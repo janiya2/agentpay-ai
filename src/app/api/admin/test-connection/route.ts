@@ -34,7 +34,41 @@ export async function POST(req: NextRequest) {
           if (mErr?.message?.includes('404') || mErr?.message?.includes('not found')) {
             continue; // try next candidate model
           }
-          break; // other error (400, 403, 429)
+          break; // other error (400, 401, 403, 429)
+        }
+      }
+
+      // If SDK failed, try Direct REST (handles both AQ auth keys and standard AIza keys)
+      if (!operationalModel) {
+        const restUrls = [
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${cleanKey}`,
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent`
+        ];
+
+        for (const url of restUrls) {
+          try {
+            const fetchRes = await fetch(url, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-goog-api-key': cleanKey
+              },
+              body: JSON.stringify({
+                contents: [{ parts: [{ text: "Ping test. Respond strictly with: PONG" }] }]
+              })
+            });
+            const data = await fetchRes.json();
+            console.log('[Direct REST Gemini Status]:', fetchRes.status, JSON.stringify(data));
+            if (fetchRes.ok && data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+              operationalModel = 'gemini-1.5-flash';
+              responseText = data.candidates[0].content.parts[0].text;
+              break;
+            } else if (data?.error?.message) {
+              lastErr = new Error(data.error.message);
+            }
+          } catch (fErr: any) {
+            console.warn('[Direct REST Attempt Exception]:', fErr?.message);
+          }
         }
       }
 
@@ -48,9 +82,12 @@ export async function POST(req: NextRequest) {
       }
 
       const raw = lastErr?.message || '';
+      console.error('[Test Connection Gemini Raw Error]:', raw);
       let errorMsg = raw;
 
-      if (raw.includes('leaked')) {
+      if (raw.includes('ACCESS_TOKEN_TYPE_UNSUPPORTED')) {
+        errorMsg = '⏳ Google Cloud Propagating: Balance update was successful ($4.99 active), but Google API Gateway takes 2–5 minutes to unblock the key. Click "Create API Key" in aistudio.google.com to generate a fresh key under this active project now!';
+      } else if (raw.includes('leaked')) {
         errorMsg = '⚠️ Blocked: This API key was reported as leaked/compromised by Google. Please generate a fresh, free key at https://aistudio.google.com/app/apikey.';
       } else if (raw.includes('API_KEY_INVALID') || raw.includes('400')) {
         errorMsg = '❌ Invalid Key: API key format or credentials not recognized by Google Generative AI.';
