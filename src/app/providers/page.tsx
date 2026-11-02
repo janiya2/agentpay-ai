@@ -194,11 +194,22 @@ export default function ProviderPortalPage() {
     }
   }, [selectedProviderId, activeProvider]);
 
-  // Handle Provider Submitting Bid (Optimistic & Zero Flicker)
+  // Handle Provider Submitting Bid (Optimistic, Zero Flicker, Strict Budget Guardrail)
   const handleSubmitBid = async (sessionId: string) => {
+    const currentTender = inquiries.find(i => i.id === sessionId);
+    const maxCap = currentTender?.spendingLimit || 200;
+    const price = customBidPrice[sessionId] !== undefined 
+      ? Number(customBidPrice[sessionId]) 
+      : Math.round(maxCap * 0.8);
+
+    // Hard client-side budget cap check
+    if (price > maxCap) {
+      alert(`🚫 Action Denied: Your proposed bid ($${price} USD) exceeds the client's authorized budget cap of $${maxCap} USD. Please adjust your bid to $${maxCap} USD or less to submit.`);
+      return;
+    }
+
     setRespondingSessionId(sessionId);
     try {
-      const price = customBidPrice[sessionId] || 160;
       const days = customDeliveryDays[sessionId] || 3;
       const note = customReplyNote[sessionId] || 'I have verified capacity and will deliver within 3 days with full code documentation.';
 
@@ -274,6 +285,22 @@ export default function ProviderPortalPage() {
       return inq;
     }));
 
+    // Quick local parse to update bid form immediately while AI is thinking
+    const localNumMatches = text.match(/\b(\d{2,4})\b/g);
+    if (localNumMatches && localNumMatches.length > 0) {
+      const parsedNum = Number(localNumMatches[0]);
+      if (!isNaN(parsedNum) && parsedNum >= 30) {
+        setCustomBidPrice(prev => ({ ...prev, [sessionId]: parsedNum }));
+      }
+    }
+    const localDaysMatch = text.match(/(\d{1,2})\s*(?:days?|dyas?|d\b)/i);
+    if (localDaysMatch) {
+      const parsedDays = Number(localDaysMatch[1]);
+      if (!isNaN(parsedDays) && parsedDays >= 1 && parsedDays <= 30) {
+        setCustomDeliveryDays(prev => ({ ...prev, [sessionId]: parsedDays }));
+      }
+    }
+
     // 3. Trigger typing indicator and auto-scroll
     setIsSendingMessage(prev => ({ ...prev, [sessionId]: true }));
     setTimeout(() => {
@@ -303,6 +330,15 @@ export default function ProviderPortalPage() {
           }
           return inq;
         }));
+
+        // AUTO-FILL: Update bid price and turnaround from server-detected negotiation
+        if (data.detectedPrice) {
+          setCustomBidPrice(prev => ({ ...prev, [sessionId]: data.detectedPrice }));
+        }
+        if (data.detectedDays) {
+          setCustomDeliveryDays(prev => ({ ...prev, [sessionId]: data.detectedDays }));
+        }
+
         setTimeout(() => {
           chatScrollRef.current?.scrollIntoView({ behavior: 'smooth' });
         }, 50);
@@ -360,6 +396,36 @@ export default function ProviderPortalPage() {
   useEffect(() => {
     chatScrollRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [activeTender?.id, activeTender?.negotiationDialog?.length, isSendingMessage]);
+
+  // Auto-sync negotiated price and days from chat dialogue into the bid form if not yet manually set
+  useEffect(() => {
+    if (!activeTender || !activeTender.id) return;
+    const sid = activeTender.id;
+    if (customBidPrice[sid]) return; // already set
+
+    const dialog = activeTender.negotiationDialog || [];
+    for (let i = dialog.length - 1; i >= 0; i--) {
+      const msg = dialog[i].message || '';
+      const numMatches = msg.match(/\b(\d{2,4})\b/g);
+      if (numMatches) {
+        for (const rawNum of numMatches) {
+          const parsed = Number(rawNum);
+          if (!isNaN(parsed) && parsed >= 30 && parsed <= (activeTender.spendingLimit || 200)) {
+            setCustomBidPrice(prev => ({ ...prev, [sid]: parsed }));
+            break;
+          }
+        }
+      }
+      const daysMatch = msg.match(/(\d{1,2})\s*(?:days?|dyas?|d\b)/i);
+      if (daysMatch) {
+        const parsedDays = Number(daysMatch[1]);
+        if (!isNaN(parsedDays) && parsedDays >= 1 && parsedDays <= 30) {
+          setCustomDeliveryDays(prev => ({ ...prev, [sid]: parsedDays }));
+        }
+      }
+      if (customBidPrice[sid]) break;
+    }
+  }, [activeTender?.id, activeTender?.negotiationDialog?.length]);
 
   // Prevent flash of empty content on initial load
   if (loading && providers.length === 0) {
@@ -858,26 +924,47 @@ export default function ProviderPortalPage() {
                       }
 
                       if (isOpen && !myExistingBid) {
+                        const maxCap = activeTender.spendingLimit || 200;
+                        const defaultBid = Math.round(maxCap * 0.8);
+                        const currentPrice = customBidPrice[activeTender.id] !== undefined ? customBidPrice[activeTender.id] : defaultBid;
+                        const isOverBudget = currentPrice > maxCap;
+
                         return (
-                          <div className="p-3.5 rounded-2xl bg-zinc-950/80 border border-cyan-500/30 space-y-2 text-xs">
+                          <div className={`p-3.5 rounded-2xl bg-zinc-950/80 border transition-all space-y-2 text-xs ${
+                            isOverBudget ? 'border-red-500/50 bg-red-950/20 shadow-lg shadow-red-950/30' : 'border-cyan-500/30'
+                          }`}>
                             <div className="flex items-center justify-between">
                               <span className="font-bold text-cyan-300 flex items-center gap-1.5 text-[11px]">
                                 <DollarSign className="h-3.5 w-3.5 text-cyan-400" />
                                 Submit Official Milestone Bid to Client
                               </span>
-                              <span className="text-[10px] text-zinc-400 font-mono">Max Cap: ${activeTender.spendingLimit || 200} USD</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] text-zinc-400 font-mono">
+                                  Max Budget Cap: <strong className="text-white">${maxCap} USD</strong>
+                                </span>
+                                {isOverBudget && (
+                                  <span className="px-2 py-0.5 rounded-md bg-red-500/20 text-red-300 border border-red-500/40 text-[10px] font-mono font-bold animate-pulse">
+                                    ⚠️ Over Budget by +${currentPrice - maxCap}
+                                  </span>
+                                )}
+                              </div>
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                               <div>
-                                <label className="block text-[10px] text-zinc-400 mb-0.5">Bid Price ($ USD)</label>
+                                <label className="block text-[10px] text-zinc-400 mb-0.5">
+                                  Bid Price ($ USD) {isOverBudget && <span className="text-red-400 font-bold">(Exceeds Cap)</span>}
+                                </label>
                                 <input
                                   type="number"
-                                  value={customBidPrice[activeTender.id] || Math.round((activeTender.spendingLimit || 200) * 0.8)}
+                                  value={currentPrice}
                                   onChange={e => setCustomBidPrice({ ...customBidPrice, [activeTender.id]: Number(e.target.value) })}
                                   min="30"
-                                  max={activeTender.spendingLimit || 500}
-                                  className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-1.5 text-white font-mono font-bold focus:outline-none focus:border-cyan-400 text-xs"
+                                  className={`w-full bg-zinc-900 border rounded-xl px-3 py-1.5 text-white font-mono font-bold focus:outline-none text-xs transition-colors ${
+                                    isOverBudget 
+                                      ? 'border-red-500 text-red-300 focus:border-red-400 ring-1 ring-red-500/50' 
+                                      : 'border-zinc-800 focus:border-cyan-400'
+                                  }`}
                                 />
                               </div>
 
@@ -888,7 +975,7 @@ export default function ProviderPortalPage() {
                                   value={customDeliveryDays[activeTender.id] || 3}
                                   onChange={e => setCustomDeliveryDays({ ...customDeliveryDays, [activeTender.id]: Number(e.target.value) })}
                                   min="1"
-                                  max="14"
+                                  max="30"
                                   className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-1.5 text-white font-mono font-bold focus:outline-none focus:border-cyan-400 text-xs"
                                 />
                               </div>
@@ -905,14 +992,35 @@ export default function ProviderPortalPage() {
                               </div>
                             </div>
 
+                            {/* Over-budget helper notice */}
+                            {isOverBudget && (
+                              <p className="text-[10px] text-red-400 font-semibold bg-red-950/40 p-2 rounded-xl border border-red-500/30">
+                                🚫 Submission Blocked: Your bid price (${currentPrice} USD) exceeds the client&apos;s authorized budget cap of ${maxCap} USD. Please adjust to ${maxCap} USD or less to submit.
+                              </p>
+                            )}
+
                             <div className="flex justify-end pt-1">
                               <button
                                 onClick={() => handleSubmitBid(activeTender.id)}
-                                disabled={respondingSessionId === activeTender.id}
-                                className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:opacity-95 text-zinc-950 font-bold text-xs flex items-center gap-1.5 shadow-md shadow-emerald-950/40 transition-all cursor-pointer disabled:opacity-50"
+                                disabled={isOverBudget || respondingSessionId === activeTender.id}
+                                className={`px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-md transition-all ${
+                                  isOverBudget
+                                    ? 'bg-zinc-800 text-zinc-500 border border-zinc-700 cursor-not-allowed opacity-60'
+                                    : 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:opacity-95 text-zinc-950 shadow-emerald-950/40 cursor-pointer disabled:opacity-50'
+                                }`}
                               >
-                                {respondingSessionId === activeTender.id ? <span className="animate-spin">⏳</span> : <Sparkles className="h-3.5 w-3.5" />}
-                                <span>Submit Official Bid (${customBidPrice[activeTender.id] || Math.round((activeTender.spendingLimit || 200) * 0.8)} USD)</span>
+                                {respondingSessionId === activeTender.id ? (
+                                  <span className="animate-spin">⏳</span>
+                                ) : isOverBudget ? (
+                                  <span>🚫</span>
+                                ) : (
+                                  <Sparkles className="h-3.5 w-3.5" />
+                                )}
+                                <span>
+                                  {isOverBudget 
+                                    ? `Exceeds Client Cap ($${currentPrice} > $${maxCap})` 
+                                    : `Submit Official Bid ($${currentPrice} USD)`}
+                                </span>
                               </button>
                             </div>
                           </div>

@@ -30,7 +30,17 @@ export async function POST(req: NextRequest) {
       }, { status: 409 });
     }
 
-    const price = Number(bidPrice) || Math.round((sessionData.spendingLimit || 200) * 0.8) || 160;
+    const budgetCap = sessionData.spendingLimit || 200;
+    const price = Number(bidPrice) || Math.round(budgetCap * 0.8) || 160;
+
+    // ENFORCE CLIENT BUDGET CAP: Reject any bid exceeding authorized client spending limit
+    if (price > budgetCap) {
+      return NextResponse.json({
+        success: false,
+        error: `🚫 Budget Exceeded: Your proposed bid of $${price} USD exceeds the client's maximum authorized budget cap of $${budgetCap} USD. Please adjust your bid to $${budgetCap} USD or less.`
+      }, { status: 400 });
+    }
+
     const ms1 = Math.round(price / 2);
     const ms2 = price - ms1;
 

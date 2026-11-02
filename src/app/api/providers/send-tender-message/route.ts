@@ -54,6 +54,16 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Parse potential delivery days from provider message (e.g. "4 days", "4 dyas", "5 d", "in 3 days")
+    const daysMatch = message.match(/(\d{1,2})\s*(?:days?|dyas?|d\b)/i);
+    let detectedDays: number | null = null;
+    if (daysMatch) {
+      const parsedDays = Number(daysMatch[1]);
+      if (!isNaN(parsedDays) && parsedDays >= 1 && parsedDays <= 30) {
+        detectedDays = parsedDays;
+      }
+    }
+
     try {
       await geminiRotator.loadKeysFromFirestore();
       botReplyText = await geminiRotator.executeWithRotation(async (genAI) => {
@@ -161,7 +171,9 @@ Provide ONLY the text of your response:
       message: 'Dialogue updated with provider message and autonomous bot reply',
       providerEntry,
       botEntry,
-      dialog: finalDialog
+      dialog: finalDialog,
+      detectedPrice: detectedNumber,
+      detectedDays: detectedDays
     });
 
   } catch (err: any) {
