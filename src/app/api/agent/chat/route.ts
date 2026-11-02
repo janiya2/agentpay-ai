@@ -210,36 +210,83 @@ Format your response strictly as valid JSON with NO markdown formatting:
       const peers = allProviders.filter(p => p.id !== chosen!.id && (p.category === chosen!.category || p.category === matchedCategory)).slice(0, 2);
       const top3Providers = [chosen, ...peers];
 
-      const targetProviders = top3Providers.map((p) => ({
-        id: p.id,
-        name: p.name,
-        title: p.title,
-        email: p.contactEmail,
-        avatarUrl: p.avatarUrl,
-        rating: p.rating,
-        hourlyRate: p.hourlyRate,
-        status: 'awaiting_bid' as const
-      }));
-
+      // Autonomous Swarm Bidding: Any provider with autoBiddingEnabled !== false generates an instant bid
+      const swarmBids: any[] = [];
       const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      const targetProviders = top3Providers.map((p, pIdx) => {
+        const isAuto = p.autoBiddingEnabled !== false;
+
+        if (isAuto) {
+          const floor = p.minProjectFloor || 120;
+          const targetCap = spendingLimit || 200;
+          // Natural competitive variance among specialists
+          const variance = pIdx === 0 ? 30 : pIdx === 1 ? 40 : 25;
+          let calculatedPrice = Math.max(floor, targetCap - variance);
+          if (calculatedPrice > targetCap) calculatedPrice = targetCap;
+          const turnaround = Math.max(p.minTurnaroundDays || 2, pIdx === 1 ? 2 : pIdx === 0 ? 3 : 4);
+
+          swarmBids.push({
+            providerId: p.id,
+            providerName: p.name,
+            providerAvatar: p.avatarUrl,
+            providerTitle: p.title,
+            bidPrice: calculatedPrice,
+            deliveryDays: turnaround,
+            note: `Autonomous Proposal via ${p.name}'s AI Delegate: Guaranteed ${p.title} deliverables adhering strictly to contract specifications with ${turnaround}-day turnaround.`,
+            milestones: [
+              { title: 'Milestone 1: Architectural Draft & Components', amount: Math.round(calculatedPrice * 0.5) },
+              { title: 'Milestone 2: Final Delivery, Testing & Handoff', amount: Math.round(calculatedPrice * 0.5) }
+            ],
+            submittedAt: timeNow,
+            isAutoBid: true
+          });
+
+          return {
+            id: p.id,
+            name: p.name,
+            title: p.title,
+            email: p.contactEmail,
+            avatarUrl: p.avatarUrl,
+            rating: p.rating,
+            hourlyRate: p.hourlyRate,
+            autoBiddingEnabled: true,
+            status: 'bid_received' as const,
+            bidPrice: calculatedPrice
+          };
+        } else {
+          return {
+            id: p.id,
+            name: p.name,
+            title: p.title,
+            email: p.contactEmail,
+            avatarUrl: p.avatarUrl,
+            rating: p.rating,
+            hourlyRate: p.hourlyRate,
+            autoBiddingEnabled: false,
+            status: 'awaiting_bid' as const
+          };
+        }
+      });
+
       const dynamicDialog = [
         {
           speaker: 'agent' as const,
           speakerName: 'AgentPay Commerce Bot 🤖',
-          message: `Initiating Autonomous RFP Tender to ${targetProviders.length} specialists (${targetProviders.map(p => p.name).join(', ')}). Project Scope: ${chosen.title}. Client Budget Cap: $${spendingLimit} USD. Awaiting competitive milestone bids and turnaround terms in Provider Workspace.`,
+          message: `Initiating Autonomous RFP Tender to ${targetProviders.length} specialists (${targetProviders.map(p => p.name).join(', ')}). Project Scope: ${chosen.title}. Client Budget Cap: $${spendingLimit} USD. ${swarmBids.length} autonomous bids received.`,
           timestamp: timeNow
         }
       ];
 
       result = {
-        reply: `🚀 **Autonomous Tender Dispatched to ${chosen.name} & Top Specialists!**\n\nI have transmitted your project requirements to:\n${targetProviders.map(p => `• **${p.name}** (${p.title}) — *${p.email}*`).join('\n')}\n\n⏳ **Status: Awaiting Specialist Bids & Counter-Offers**\nNotification emails have been dispatched via Resend to their inboxes. Each specialist has been alerted to review the project scope in their **Provider Workspace** and submit their competitive milestone bids.\n\n*As bids arrive in real-time, they will stream directly into the Bids Board below for your comparison and PayPal milestone escrow award.*`,
+        reply: `🚀 **Autonomous Swarm Tender Dispatched!**\n\nI have transmitted your RFP scope to 3 top verified specialists:\n${targetProviders.map(p => `• **${p.name}** (${p.title}) — ${p.autoBiddingEnabled ? '⚡ *Instant AI Delegate Active*' : '⏳ *Manual Bidding Mode*'}`).join('\n')}\n\n🏆 **Bidding Status:** ${swarmBids.length} competitive milestone bids have been autonomously submitted to your decision board below. Review their price, turnaround, and milestone tranches, or open a **Direct 1-on-1 Chat** to negotiate further!`,
         intent: 'tender_dispatched',
         categoryMatched: chosen.category,
         selectedProviderName: chosen.name,
         providerId: chosen.id,
         negotiationDialog: dynamicDialog,
         targetProviders,
-        bids: [],
+        bids: swarmBids,
         triggerPayPalOrder: false
       };
 

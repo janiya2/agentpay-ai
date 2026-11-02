@@ -30,6 +30,11 @@ export interface ServiceProvider {
   status: 'active' | 'busy' | 'offline';
   verified: boolean;
   createdAt: string;
+  // Autonomous AI Delegate Guardrails
+  autoBiddingEnabled?: boolean;
+  minProjectFloor?: number;
+  minTurnaroundDays?: number;
+  autoBidDiscountPercent?: number;
 }
 
 export interface ChatMessage {

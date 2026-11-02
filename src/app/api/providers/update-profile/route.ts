@@ -16,7 +16,11 @@ export async function POST(req: NextRequest) {
       contactEmail, 
       paypalEmail,
       location, 
-      status 
+      status,
+      autoBiddingEnabled,
+      minProjectFloor,
+      minTurnaroundDays,
+      autoBidDiscountPercent
     } = body;
 
     if (!providerId) {
@@ -54,6 +58,21 @@ export async function POST(req: NextRequest) {
     if (paypalEmail) updatePayload.paypalEmail = paypalEmail.trim();
     if (location) updatePayload.location = location.trim();
     if (status) updatePayload.status = status;
+    if (typeof autoBiddingEnabled === 'boolean') updatePayload.autoBiddingEnabled = autoBiddingEnabled;
+    if (typeof minProjectFloor === 'number' || typeof minProjectFloor === 'string') {
+      const parsedFloor = Number(minProjectFloor);
+      if (!isNaN(parsedFloor) && parsedFloor >= 0) updatePayload.minProjectFloor = parsedFloor;
+    }
+    if (typeof minTurnaroundDays === 'number' || typeof minTurnaroundDays === 'string') {
+      const parsedDays = Number(minTurnaroundDays);
+      if (!isNaN(parsedDays) && parsedDays >= 1) updatePayload.minTurnaroundDays = parsedDays;
+    }
+    if (typeof autoBidDiscountPercent === 'number' || typeof autoBidDiscountPercent === 'string') {
+      const parsedDiscount = Number(autoBidDiscountPercent);
+      if (!isNaN(parsedDiscount) && parsedDiscount >= 0 && parsedDiscount <= 50) {
+        updatePayload.autoBidDiscountPercent = parsedDiscount;
+      }
+    }
 
     await updateDoc(providerRef, updatePayload);
 

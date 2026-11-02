@@ -20,9 +20,11 @@ export default function OrdersPage() {
   const [releasingIndex, setReleasingIndex] = useState<{ orderId: string; mIdx: number } | null>(null);
   const [releaseSuccessMsg, setReleaseSuccessMsg] = useState<string | null>(null);
   const [activeChatOrder, setActiveChatOrder] = useState<{
-    orderId: string;
+    channelId: string;
     orderTitle: string;
     providerName: string;
+    orderAmount?: number;
+    escrowStatus?: string;
   } | null>(null);
 
   const fetchOrders = async () => {
@@ -389,9 +391,11 @@ export default function OrdersPage() {
                   <div className="flex items-center gap-3">
                     <button
                       onClick={() => setActiveChatOrder({
-                        orderId: order.id,
+                        channelId: order.id,
                         orderTitle: order.serviceTitle,
-                        providerName: order.providerName
+                        providerName: order.providerName,
+                        orderAmount: order.amount,
+                        escrowStatus: order.status
                       })}
                       className="px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white font-semibold text-xs border border-zinc-700 flex items-center gap-1.5 transition-all cursor-pointer"
                     >
@@ -419,11 +423,14 @@ export default function OrdersPage() {
         <DirectChatModal
           isOpen={!!activeChatOrder}
           onClose={() => setActiveChatOrder(null)}
-          orderId={activeChatOrder.orderId}
+          channelId={activeChatOrder.channelId}
           orderTitle={activeChatOrder.orderTitle}
           currentUserRole="client"
           currentUserName={user?.name || 'Janitha Dilshan'}
           otherPartyName={activeChatOrder.providerName}
+          isPurchasedOrder={true}
+          orderAmount={activeChatOrder.orderAmount}
+          escrowStatus={activeChatOrder.escrowStatus}
         />
       )}
     </div>

@@ -1,27 +1,44 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Send, Bot, User, MessageSquare, Shield, Clock } from 'lucide-react';
+import { 
+  X, Send, Bot, User, MessageSquare, ShieldCheck, Clock, 
+  CreditCard, Sparkles, CheckCircle2, AlertCircle 
+} from 'lucide-react';
 import type { DirectMessage } from '@/types';
 
-interface DirectChatModalProps {
+export interface DirectChatModalProps {
   isOpen: boolean;
   onClose: () => void;
-  orderId: string;
+  channelId: string; // Order ID or Tender Session ID
   orderTitle: string;
   currentUserRole: 'client' | 'provider';
   currentUserName: string;
   otherPartyName: string;
+  isPurchasedOrder?: boolean;
+  orderAmount?: number;
+  escrowStatus?: string;
+  bidPrice?: number;
+  deliveryDays?: number;
+  clientBudgetCap?: number;
+  paypalOrderId?: string;
 }
 
 export default function DirectChatModal({
   isOpen,
   onClose,
-  orderId,
+  channelId,
   orderTitle,
   currentUserRole,
   currentUserName,
-  otherPartyName
+  otherPartyName,
+  isPurchasedOrder = false,
+  orderAmount,
+  escrowStatus,
+  bidPrice,
+  deliveryDays,
+  clientBudgetCap,
+  paypalOrderId
 }: DirectChatModalProps) {
   const [messages, setMessages] = useState<DirectMessage[]>([]);
   const [input, setInput] = useState('');
@@ -30,9 +47,9 @@ export default function DirectChatModal({
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const fetchMessages = async () => {
-    if (!orderId) return;
+    if (!channelId) return;
     try {
-      const res = await fetch(`/api/direct-messages?orderId=${encodeURIComponent(orderId)}`);
+      const res = await fetch(`/api/direct-messages?orderId=${encodeURIComponent(channelId)}`);
       const data = await res.json();
       if (data.success && Array.isArray(data.messages)) {
         setMessages(data.messages);
@@ -43,15 +60,15 @@ export default function DirectChatModal({
   };
 
   useEffect(() => {
-    if (isOpen && orderId) {
+    if (isOpen && channelId) {
       setLoading(true);
       fetchMessages().finally(() => setLoading(false));
 
-      // Poll every 4s for fresh messages while open
-      const interval = setInterval(fetchMessages, 4000);
+      // Poll every 3.5s for fresh messages while open
+      const interval = setInterval(fetchMessages, 3500);
       return () => clearInterval(interval);
     }
-  }, [isOpen, orderId]);
+  }, [isOpen, channelId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -67,12 +84,24 @@ export default function DirectChatModal({
     setSending(true);
     setInput('');
 
+    // Optimistic local add
+    const tempId = `temp_${Date.now()}`;
+    const optimisticMsg: DirectMessage = {
+      id: tempId,
+      orderId: channelId,
+      senderRole: currentUserRole,
+      senderName: currentUserName,
+      message: text,
+      timestamp: new Date().toISOString()
+    };
+    setMessages(prev => [...prev, optimisticMsg]);
+
     try {
       const res = await fetch('/api/direct-messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          orderId,
+          orderId: channelId,
           senderRole: currentUserRole,
           senderName: currentUserName,
           message: text
@@ -93,24 +122,36 @@ export default function DirectChatModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
       <div 
-        className="relative w-full max-w-2xl h-[600px] flex flex-col rounded-3xl bg-zinc-950 border border-zinc-800 shadow-2xl overflow-hidden"
+        className="relative w-full max-w-2xl h-[620px] flex flex-col rounded-3xl bg-zinc-950 border border-zinc-800 shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-4 sm:p-5 border-b border-zinc-800 bg-zinc-900/60 flex items-center justify-between">
+        <div className="p-4 sm:p-5 border-b border-zinc-800 bg-zinc-900/70 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-2xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-zinc-950 font-bold">
+            <div className={`h-10 w-10 rounded-2xl flex items-center justify-center font-bold text-zinc-950 shadow-md ${
+              isPurchasedOrder
+                ? 'bg-gradient-to-tr from-emerald-400 to-teal-500'
+                : 'bg-gradient-to-tr from-cyan-400 to-blue-500'
+            }`}>
               <MessageSquare className="h-5 w-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-white tracking-tight">Direct Collaboration Room</h3>
-                <span className="px-2 py-0.5 rounded-full text-[9px] font-mono bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
-                  Escrow Protected
-                </span>
+                <h3 className="text-sm font-bold text-white tracking-tight">Direct 1-on-1 Collaboration</h3>
+                {isPurchasedOrder ? (
+                  <span className="px-2 py-0.5 rounded-full text-[9px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 font-bold">
+                    <ShieldCheck className="h-3 w-3" />
+                    Verified Escrow
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded-full text-[9px] font-mono bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 flex items-center gap-1 font-bold">
+                    <Clock className="h-3 w-3" />
+                    Pre-Escrow Bid Discussion
+                  </span>
+                )}
               </div>
               <p className="text-xs text-zinc-400">
-                Between <strong className="text-white">{currentUserName}</strong> and <strong className="text-cyan-300">{otherPartyName}</strong>
+                Between <strong className="text-white">{currentUserName}</strong> ({currentUserRole === 'client' ? 'Client' : 'Specialist'}) and <strong className="text-cyan-300">{otherPartyName}</strong>
               </p>
             </div>
           </div>
@@ -123,10 +164,34 @@ export default function DirectChatModal({
           </button>
         </div>
 
-        {/* Deliverable Scope Banner */}
-        <div className="px-5 py-2.5 bg-zinc-900/40 border-b border-zinc-800/80 flex items-center justify-between text-xs text-zinc-400">
-          <span className="truncate max-w-[350px]">Project: <strong className="text-zinc-200">{orderTitle}</strong></span>
-          <span className="font-mono text-[10px] text-zinc-500">Order Ref: #{orderId.substring(0, 14)}</span>
+        {/* Dynamic Context Card: Clearly identifies Client status to Provider and vice versa */}
+        <div className="px-5 py-3 bg-zinc-900/40 border-b border-zinc-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs">
+          <div className="space-y-0.5">
+            <span className="text-[10px] uppercase font-mono text-zinc-500 block">Project Scope</span>
+            <p className="font-semibold text-zinc-200 truncate max-w-sm">{orderTitle}</p>
+          </div>
+
+          <div className="text-left sm:text-right shrink-0">
+            {isPurchasedOrder ? (
+              <div className="space-y-0.5 font-mono">
+                <span className="text-[10px] text-zinc-500 uppercase block">Contract Value & Escrow</span>
+                <span className="text-sm font-black text-emerald-400">${orderAmount} USD</span>
+                <span className="text-[10px] text-zinc-400 block">
+                  Status: <strong className="text-emerald-300">{escrowStatus || 'In Escrow'}</strong>
+                </span>
+              </div>
+            ) : (
+              <div className="space-y-0.5 font-mono">
+                <span className="text-[10px] text-zinc-500 uppercase block">Milestone Bid Terms</span>
+                <span className="text-sm font-black text-cyan-300">
+                  ${bidPrice || 160} USD • {deliveryDays || 3} Days
+                </span>
+                {clientBudgetCap && (
+                  <span className="text-[10px] text-zinc-400 block">Client Cap: ${clientBudgetCap} USD</span>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Message Thread */}
@@ -138,8 +203,10 @@ export default function DirectChatModal({
           ) : messages.length === 0 ? (
             <div className="py-20 text-center text-xs text-zinc-500 space-y-2">
               <MessageSquare className="h-8 w-8 text-zinc-600 mx-auto" />
-              <p>No messages in this collaboration channel yet.</p>
-              <p className="text-[11px] text-zinc-600">Send deliverables, GitHub repo links, or discuss milestones directly!</p>
+              <p className="text-zinc-300 font-medium">No direct messages in this channel yet.</p>
+              <p className="text-[11px] text-zinc-500">
+                You can discuss technical specs, share GitHub repository links, deliverable drafts, or refine milestone requirements directly!
+              </p>
             </div>
           ) : (
             messages.map((m) => {
@@ -151,7 +218,7 @@ export default function DirectChatModal({
                 >
                   <div className={`h-8 w-8 rounded-xl flex items-center justify-center text-xs font-bold shrink-0 ${
                     isMe 
-                      ? 'bg-gradient-to-tr from-cyan-500 to-blue-600 text-zinc-950' 
+                      ? 'bg-gradient-to-tr from-cyan-500 to-blue-600 text-zinc-950 shadow-md' 
                       : 'bg-zinc-800 border border-zinc-700 text-cyan-400'
                   }`}>
                     <User className="h-4 w-4" />
@@ -161,7 +228,7 @@ export default function DirectChatModal({
                     <div className="flex items-center gap-2 text-[10px] text-zinc-500">
                       <span className="font-bold text-zinc-300">{m.senderName}</span>
                       <span>•</span>
-                      <span>{new Date(m.timestamp || (m as any).createdAt || 0).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      <span>{new Date(m.timestamp || (m as any).createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
 
                     <div className={`p-3.5 rounded-2xl text-xs leading-relaxed ${
@@ -185,7 +252,7 @@ export default function DirectChatModal({
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={`Message ${otherPartyName} (e.g. 'Here is the GitHub repo or Figma design link')...`}
+            placeholder={`Message ${otherPartyName} (e.g. 'Can we adjust milestone 1 scope?' or 'Here is the GitHub repo')...`}
             className="flex-1 bg-zinc-900 border border-zinc-700/80 rounded-2xl px-4 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-400 transition-all"
           />
           <button
@@ -201,4 +268,3 @@ export default function DirectChatModal({
     </div>
   );
 }
-

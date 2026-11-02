@@ -10,6 +10,7 @@ import type { ChatMessage, ServiceProvider } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 import { db } from '@/lib/firebase';
 import { collection, query, orderBy, limit, getDocs, doc, getDoc } from 'firebase/firestore';
+import DirectChatModal from '@/components/DirectChatModal';
 
 export default function ChatInterface() {
   const { user, openAuthModal } = useAuth();
@@ -43,6 +44,17 @@ export default function ChatInterface() {
     isRealAI: true,
     modelUsed: 'gemini-2.5-flash'
   });
+
+  // Direct 1-on-1 Chat with Specialist State
+  const [activeDirectChat, setActiveDirectChat] = useState<{
+    channelId: string;
+    orderTitle: string;
+    providerName: string;
+    isPurchasedOrder: boolean;
+    bidPrice?: number;
+    deliveryDays?: number;
+    clientBudgetCap?: number;
+  } | null>(null);
 
   // History Drawer State
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -623,6 +635,19 @@ export default function ChatInterface() {
                           <span className="text-zinc-400">⭐ {prov.rating} ({prov.reviewCount})</span>
                           <span className="font-mono font-bold text-emerald-400">${prov.hourlyRate}/hr</span>
                         </div>
+                        <div className="pt-0.5">
+                          {prov.autoBiddingEnabled !== false ? (
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 flex items-center gap-1 font-bold">
+                              <Sparkles className="h-2.5 w-2.5 text-emerald-400" />
+                              Instant AI Delegate Active
+                            </span>
+                          ) : (
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-amber-500/10 text-amber-300 border border-amber-500/30 flex items-center gap-1 font-bold">
+                              <Clock className="h-2.5 w-2.5 text-amber-400" />
+                              Manual Bids Only (24h SLA)
+                            </span>
+                          )}
+                        </div>
                         <button
                           onClick={() => {
                             if (!user) {
@@ -793,14 +818,33 @@ export default function ChatInterface() {
                                       Outbid / Closed
                                     </span>
                                   ) : (
-                                    <button
-                                      onClick={() => handleAwardBid(sessionId, bid.providerId)}
-                                      disabled={isLoading}
-                                      className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:opacity-95 text-zinc-950 font-bold text-[11px] flex items-center gap-1.5 shadow-md shadow-emerald-950/40 transition-all cursor-pointer"
-                                    >
-                                      <CheckCircle2 className="h-3.5 w-3.5" />
-                                      <span>Award Contract & Pay</span>
-                                    </button>
+                                    <div className="flex items-center gap-2">
+                                      <button
+                                        onClick={() => setActiveDirectChat({
+                                          channelId: `${sessionId}_${bid.providerId}`,
+                                          orderTitle: `${bid.providerTitle || 'Digital Milestone'} Contract`,
+                                          providerName: bid.providerName,
+                                          isPurchasedOrder: false,
+                                          bidPrice: bid.bidPrice,
+                                          deliveryDays: bid.deliveryDays,
+                                          clientBudgetCap: spendingLimit
+                                        })}
+                                        className="px-2.5 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white font-semibold text-[11px] border border-zinc-700 flex items-center gap-1 transition-all cursor-pointer shadow-sm"
+                                        title="Chat directly with specialist before awarding"
+                                      >
+                                        <MessageSquare className="h-3.5 w-3.5 text-cyan-400" />
+                                        <span>Chat</span>
+                                      </button>
+
+                                      <button
+                                        onClick={() => handleAwardBid(sessionId, bid.providerId)}
+                                        disabled={isLoading}
+                                        className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:opacity-95 text-zinc-950 font-bold text-[11px] flex items-center gap-1.5 shadow-md shadow-emerald-950/40 transition-all cursor-pointer"
+                                      >
+                                        <CheckCircle2 className="h-3.5 w-3.5" />
+                                        <span>Award & Pay</span>
+                                      </button>
+                                    </div>
                                   )}
                                 </div>
                               </div>
@@ -1209,6 +1253,23 @@ export default function ChatInterface() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Direct 1-on-1 Specialist Collaboration Modal */}
+      {activeDirectChat && (
+        <DirectChatModal
+          isOpen={!!activeDirectChat}
+          onClose={() => setActiveDirectChat(null)}
+          channelId={activeDirectChat.channelId}
+          orderTitle={activeDirectChat.orderTitle}
+          currentUserRole="client"
+          currentUserName={user?.name || 'Janitha Dilshan'}
+          otherPartyName={activeDirectChat.providerName}
+          isPurchasedOrder={activeDirectChat.isPurchasedOrder}
+          bidPrice={activeDirectChat.bidPrice}
+          deliveryDays={activeDirectChat.deliveryDays}
+          clientBudgetCap={activeDirectChat.clientBudgetCap}
+        />
       )}
     </div>
   );

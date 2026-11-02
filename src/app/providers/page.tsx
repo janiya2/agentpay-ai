@@ -46,6 +46,10 @@ export default function ProviderPortalPage() {
     skills: string;
     bio: string;
     status: 'active' | 'busy' | 'offline';
+    autoBiddingEnabled: boolean;
+    minProjectFloor: number;
+    minTurnaroundDays: number;
+    autoBidDiscountPercent: number;
   }>({
     name: '',
     title: '',
@@ -56,14 +60,24 @@ export default function ProviderPortalPage() {
     location: 'Remote',
     skills: '',
     bio: '',
-    status: 'active'
+    status: 'active',
+    autoBiddingEnabled: true,
+    minProjectFloor: 120,
+    minTurnaroundDays: 3,
+    autoBidDiscountPercent: 5
   });
 
-  // Direct Chat Modal State
+  // Direct Chat Modal State with Rich Buyer/Seller Context
   const [activeChatOrder, setActiveChatOrder] = useState<{
-    orderId: string;
+    channelId: string;
     orderTitle: string;
     clientName: string;
+    isPurchasedOrder: boolean;
+    orderAmount?: number;
+    escrowStatus?: string;
+    bidPrice?: number;
+    deliveryDays?: number;
+    clientBudgetCap?: number;
   } | null>(null);
 
   useEffect(() => {
@@ -109,7 +123,11 @@ export default function ProviderPortalPage() {
       location: activeProvider.location || 'Remote',
       skills: (activeProvider.skills || []).join(', '),
       bio: activeProvider.bio || '',
-      status: activeProvider.status || 'active'
+      status: activeProvider.status || 'active',
+      autoBiddingEnabled: activeProvider.autoBiddingEnabled !== false,
+      minProjectFloor: activeProvider.minProjectFloor || 120,
+      minTurnaroundDays: activeProvider.minTurnaroundDays || 3,
+      autoBidDiscountPercent: activeProvider.autoBidDiscountPercent || 5
     });
     setIsEditModalOpen(true);
   };
@@ -134,7 +152,11 @@ export default function ProviderPortalPage() {
           location: editForm.location,
           skills: editForm.skills.split(',').map(s => s.trim()).filter(Boolean),
           bio: editForm.bio,
-          status: editForm.status
+          status: editForm.status,
+          autoBiddingEnabled: editForm.autoBiddingEnabled,
+          minProjectFloor: Number(editForm.minProjectFloor),
+          minTurnaroundDays: Number(editForm.minTurnaroundDays),
+          autoBidDiscountPercent: Number(editForm.autoBidDiscountPercent)
         })
       });
 
@@ -505,6 +527,17 @@ export default function ProviderPortalPage() {
                   <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 text-[10px] font-mono border border-emerald-500/30">
                     Verified Talent
                   </span>
+                  {activeProvider.autoBiddingEnabled !== false ? (
+                    <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-300 text-[10px] font-mono border border-emerald-500/30 flex items-center gap-1 font-bold">
+                      <Sparkles className="h-2.5 w-2.5 text-emerald-400" />
+                      AI Delegate: Auto-Bid ON (${activeProvider.minProjectFloor || 120} Floor)
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 text-[10px] font-mono border border-amber-500/30 flex items-center gap-1 font-bold">
+                      <Clock className="h-2.5 w-2.5 text-amber-400" />
+                      AI Delegate: OFF (Manual Bids Only)
+                    </span>
+                  )}
                   <span className={`px-2 py-0.5 rounded-md text-[10px] font-mono border ${
                     activeProvider.status === 'active' 
                       ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30'
@@ -759,11 +792,29 @@ export default function ProviderPortalPage() {
                       </div>
                     </div>
 
-                    <div className="text-right shrink-0">
-                      <span className="text-[10px] text-zinc-500 uppercase tracking-wider block">Client Budget Cap</span>
-                      <span className="font-mono font-black text-lg text-emerald-400">
-                        ${activeTender.spendingLimit || 200} USD
-                      </span>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <button
+                        onClick={() => setActiveChatOrder({
+                          channelId: `${activeTender.id}_${activeProvider.id}`,
+                          orderTitle: activeTender.projectScope || 'Digital Milestone Contract',
+                          clientName: activeTender.buyerName || 'Client',
+                          isPurchasedOrder: false,
+                          bidPrice: customBidPrice[activeTender.id] || 160,
+                          deliveryDays: customDeliveryDays[activeTender.id] || 3,
+                          clientBudgetCap: activeTender.spendingLimit || 200
+                        })}
+                        className="px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-cyan-300 hover:text-white border border-zinc-700 font-semibold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                      >
+                        <MessageSquare className="h-3.5 w-3.5 text-cyan-400" />
+                        <span>Direct Chat with Client</span>
+                      </button>
+
+                      <div className="text-right">
+                        <span className="text-[10px] text-zinc-500 uppercase tracking-wider block">Client Budget Cap</span>
+                        <span className="font-mono font-black text-lg text-emerald-400">
+                          ${activeTender.spendingLimit || 200} USD
+                        </span>
+                      </div>
                     </div>
                   </div>
 
@@ -1107,9 +1158,12 @@ export default function ProviderPortalPage() {
                     {/* Direct Client Chat Button */}
                     <button
                       onClick={() => setActiveChatOrder({
-                        orderId: order.id,
+                        channelId: order.id,
                         orderTitle: order.serviceTitle,
-                        clientName: order.buyerName
+                        clientName: order.buyerName,
+                        isPurchasedOrder: true,
+                        orderAmount: order.amount,
+                        escrowStatus: order.status
                       })}
                       className="px-3.5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white font-semibold text-xs border border-zinc-700 flex items-center gap-1.5 transition-all cursor-pointer"
                     >
@@ -1279,6 +1333,80 @@ export default function ProviderPortalPage() {
                 </p>
               </div>
 
+              {/* Autonomous AI Delegate Settings & Guardrails */}
+              <div className="p-4 rounded-2xl bg-zinc-900/80 border border-zinc-700/80 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-[11px] text-white font-bold flex items-center gap-1.5">
+                      <Sparkles className="h-3.5 w-3.5 text-cyan-400" />
+                      Autonomous AI Bidding Agent
+                    </label>
+                    <p className="text-[10px] text-zinc-400 mt-0.5">
+                      Allow your AI Agent to autonomously analyze client RFQs and submit competitive bids within your limits.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditForm({ ...editForm, autoBiddingEnabled: !editForm.autoBiddingEnabled })}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer ${
+                      editForm.autoBiddingEnabled
+                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
+                        : 'bg-zinc-800 text-zinc-400 border border-zinc-700'
+                    }`}
+                  >
+                    {editForm.autoBiddingEnabled ? '⚡ ENABLED' : '⛔ DISABLED'}
+                  </button>
+                </div>
+
+                {editForm.autoBiddingEnabled ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-zinc-800">
+                    <div>
+                      <label className="block text-[10px] text-zinc-400 font-mono mb-1">
+                        Min Project Floor ($ USD)
+                      </label>
+                      <input
+                        type="number"
+                        min="50"
+                        max="2000"
+                        value={editForm.minProjectFloor}
+                        onChange={e => setEditForm({ ...editForm, minProjectFloor: Number(e.target.value) })}
+                        className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-cyan-400"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] text-zinc-400 font-mono mb-1">
+                        Min Turnaround (Days)
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="30"
+                        value={editForm.minTurnaroundDays}
+                        onChange={e => setEditForm({ ...editForm, minTurnaroundDays: Number(e.target.value) })}
+                        className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-cyan-400"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] text-zinc-400 font-mono mb-1">
+                        Dynamic Discount Margin (%)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="30"
+                        value={editForm.autoBidDiscountPercent}
+                        onChange={e => setEditForm({ ...editForm, autoBidDiscountPercent: Number(e.target.value) })}
+                        className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-cyan-400"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-[10px] text-amber-300/90 bg-amber-500/10 border border-amber-500/20 p-2.5 rounded-xl">
+                    ⚠️ When disabled, your AI Agent will not bid automatically. All incoming tenders will require manual negotiation, and clients will see a notice that responses may take up to 24 hours.
+                  </p>
+                )}
+              </div>
+
               {/* Row 4: Availability Status */}
               <div>
                 <label className="block text-[11px] text-zinc-400 font-medium mb-1">Availability Status</label>
@@ -1370,11 +1498,17 @@ export default function ProviderPortalPage() {
         <DirectChatModal
           isOpen={!!activeChatOrder}
           onClose={() => setActiveChatOrder(null)}
-          orderId={activeChatOrder.orderId}
+          channelId={activeChatOrder.channelId}
           orderTitle={activeChatOrder.orderTitle}
           currentUserRole="provider"
           currentUserName={activeProvider.name}
           otherPartyName={activeChatOrder.clientName}
+          isPurchasedOrder={activeChatOrder.isPurchasedOrder}
+          orderAmount={activeChatOrder.orderAmount}
+          escrowStatus={activeChatOrder.escrowStatus}
+          bidPrice={activeChatOrder.bidPrice}
+          deliveryDays={activeChatOrder.deliveryDays}
+          clientBudgetCap={activeChatOrder.clientBudgetCap}
         />
       )}
     </div>
