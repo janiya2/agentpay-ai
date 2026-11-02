@@ -50,6 +50,13 @@ export interface ChatMessage {
         amount: number;
       }>;
     };
+    negotiationDialog?: Array<{
+      speaker: 'agent' | 'provider';
+      speakerName: string;
+      speakerAvatar?: string;
+      message: string;
+      timestamp: string;
+    }>;
     paypalOrderId?: string;
     amount?: number;
     currency?: string;

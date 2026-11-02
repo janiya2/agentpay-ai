@@ -1,4 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { db } from './firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 interface KeyHealth {
   key: string;
@@ -13,6 +15,24 @@ class GeminiKeyRotator {
 
   constructor() {
     this.refreshKeys();
+  }
+
+  public async loadKeysFromFirestore() {
+    try {
+      const snap = await getDoc(doc(db, 'agentpay_settings', 'general'));
+      if (snap.exists()) {
+        const data = snap.data();
+        if (data.geminiKeys && Array.isArray(data.geminiKeys)) {
+          const validKeys = data.geminiKeys.filter((k: string) => k && k.trim().length > 10);
+          if (validKeys.length > 0) {
+            this.refreshKeys(validKeys);
+            return;
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[GeminiRotator] Could not load keys from Firestore:', err);
+    }
   }
 
   public refreshKeys(customKeys?: string[]) {

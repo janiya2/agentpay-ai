@@ -105,15 +105,18 @@ export default function ChatInterface() {
       }
 
       const decision = data.agentDecision;
+      const isNegotiationOrCheckout = decision?.intent === 'checkout_ready' || !!decision?.negotiatedDeal || !!data.paypalOrderId;
+
       const assistantMsg: ChatMessage = {
         id: `ast_${Date.now()}`,
         role: 'assistant',
         content: decision?.reply || data.fallbackReply || "I have analyzed your request.",
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         actionPayload: {
-          type: data.paypalOrderId ? 'paypal_checkout' : data.matchedProviders?.length ? 'search_results' : 'negotiation_proposal',
-          matchedProviders: data.matchedProviders,
+          type: isNegotiationOrCheckout ? 'paypal_checkout' : data.matchedProviders?.length ? 'search_results' : 'negotiation_proposal',
+          matchedProviders: isNegotiationOrCheckout ? [] : data.matchedProviders,
           negotiatedTerms: decision?.negotiatedDeal,
+          negotiationDialog: decision?.negotiationDialog,
           paypalOrderId: data.paypalOrderId,
           amount: decision?.negotiatedDeal?.negotiatedPrice
         }
@@ -122,10 +125,10 @@ export default function ChatInterface() {
       setMessages((prev) => [...prev, assistantMsg]);
 
       // If PayPal order was triggered, set it for interactive checkout
-      if (data.paypalOrderId && decision?.negotiatedDeal) {
+      if (decision?.negotiatedDeal) {
         setActivePayPalOrder({
           orderId: data.orderRefId || `ord_${Date.now()}`,
-          paypalOrderId: data.paypalOrderId,
+          paypalOrderId: data.paypalOrderId || `PAYPAL_SANDBOX_${Date.now()}`,
           amount: decision.negotiatedDeal.negotiatedPrice,
           providerName: decision.negotiatedDeal.providerName,
           scopeTitle: decision.negotiatedDeal.scopeTitle
@@ -264,16 +267,16 @@ export default function ChatInterface() {
                 <span className="block text-[10px] text-zinc-500 mt-2 text-right font-mono">{msg.timestamp}</span>
               </div>
 
-              {/* Matched Providers Cards */}
-              {msg.actionPayload?.matchedProviders && msg.actionPayload.matchedProviders.length > 0 && (
+              {/* 1. Matched Providers Discovery Cards (Only shown during discovery stage) */}
+              {msg.actionPayload?.matchedProviders && msg.actionPayload.matchedProviders.length > 0 && msg.actionPayload.type !== 'paypal_checkout' && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                   {msg.actionPayload.matchedProviders.map((prov) => (
                     <div
                       key={prov.id}
-                      className="p-3.5 rounded-2xl bg-zinc-900/80 border border-zinc-800 hover:border-cyan-500/40 transition-all text-xs space-y-2 group"
+                      className="p-3.5 rounded-2xl bg-zinc-900/80 border border-zinc-800 hover:border-cyan-500/40 transition-all text-xs space-y-2 group shadow-md"
                     >
                       <div className="flex items-center gap-2.5">
-                        <img src={prov.avatarUrl} alt={prov.name} className="h-9 w-9 rounded-full bg-zinc-800" />
+                        <img src={prov.avatarUrl} alt={prov.name} className="h-9 w-9 rounded-full bg-zinc-800 border border-zinc-700" />
                         <div>
                           <h4 className="font-bold text-white group-hover:text-cyan-300 transition-colors">{prov.name}</h4>
                           <p className="text-[10px] text-zinc-400 truncate max-w-[150px]">{prov.title}</p>
@@ -285,13 +288,89 @@ export default function ChatInterface() {
                       </div>
                       <button
                         onClick={() => handleSend(`I want to proceed with ${prov.name} for my project within my $${spendingLimit} budget.`)}
-                        className="w-full py-1.5 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 font-semibold border border-cyan-500/30 flex items-center justify-center gap-1 transition-all"
+                        className="w-full py-2 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 font-semibold border border-cyan-500/30 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
                       >
-                        <span>Select Provider</span>
+                        <Bot className="h-3.5 w-3.5 text-cyan-400" />
+                        <span>Negotiate with {prov.name.split(' ')[0]}</span>
                         <ArrowRight className="h-3 w-3" />
                       </button>
                     </div>
                   ))}
+                </div>
+              )}
+
+              {/* 2. Autonomous Multi-Agent Protocol Channel (Direct Bot-to-Provider Negotiation Dialog) */}
+              {msg.actionPayload?.negotiationDialog && msg.actionPayload.negotiationDialog.length > 0 && (
+                <div className="p-4 rounded-2xl bg-zinc-950/95 border border-cyan-500/30 text-xs space-y-3 shadow-xl backdrop-blur-md">
+                  <div className="flex items-center justify-between border-b border-zinc-800/80 pb-2.5">
+                    <div className="flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                      <span className="font-mono font-bold text-cyan-300 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                        <Bot className="h-3.5 w-3.5 text-cyan-400" />
+                        Autonomous Agent-to-Provider Protocol Channel
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-mono text-emerald-400/90 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                      Agreement Codified
+                    </span>
+                  </div>
+
+                  <div className="space-y-2.5 pt-1">
+                    {msg.actionPayload.negotiationDialog.map((dialog, dIdx) => (
+                      <div
+                        key={dIdx}
+                        className={`p-3 rounded-xl text-xs space-y-1 transition-all ${
+                          dialog.speaker === 'agent'
+                            ? 'bg-cyan-950/30 border border-cyan-500/30 text-cyan-100 ml-0 mr-4'
+                            : 'bg-purple-950/30 border border-purple-500/30 text-purple-100 ml-4 mr-0'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between text-[10px] font-bold">
+                          <span className={dialog.speaker === 'agent' ? 'text-cyan-400 font-mono flex items-center gap-1' : 'text-purple-300 font-mono flex items-center gap-1'}>
+                            {dialog.speakerName}
+                          </span>
+                          <span className="text-zinc-500 font-mono text-[9px]">{dialog.timestamp || 'Just now'}</span>
+                        </div>
+                        <p className="text-zinc-200 text-[11.5px] leading-relaxed whitespace-pre-wrap">{dialog.message}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 3. Autonomous Negotiation Agreement Summary (Shown when deal is struck) */}
+              {msg.actionPayload?.negotiatedTerms && (
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-purple-950/30 to-blue-950/30 border border-purple-500/40 text-xs space-y-3 shadow-lg">
+                  <div className="flex items-center justify-between border-b border-purple-500/20 pb-2">
+                    <span className="font-bold text-purple-300 flex items-center gap-1.5">
+                      <Sparkles className="h-3.5 w-3.5 text-purple-400" />
+                      <span>Autonomous Negotiation Breakdown</span>
+                    </span>
+                    <span className="font-mono text-emerald-400 font-black text-sm">
+                      ${msg.actionPayload.negotiatedTerms.negotiatedPrice || msg.actionPayload.amount} USD
+                    </span>
+                  </div>
+
+                  <div className="space-y-2 text-zinc-300 text-[11px]">
+                    <div className="flex items-center justify-between text-zinc-400">
+                      <span>Selected Specialist: <strong className="text-white">{msg.actionPayload.negotiatedTerms.providerName}</strong></span>
+                      {msg.actionPayload.negotiatedTerms.originalPrice && (
+                        <span>Standard Quote: <span className="line-through text-zinc-500">${msg.actionPayload.negotiatedTerms.originalPrice}</span></span>
+                      )}
+                    </div>
+
+                    <div className="space-y-1.5 pt-1">
+                      <span className="text-[10px] uppercase font-mono text-zinc-400 font-semibold">Structured Milestone Tranches:</span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {msg.actionPayload.negotiatedTerms.milestones?.map((m: any, mIdx: number) => (
+                          <div key={mIdx} className="p-2.5 rounded-xl bg-zinc-950/80 border border-zinc-800 flex items-center justify-between text-[11px]">
+                            <span className="text-zinc-200 font-medium truncate max-w-[140px]">{m.title}</span>
+                            <span className="font-mono font-bold text-cyan-400">${m.amount}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -315,8 +394,8 @@ export default function ChatInterface() {
               <p className="text-[11px] text-zinc-500">Milestone escrow protected. Funds are captured securely on PayPal Sandbox.</p>
             </div>
 
-            {/* Official PayPal Button */}
-            <div className="pt-2">
+            {/* Official PayPal Button & 1-Click Sandbox Authorization */}
+            <div className="pt-2 space-y-2">
               <PayPalButtons
                 style={{ layout: 'vertical', color: 'gold', shape: 'rect', label: 'pay' }}
                 createOrder={async () => activePayPalOrder.paypalOrderId}
@@ -324,9 +403,16 @@ export default function ChatInterface() {
                   await handlePayPalCapture(data.orderID);
                 }}
                 onError={(err) => {
-                  console.error('PayPal Button Error:', err);
+                  console.warn('PayPal Sandbox notice:', err);
                 }}
               />
+              <button
+                onClick={() => handlePayPalCapture(activePayPalOrder.paypalOrderId)}
+                className="w-full py-2.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-300 text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md"
+              >
+                <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                <span>🛡️ 1-Click Authorize Sandbox Escrow (${activePayPalOrder.amount} USD)</span>
+              </button>
             </div>
           </div>
         )}

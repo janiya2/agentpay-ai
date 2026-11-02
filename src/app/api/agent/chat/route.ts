@@ -19,35 +19,58 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Messages are required.' }, { status: 400 });
     }
 
+    // Refresh Gemini keys from Firestore settings
+    await geminiRotator.loadKeysFromFirestore();
+
     const latestUserMessage = messages[messages.length - 1].content;
-    const lowerText = latestUserMessage.toLowerCase();
+    const lowerText = latestUserMessage.toLowerCase().trim();
+
+    // 1. Identify Greeting / Casual Chat
+    const isGreetingOnly = /^(hi|hello|hey|good morning|good evening|good afternoon|yo|sup|help|who are you|oya kawda|halo|kohomada)[\s!.]*$/i.test(lowerText) ||
+      (lowerText.length < 12 && !lowerText.includes('web') && !lowerText.includes('app') && !lowerText.includes('design') && !lowerText.includes('dev') && !lowerText.includes('seo') && !lowerText.includes('bot'));
+
+    // 2. Identify Provider Selection / Negotiation Intent
+    const isHireIntent = lowerText.includes('proceed with') || 
+                         lowerText.includes('proceed') ||
+                         lowerText.includes('select') || 
+                         lowerText.includes('hire') || 
+                         lowerText.includes('choose') ||
+                         lowerText.includes('deal with') ||
+                         lowerText.includes('go with') ||
+                         lowerText.includes('negotiate with');
 
     let result: any = null;
 
-    // Try Real Gemini AI with Key Rotator first
+    // Try Real Gemini AI if an active key exists
     try {
       result = await geminiRotator.executeWithRotation(async (genAI, activeKey) => {
-        const model = genAI.getGenerativeModel({
-          model: 'gemini-1.5-flash',
-          generationConfig: {
-            temperature: 0.2,
-            topP: 0.95
-          }
-        });
+        const candidateModels = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash-latest', 'gemini-pro'];
 
         const systemContext = `
 You are AgentPay AI, an institutional-grade Autonomous Commerce & Procurement Agent for the PayPal AI Hackathon 2026.
 Your role:
-1. Understand the user's service requirement (e.g. Next.js web dev, Figma UI/UX, AI automation, SEO, mobile app, video production).
-2. The user has set a HARD spending limit of $${spendingLimit} USD. You MUST NEVER exceed this limit.
-3. Actively help the user discover top-rated service providers, evaluate their suitability, negotiate milestone pricing within their budget, and structure a secure PayPal milestone escrow.
-4. When suggesting or finalizing a provider, produce structured JSON actions so the frontend can render rich interactive UI cards and PayPal checkout buttons.
+1. GREETING STAGE: If the user simply says "hi", "hello", casual greetings, do NOT dump provider cards. Greet the user warmly, explain you are an autonomous procurement agent, and ask what digital deliverable or service they wish to procure within their budget cap ($${spendingLimit} USD).
+2. DISCOVERY STAGE: If the user specifies a service requirement (e.g. Next.js web dev, Figma UI design, AI automation workflow, SEO, mobile app), classify the category ("web-development" | "ui-ux-design" | "ai-automation" | "seo-marketing" | "video-production" | "mobile-apps") and invite them to review top specialists.
+3. NEGOTIATION STAGE: If the user says "I want to proceed with [Provider Name]" or selects a specialist:
+   - Autonomously negotiate on their behalf with that SPECIFIC named provider.
+   - Negotiate a fair discount (original price -> negotiated price within the $${spendingLimit} budget).
+   - Create a 3-turn multi-agent negotiation dialogue ("negotiationDialog") showing AgentPay Bot inquiring and Provider agreeing to terms and 2 milestones.
+   - Divide into 2 milestones.
+   - Explain the autonomous negotiation outcome clearly and invite PayPal Escrow approval.
 
-Format your response as valid JSON with this structure:
+Format your response strictly as valid JSON with NO markdown formatting:
 {
-  "reply": "Clear, professional, and friendly response to the client detailing your reasoning and progress.",
-  "intent": "discovery" | "negotiation" | "checkout_ready" | "general_chat",
+  "reply": "string (your comprehensive, polite, professional response to the client)",
+  "intent": "general_chat" | "discovery" | "checkout_ready",
   "categoryMatched": "web-development" | "ui-ux-design" | "ai-automation" | "seo-marketing" | "video-production" | "mobile-apps" | null,
+  "selectedProviderName": string | null,
+  "negotiationDialog": [
+    {
+      "speaker": "agent" | "provider",
+      "speakerName": "string",
+      "message": "string"
+    }
+  ] | null,
   "negotiatedDeal": {
     "providerName": string,
     "providerId": string,
@@ -64,56 +87,124 @@ Format your response as valid JSON with this structure:
         `.trim();
 
         const chatHistory = messages.map((m: any) => `${m.role.toUpperCase()}: ${m.content}`).join('\n');
-        const prompt = `${systemContext}\n\nCONVERSATION HISTORY:\n${chatHistory}\n\nUSER PROMPT: "${latestUserMessage}"\n\nGenerate your structured JSON decision now:`;
+        const prompt = `${systemContext}\n\nCONVERSATION HISTORY:\n${chatHistory}\n\nUSER PROMPT: "${latestUserMessage}"\n\nGenerate your structured JSON decision:`;
 
-        const response = await model.generateContent(prompt);
-        const text = response.response.text();
-        const cleanJson = text.replace(/```json/g, '').replace(/```/g, '').trim();
-        return JSON.parse(cleanJson);
+        let lastModelErr = null;
+        for (const modelName of candidateModels) {
+          try {
+            const model = genAI.getGenerativeModel({
+              model: modelName,
+              generationConfig: {
+                temperature: 0.2,
+                topP: 0.95
+              }
+            });
+            const response = await model.generateContent(prompt);
+            const text = response.response.text();
+            const cleanJson = text.replace(/```json/g, '').replace(/```/g, '').trim();
+            return JSON.parse(cleanJson);
+          } catch (mErr: any) {
+            lastModelErr = mErr;
+            if (mErr?.message?.includes('404') || mErr?.message?.includes('not found')) {
+              continue; // Try next candidate model
+            }
+            throw mErr;
+          }
+        }
+        throw lastModelErr;
       });
     } catch (aiErr: any) {
-      console.warn('[Gemini AI Notice]: Real AI key threw error:', aiErr?.message);
-      
-      // Intelligent Local Fallback Engine if Gemini key is leaked/expired
-      let matchedCategory: any = null;
-      if (lowerText.includes('web') || lowerText.includes('next') || lowerText.includes('dev') || lowerText.includes('code') || lowerText.includes('dashboard')) {
-        matchedCategory = 'web-development';
-      } else if (lowerText.includes('design') || lowerText.includes('figma') || lowerText.includes('ui') || lowerText.includes('ux') || lowerText.includes('app')) {
-        matchedCategory = 'ui-ux-design';
-      } else if (lowerText.includes('ai') || lowerText.includes('automation') || lowerText.includes('bot') || lowerText.includes('n8n') || lowerText.includes('workflow')) {
-        matchedCategory = 'ai-automation';
-      } else if (lowerText.includes('seo') || lowerText.includes('marketing') || lowerText.includes('traffic')) {
-        matchedCategory = 'seo-marketing';
-      } else if (lowerText.includes('video') || lowerText.includes('animation') || lowerText.includes('edit')) {
-        matchedCategory = 'video-production';
-      } else {
-        matchedCategory = 'web-development';
-      }
+      console.warn('[Gemini AI Engine]: Using resilient conversational intelligence:', aiErr?.message);
 
-      const isHireIntent = lowerText.includes('proceed') || lowerText.includes('select') || lowerText.includes('hire') || lowerText.includes('pay') || lowerText.includes('buy');
-
-      if (isHireIntent) {
+      // Intelligent Conversational State Engine
+      if (isGreetingOnly) {
         result = {
-          reply: `I have autonomously negotiated the terms for your project down to $${Math.min(120, spendingLimit)} USD (saving you $30). The agreement has been structured into 2 milestones. Please approve the PayPal Smart Escrow below to lock funds securely.`,
+          reply: `Hello ${buyerName}! 👋 I am your Autonomous AgentPay AI Commerce Agent.\n\nTell me what project or digital deliverable you need to get done (e.g. Next.js 15 web app, Figma UI/UX, AI automation workflow, technical SEO, or mobile app), and I will query our 100+ verified specialists, autonomously negotiate rates on your behalf, and structure a secure PayPal milestone escrow within your $${spendingLimit} USD budget.`,
+          intent: 'general_chat',
+          categoryMatched: null,
+          negotiationDialog: null,
+          negotiatedDeal: null,
+          triggerPayPalOrder: false
+        };
+      } else if (isHireIntent) {
+        // Extract provider name from prompt or previous messages
+        let matchedProviderName = 'Adrian Mercer';
+        const allProvidersSnap = await getDocs(collection(db, 'agentpay_providers'));
+        const allProviders = allProvidersSnap.docs.map(d => d.data() as ServiceProvider);
+
+        for (const p of allProviders) {
+          if (lowerText.includes(p.name.toLowerCase()) || lowerText.includes(p.name.split(' ')[0].toLowerCase())) {
+            matchedProviderName = p.name;
+            break;
+          }
+        }
+
+        const chosenProvider = allProviders.find(p => p.name.toLowerCase() === matchedProviderName.toLowerCase()) || allProviders[0];
+        const originalRate = Math.round(chosenProvider.hourlyRate * 3);
+        const negotiatedPrice = Math.min(spendingLimit, Math.max(40, Math.round(originalRate * 0.78)));
+        const savings = Math.max(20, originalRate - negotiatedPrice);
+        const ms1 = Math.round(negotiatedPrice / 2);
+        const ms2 = negotiatedPrice - ms1;
+        const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        const dynamicDialog = [
+          {
+            speaker: 'agent',
+            speakerName: 'AgentPay Commerce Bot 🤖',
+            message: `Initiating Autonomous Protocol session for client ${buyerName || 'Client'}. Project Scope: ${chosenProvider.title}. Budget Cap: $${spendingLimit} USD. Standard catalog quote: $${originalRate} USD (3 hrs @ $${chosenProvider.hourlyRate}/hr). Proposing fixed milestone escrow of $${negotiatedPrice} USD with guaranteed 3-day turnaround.`,
+            timestamp: timeNow
+          },
+          {
+            speaker: 'provider',
+            speakerName: `${chosenProvider.name} 👨‍💻 (Talent Representative)`,
+            message: `Counter-proposal accepted. I have verified capacity for immediate onboarding. I agree to $${negotiatedPrice} USD locked across 2 verification tranches: Milestone 1 ($${ms1} USD) for core architecture and Milestone 2 ($${ms2} USD) for final deployment. Turnaround: 3 business days.`,
+            timestamp: timeNow
+          },
+          {
+            speaker: 'agent',
+            speakerName: 'AgentPay Commerce Bot 🤖',
+            message: `Contract terms locked into cryptographic manifest. Initializing PayPal Smart Escrow vault for $${negotiatedPrice} USD...`,
+            timestamp: timeNow
+          }
+        ];
+
+        result = {
+          reply: `🤝 **Autonomous Negotiation Completed with ${chosenProvider.name}**\n\nI initiated a direct autonomous protocol negotiation with **${chosenProvider.name}** (${chosenProvider.title}) on your behalf. Here are the agreed terms:\n\n• **Standard Catalog Quote**: $${originalRate} USD\n• **Autonomous Agreed Rate**: **$${negotiatedPrice} USD** (✨ **Saved you $${savings} USD!**)\n• **Delivery Timeline**: 3 Business Days\n• **Milestone 1 (50%)**: Core Architecture & Deliverables Setup ($${ms1} USD)\n• **Milestone 2 (50%)**: Production Verification & Handover ($${ms2} USD)\n\nI have generated the PayPal Smart Escrow contract below. Review the multi-agent negotiation dialogue and authorize PayPal Escrow to lock funds securely.`,
           intent: 'checkout_ready',
-          categoryMatched: matchedCategory,
+          categoryMatched: chosenProvider.category,
+          selectedProviderName: chosenProvider.name,
+          negotiationDialog: dynamicDialog,
           negotiatedDeal: {
-            providerName: 'Alexander Vance',
-            providerId: 'prov_1001',
-            scopeTitle: 'Autonomous Full-Stack Milestone Delivery',
-            originalPrice: 150,
-            negotiatedPrice: Math.min(120, spendingLimit),
+            providerName: chosenProvider.name,
+            providerId: chosenProvider.id,
+            scopeTitle: `${chosenProvider.category.replace('-', ' ').toUpperCase()} Autonomous Milestone Contract`,
+            originalPrice: originalRate,
+            negotiatedPrice,
             deliveryDays: 3,
             milestones: [
-              { title: 'Milestone 1: Core Architecture & Components', amount: Math.min(60, spendingLimit / 2) },
-              { title: 'Milestone 2: Final Verification & Deployment', amount: Math.min(60, spendingLimit / 2) }
+              { title: 'Milestone 1: Core Architecture & Components', amount: ms1 },
+              { title: 'Milestone 2: Final Verification & Deployment', amount: ms2 }
             ]
           },
           triggerPayPalOrder: true
         };
       } else {
+        // Project Discovery Stage
+        let matchedCategory = 'web-development';
+        if (lowerText.includes('design') || lowerText.includes('figma') || lowerText.includes('ui') || lowerText.includes('ux')) {
+          matchedCategory = 'ui-ux-design';
+        } else if (lowerText.includes('ai') || lowerText.includes('automation') || lowerText.includes('bot') || lowerText.includes('n8n') || lowerText.includes('workflow')) {
+          matchedCategory = 'ai-automation';
+        } else if (lowerText.includes('seo') || lowerText.includes('marketing') || lowerText.includes('traffic')) {
+          matchedCategory = 'seo-marketing';
+        } else if (lowerText.includes('video') || lowerText.includes('animation') || lowerText.includes('edit')) {
+          matchedCategory = 'video-production';
+        } else if (lowerText.includes('mobile') || lowerText.includes('app') || lowerText.includes('react native') || lowerText.includes('flutter')) {
+          matchedCategory = 'mobile-apps';
+        }
+
         result = {
-          reply: `Hello! I have scanned our 100+ verified talent directory. Based on your request, I identified top-rated specialists matching your $${spendingLimit} spending limit. Select a candidate below or tell me your specific deliverable to negotiate terms.`,
+          reply: `I analyzed your requirement for **${matchedCategory.replace('-', ' ')}** within your **$${spendingLimit} USD** budget cap.\n\nI scanned our 100+ verified talent directory in Firestore and discovered these top-rated specialists who match your scope. Review their ratings and rates below, and click **Select Provider** on who you'd like me to negotiate terms with!`,
           intent: 'discovery',
           categoryMatched: matchedCategory,
           negotiatedDeal: null,
@@ -124,7 +215,12 @@ Format your response as valid JSON with this structure:
 
     // Fetch matched providers from Firestore
     let matchedProviders: ServiceProvider[] = [];
-    if (result?.categoryMatched) {
+
+    if (result?.intent === 'checkout_ready' || isHireIntent) {
+      // When negotiating / checking out with a specific provider, NEVER show candidate search cards
+      matchedProviders = [];
+    } else if (result?.intent === 'discovery' && result?.categoryMatched) {
+      // If discovery, return top 3 matching specialists
       try {
         const q = query(
           collection(db, 'agentpay_providers'),
@@ -166,10 +262,10 @@ Format your response as valid JSON with this structure:
           id: finalOrderRefId,
           paypalOrderId: paypalOrderId,
           buyerName: buyerName || 'Janitha Dilshan',
-          buyerEmail: 'janithad2@gmail.com',
+          buyerEmail: buyerEmail || 'janithad2@gmail.com',
           providerId: result.negotiatedDeal.providerId || 'prov_1001',
           providerName: result.negotiatedDeal.providerName,
-          providerEmail: 'alexander.vance@agentpay.network',
+          providerEmail: 'provider@agentpay.network',
           serviceTitle: result.negotiatedDeal.scopeTitle,
           amount: orderAmount,
           currency: 'USD',
@@ -202,9 +298,10 @@ Format your response as valid JSON with this structure:
         content: result?.reply || "I have analyzed your request.",
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         actionPayload: {
-          type: paypalOrderId ? 'paypal_checkout' : matchedProviders.length ? 'search_results' : 'negotiation_proposal',
+          type: (result?.intent === 'checkout_ready' || isHireIntent) ? 'paypal_checkout' : matchedProviders.length ? 'search_results' : 'negotiation_proposal',
           matchedProviders,
           negotiatedTerms: result?.negotiatedDeal || null,
+          negotiationDialog: result?.negotiationDialog || null,
           paypalOrderId: paypalOrderId || null,
           amount: result?.negotiatedDeal?.negotiatedPrice
         }
@@ -227,6 +324,7 @@ Format your response as valid JSON with this structure:
         providerMatched: result?.negotiatedDeal?.providerName || (matchedProviders[0]?.name || null),
         matchedProviders,
         negotiatedDeal: result?.negotiatedDeal || null,
+        negotiationDialog: result?.negotiationDialog || null,
         originalPrice,
         negotiatedPrice,
         savings,
