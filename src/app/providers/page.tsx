@@ -41,6 +41,7 @@ export default function ProviderPortalPage() {
     category: string;
     hourlyRate: number;
     contactEmail: string;
+    paypalEmail: string;
     location: string;
     skills: string;
     bio: string;
@@ -51,6 +52,7 @@ export default function ProviderPortalPage() {
     category: 'web-development',
     hourlyRate: 50,
     contactEmail: '',
+    paypalEmail: '',
     location: 'Remote',
     skills: '',
     bio: '',
@@ -103,6 +105,7 @@ export default function ProviderPortalPage() {
       category: activeProvider.category || 'web-development',
       hourlyRate: activeProvider.hourlyRate || 50,
       contactEmail: activeProvider.contactEmail || '',
+      paypalEmail: activeProvider.paypalEmail || activeProvider.contactEmail || '',
       location: activeProvider.location || 'Remote',
       skills: (activeProvider.skills || []).join(', '),
       bio: activeProvider.bio || '',
@@ -127,6 +130,7 @@ export default function ProviderPortalPage() {
           category: editForm.category,
           hourlyRate: Number(editForm.hourlyRate),
           contactEmail: editForm.contactEmail,
+          paypalEmail: editForm.paypalEmail,
           location: editForm.location,
           skills: editForm.skills.split(',').map(s => s.trim()).filter(Boolean),
           bio: editForm.bio,
@@ -512,10 +516,14 @@ export default function ProviderPortalPage() {
                   </span>
                 </div>
                 <p className="text-xs text-zinc-300 font-medium">{activeProvider.title}</p>
-                <div className="flex items-center gap-3 text-xs text-zinc-400 font-mono">
+                <div className="flex items-center gap-3 text-xs text-zinc-400 font-mono flex-wrap">
                   <span className="text-cyan-400 flex items-center gap-1">
                     <Mail className="h-3 w-3" />
                     {activeProvider.contactEmail}
+                  </span>
+                  <span className="text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded-md flex items-center gap-1 text-[11px]">
+                    <CreditCard className="h-3 w-3" />
+                    Payout PayPal: {activeProvider.paypalEmail || activeProvider.contactEmail}
                   </span>
                   {activeProvider.location && (
                     <span className="text-zinc-500 flex items-center gap-1">
@@ -1082,9 +1090,18 @@ export default function ProviderPortalPage() {
                   </div>
 
                   <div className="flex flex-wrap items-center gap-3 shrink-0">
-                    <div className="text-right pr-2">
-                      <span className="text-[10px] text-zinc-500 uppercase tracking-wider block">Locked Escrow</span>
+                    <div className="text-right pr-2 space-y-0.5">
+                      <span className="text-[10px] text-zinc-500 uppercase tracking-wider block">Contract Value</span>
                       <span className="font-mono font-black text-xl text-emerald-400">${order.amount} USD</span>
+                      <div className="flex items-center gap-1.5 text-[10px] font-mono text-zinc-400 justify-end">
+                        <span className="text-amber-300 font-bold">
+                          Net Payout: ${order.providerPayoutAmount || Number((order.amount * 0.95).toFixed(2))} USD
+                        </span>
+                        <span className="text-zinc-600">•</span>
+                        <span className="text-zinc-500">
+                          Fee: ${order.platformFeeAmount || Number((order.amount * 0.05).toFixed(2))} ({order.platformFeePercentage || 5}%)
+                        </span>
+                      </div>
                     </div>
 
                     {/* Direct Client Chat Button */}
@@ -1237,6 +1254,29 @@ export default function ProviderPortalPage() {
                     placeholder="e.g. San Francisco, CA / Remote"
                   />
                 </div>
+              </div>
+
+              {/* PayPal Payout Account Configuration */}
+              <div className="p-4 rounded-2xl bg-cyan-950/20 border border-cyan-500/30 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] text-cyan-300 font-bold flex items-center gap-1.5">
+                    <CreditCard className="h-3.5 w-3.5 text-cyan-400" />
+                    PayPal Payout Email (Direct Earnings Disbursement)
+                  </label>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 font-bold">
+                    PayPal Payouts Enabled
+                  </span>
+                </div>
+                <input
+                  type="email"
+                  value={editForm.paypalEmail}
+                  onChange={e => setEditForm({ ...editForm, paypalEmail: e.target.value })}
+                  className="w-full bg-zinc-900 border border-zinc-700/80 rounded-xl px-3.5 py-2.5 text-white font-mono text-[11px] focus:outline-none focus:border-cyan-400"
+                  placeholder="e.g. sophia.patel@paypal-sandbox.com"
+                />
+                <p className="text-[10px] text-zinc-400">
+                  When a client authorizes and releases milestone escrows, funds are disbursed directly to this PayPal account via PayPal Payouts API.
+                </p>
               </div>
 
               {/* Row 4: Availability Status */}

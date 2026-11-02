@@ -186,6 +186,7 @@ export default function AdminPage() {
   const [geminiKeys, setGeminiKeys] = useState<string[]>(['']);
   const [resendApiKey, setResendApiKey] = useState('');
   const [resendFromEmail, setResendFromEmail] = useState('onboarding@resend.dev');
+  const [platformFeePercentage, setPlatformFeePercentage] = useState<number>(5);
 
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -262,6 +263,7 @@ export default function AdminPage() {
         setGeminiKeys(data.geminiKeys && data.geminiKeys.length > 0 ? data.geminiKeys : ['']);
         setResendApiKey(data.resendApiKey || '');
         setResendFromEmail(data.resendFromEmail || 'onboarding@resend.dev');
+        setPlatformFeePercentage(data.platformFeePercentage !== undefined ? data.platformFeePercentage : 5);
       } else {
         setGeminiKeys([process.env.NEXT_PUBLIC_GEMINI_API_KEY || 'AIzaSyD_5frWyGBMZ4BXECEeLHB9qKneoJWUC-s']);
       }
@@ -332,6 +334,7 @@ export default function AdminPage() {
         activeGeminiKeyIndex: 0,
         resendApiKey: resendApiKey.trim(),
         resendFromEmail: resendFromEmail.trim(),
+        platformFeePercentage: Number(platformFeePercentage),
         updatedAt: new Date().toISOString()
       }, { merge: true });
 
@@ -386,6 +389,10 @@ export default function AdminPage() {
 
   // Real Metrics Calculations
   const totalVolume = orders.reduce((acc, curr) => acc + (curr.amount || 0), 0);
+  const totalAdminRevenue = orders.reduce((acc, curr) => {
+    return acc + (curr.platformFeeAmount !== undefined ? curr.platformFeeAmount : Number((curr.amount * (platformFeePercentage / 100)).toFixed(2)));
+  }, 0);
+  const totalProviderDisbursements = totalVolume - totalAdminRevenue;
   const totalSavings = chatSessions.reduce((acc, curr) => acc + (curr.savings || 0), 0);
   const activeEscrowsCount = orders.filter(o => o.status === 'in-escrow').length;
 
@@ -881,49 +888,51 @@ export default function AdminPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="p-5 rounded-3xl bg-zinc-900/40 border border-zinc-800/80 space-y-2 relative overflow-hidden">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-zinc-400 uppercase font-semibold">Total Escrow Volume</span>
-                  <div className="h-8 w-8 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                  <span className="text-xs text-zinc-400 uppercase font-semibold">Gross Escrow GMV</span>
+                  <div className="h-8 w-8 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
                     <DollarSign className="h-4 w-4" />
                   </div>
                 </div>
-                <p className="text-2xl font-black font-mono text-emerald-400">${totalVolume.toFixed(2)} USD</p>
-                <div className="flex items-center gap-1 text-[11px] text-emerald-400/90 font-mono">
+                <p className="text-2xl font-black font-mono text-cyan-300">${totalVolume.toFixed(2)} USD</p>
+                <div className="flex items-center gap-1 text-[11px] text-cyan-400/90 font-mono">
                   <TrendingUp className="h-3 w-3" />
-                  <span>Real PayPal Orders v2 Ledger</span>
+                  <span>Real PayPal Orders v2 Volume</span>
                 </div>
               </div>
 
-              <div className="p-5 rounded-3xl bg-zinc-900/40 border border-zinc-800/80 space-y-2 relative overflow-hidden">
+              <div className="p-5 rounded-3xl bg-gradient-to-br from-emerald-950/30 to-zinc-900/40 border border-emerald-500/40 space-y-2 relative overflow-hidden shadow-lg shadow-emerald-950/20">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-zinc-400 uppercase font-semibold">Autonomous Savings</span>
-                  <div className="h-8 w-8 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
-                    <TrendingUp className="h-4 w-4" />
+                  <span className="text-xs text-emerald-400 uppercase font-bold tracking-wider">Admin Platform Revenue</span>
+                  <div className="h-8 w-8 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-300">
+                    <Sparkles className="h-4 w-4" />
                   </div>
                 </div>
-                <p className="text-2xl font-black font-mono text-cyan-300">${totalSavings.toFixed(2)} USD</p>
-                <p className="text-[11px] text-zinc-400">Actual savings achieved by AI multi-turn negotiations</p>
+                <p className="text-2xl font-black font-mono text-emerald-300">${totalAdminRevenue.toFixed(2)} USD</p>
+                <p className="text-[11px] text-emerald-400/90 font-mono">
+                  Net platform take rate ({platformFeePercentage}%) retained in Platform Vault
+                </p>
               </div>
 
               <div className="p-5 rounded-3xl bg-zinc-900/40 border border-zinc-800/80 space-y-2 relative overflow-hidden">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-zinc-400 uppercase font-semibold">Active Escrows</span>
+                  <span className="text-xs text-zinc-400 uppercase font-semibold">Provider Disbursements</span>
                   <div className="h-8 w-8 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                    <CreditCard className="h-4 w-4" />
+                  </div>
+                </div>
+                <p className="text-2xl font-black font-mono text-amber-300">${totalProviderDisbursements.toFixed(2)} USD</p>
+                <p className="text-[11px] text-zinc-400 font-mono">Disbursable via PayPal Payouts API</p>
+              </div>
+
+              <div className="p-5 rounded-3xl bg-zinc-900/40 border border-zinc-800/80 space-y-2 relative overflow-hidden">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-zinc-400 uppercase font-semibold">Active Contracts</span>
+                  <div className="h-8 w-8 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400">
                     <ShieldCheck className="h-4 w-4" />
                   </div>
                 </div>
-                <p className="text-2xl font-black font-mono text-amber-300">{activeEscrowsCount} Contracts</p>
-                <p className="text-[11px] text-zinc-400">Locked in PayPal milestone vaults</p>
-              </div>
-
-              <div className="p-5 rounded-3xl bg-zinc-900/40 border border-zinc-800/80 space-y-2 relative overflow-hidden">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-zinc-400 uppercase font-semibold">Verified Talent Pool</span>
-                  <div className="h-8 w-8 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400">
-                    <Users className="h-4 w-4" />
-                  </div>
-                </div>
-                <p className="text-2xl font-black font-mono text-white">{providers.length} Specialists</p>
-                <p className="text-[11px] text-purple-300">Live in Firestore collection (`agentpay_providers`)</p>
+                <p className="text-2xl font-black font-mono text-white">{activeEscrowsCount} in Escrow</p>
+                <p className="text-[11px] text-purple-300">{providers.length} verified specialists indexed</p>
               </div>
             </div>
 
@@ -1208,10 +1217,21 @@ export default function AdminPage() {
                         </p>
                       </div>
 
-                      <div className="flex items-center gap-3">
-                        <span className="text-base font-black font-mono text-emerald-400">
-                          ${order.amount} USD
-                        </span>
+                      <div className="flex items-center gap-4">
+                        <div className="text-right">
+                          <span className="text-base font-black font-mono text-emerald-400 block">
+                            ${order.amount} USD
+                          </span>
+                          <div className="flex items-center gap-1.5 text-[10px] font-mono text-zinc-400 justify-end">
+                            <span className="text-emerald-400 font-bold">
+                              Fee: +${order.platformFeeAmount || Number((order.amount * (platformFeePercentage / 100)).toFixed(2))}
+                            </span>
+                            <span className="text-zinc-600">•</span>
+                            <span className="text-amber-300">
+                              Net: ${order.providerPayoutAmount || Number((order.amount * (1 - platformFeePercentage / 100)).toFixed(2))}
+                            </span>
+                          </div>
+                        </div>
                         <span className={`px-2.5 py-1 rounded-full text-[10px] font-mono font-bold uppercase ${
                           order.status === 'completed'
                             ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
@@ -1238,8 +1258,9 @@ export default function AdminPage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between pt-2 text-[11px] text-zinc-500 font-mono border-t border-zinc-800/60">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 text-[11px] text-zinc-500 font-mono border-t border-zinc-800/60">
                       <span>PayPal Ref: {order.paypalOrderId}</span>
+                      <span>Disbursable to: <strong className="text-amber-300">{order.providerPaypalEmail || order.providerEmail}</strong></span>
                       <span>Created: {new Date(order.createdAt).toLocaleDateString()}</span>
                     </div>
                   </div>
@@ -1577,6 +1598,67 @@ export default function AdminPage() {
                     data-lpignore="true"
                     className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2 text-xs font-mono text-white placeholder-zinc-600 focus:outline-none focus:border-blue-500/50"
                   />
+                </div>
+              </div>
+            </div>
+
+            {/* 4. Platform Monetization & Take Rate Settings */}
+            <div className="p-6 rounded-3xl bg-zinc-900/40 border border-emerald-500/30 space-y-4 bg-gradient-to-br from-emerald-950/10 to-zinc-900/40">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                    <DollarSign className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h2 className="text-sm font-bold text-white">Platform Commission & Monetization Rate</h2>
+                    <p className="text-xs text-zinc-400">Admin take rate deducted on all client-funded milestone escrows.</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-emerald-400 font-black text-sm bg-emerald-500/10 px-3 py-1 rounded-xl border border-emerald-500/30">
+                    Active Take Rate: {platformFeePercentage}%
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs text-zinc-400 font-medium">Platform Fee Percentage (%)</label>
+                    <span className="font-mono text-xs text-emerald-400 font-bold">{platformFeePercentage}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="1"
+                    max="20"
+                    step="0.5"
+                    value={platformFeePercentage}
+                    onChange={e => setPlatformFeePercentage(Number(e.target.value))}
+                    className="w-full accent-emerald-400 cursor-pointer"
+                  />
+                  <div className="flex justify-between text-[10px] text-zinc-500 font-mono">
+                    <span>1% (Low)</span>
+                    <span>5% (Recommended)</span>
+                    <span>10% (Market Standard)</span>
+                    <span>20% (Max)</span>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-zinc-950 border border-zinc-800 text-xs space-y-1.5">
+                  <span className="text-[11px] font-bold text-zinc-300 block">Unit Economics Example ($200 Milestone):</span>
+                  <div className="flex justify-between text-zinc-400 font-mono text-[11px]">
+                    <span>Gross Client Payment:</span>
+                    <span className="text-white">$200.00 USD</span>
+                  </div>
+                  <div className="flex justify-between text-emerald-400 font-mono text-[11px]">
+                    <span>Admin Platform Profit ({platformFeePercentage}%):</span>
+                    <span>+${((200 * platformFeePercentage) / 100).toFixed(2)} USD</span>
+                  </div>
+                  <div className="flex justify-between text-amber-300 font-mono text-[11px]">
+                    <span>Provider Net Payout ({100 - platformFeePercentage}%):</span>
+                    <span>${(200 - (200 * platformFeePercentage) / 100).toFixed(2)} USD</span>
+                  </div>
                 </div>
               </div>
             </div>

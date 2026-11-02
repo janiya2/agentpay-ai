@@ -26,6 +26,7 @@ export interface ServiceProvider {
     deliveryDays: number;
   };
   contactEmail: string;
+  paypalEmail?: string;
   status: 'active' | 'busy' | 'offline';
   verified: boolean;
   createdAt: string;
@@ -108,6 +109,11 @@ export interface AgentPayOrder {
   serviceTitle: string;
   amount: number;
   currency: 'USD';
+  platformFeePercentage?: number;
+  platformFeeAmount?: number;
+  providerPayoutAmount?: number;
+  providerPaypalEmail?: string;
+  payoutStatus?: 'pending' | 'partially-released' | 'disbursed';
   status: 'pending-payment' | 'in-escrow' | 'completed' | 'disputed' | 'refunded';
   milestones: Array<{
     id: string;
@@ -128,6 +134,7 @@ export interface PlatformSettings {
   activeGeminiKeyIndex: number;
   resendApiKey: string;
   resendFromEmail: string;
+  platformFeePercentage?: number;
   adminPasscode: string;
 }
 

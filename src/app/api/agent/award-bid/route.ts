@@ -43,7 +43,28 @@ export async function POST(req: NextRequest) {
       paypalOrderId = `PAYPAL_SANDBOX_${Date.now()}`;
     }
 
-    // Save order in agentpay_orders
+    // Fetch platform fee from settings or default to 5%
+    let platformFeePercentage = 5;
+    try {
+      const settingsSnap = await getDoc(doc(db, 'agentpay_settings', 'general'));
+      if (settingsSnap.exists() && settingsSnap.data().platformFeePercentage !== undefined) {
+        platformFeePercentage = Number(settingsSnap.data().platformFeePercentage);
+      }
+    } catch (e) {}
+
+    const platformFeeAmount = Number(((winningPrice * platformFeePercentage) / 100).toFixed(2));
+    const providerPayoutAmount = Number((winningPrice - platformFeeAmount).toFixed(2));
+
+    // Lookup provider's registered PayPal Payout Email from Firestore
+    let providerPaypalEmail = winningBid.providerEmail || winningBid.email || 'provider@agentpay.network';
+    try {
+      const provSnap = await getDoc(doc(db, 'agentpay_providers', winningBid.providerId || winningBid.id));
+      if (provSnap.exists() && provSnap.data().paypalEmail) {
+        providerPaypalEmail = provSnap.data().paypalEmail;
+      }
+    } catch (e) {}
+
+    // Save order in agentpay_orders with platform fee and provider payout breakdown
     const orderDoc = {
       id: finalOrderRefId,
       paypalOrderId,
@@ -52,8 +73,13 @@ export async function POST(req: NextRequest) {
       providerId: winningBid.providerId || winningBid.id,
       providerName: winningBid.providerName || winningBid.name,
       providerEmail: winningBid.providerEmail || winningBid.email || 'provider@agentpay.network',
+      providerPaypalEmail,
       serviceTitle: sessionData.projectScope || 'Milestone Contract',
       amount: winningPrice,
+      platformFeePercentage,
+      platformFeeAmount,
+      providerPayoutAmount,
+      payoutStatus: 'pending',
       currency: 'USD',
       status: 'pending-payment',
       milestones: (winningBid.milestones || [

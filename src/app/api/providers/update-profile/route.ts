@@ -14,6 +14,7 @@ export async function POST(req: NextRequest) {
       bio, 
       skills, 
       contactEmail, 
+      paypalEmail,
       location, 
       status 
     } = body;
@@ -50,6 +51,7 @@ export async function POST(req: NextRequest) {
       updatePayload.skills = skills.split(',').map(s => s.trim()).filter(Boolean);
     }
     if (contactEmail) updatePayload.contactEmail = contactEmail.trim();
+    if (paypalEmail) updatePayload.paypalEmail = paypalEmail.trim();
     if (location) updatePayload.location = location.trim();
     if (status) updatePayload.status = status;
 
