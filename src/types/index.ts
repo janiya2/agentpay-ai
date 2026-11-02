@@ -90,3 +90,4 @@ export interface PlatformSettings {
   resendFromEmail: string;
   adminPasscode: string;
 }
+
