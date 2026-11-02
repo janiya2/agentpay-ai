@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { geminiRotator } from '@/lib/gemini-rotator';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, query, where, limit } from 'firebase/firestore';
+import { collection, getDocs, query, where, limit, doc, setDoc } from 'firebase/firestore';
 import { createPayPalOrder } from '@/lib/paypal';
 import type { ServiceProvider } from '@/types';
 
@@ -152,6 +152,61 @@ Format your response as valid JSON with this structure:
         console.error('[PayPal API Order Creation Error, using test order ID]:', err);
         paypalOrderId = `PAYPAL_SANDBOX_${Date.now()}`;
       }
+
+      // Persist order to Firestore agentpay_orders
+      try {
+        const orderDoc = {
+          id: finalOrderRefId,
+          paypalOrderId: paypalOrderId,
+          buyerName: buyerName || 'Janitha Dilshan',
+          buyerEmail: 'janithad2@gmail.com',
+          providerId: result.negotiatedDeal.providerId || 'prov_1001',
+          providerName: result.negotiatedDeal.providerName,
+          providerEmail: 'alexander.vance@agentpay.network',
+          serviceTitle: result.negotiatedDeal.scopeTitle,
+          amount: orderAmount,
+          currency: 'USD',
+          status: 'pending-payment',
+          milestones: (result.negotiatedDeal.milestones || []).map((m: any, idx: number) => ({
+            id: `ms_${idx + 1}`,
+            title: m.title,
+            amount: m.amount,
+            status: 'pending'
+          })),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        await setDoc(doc(db, 'agentpay_orders', finalOrderRefId), orderDoc);
+      } catch (err) {
+        console.warn('[Firestore] Failed to save order:', err);
+      }
+    }
+
+    // Persist real-time chat & autonomous negotiation audit log to Firestore
+    try {
+      const logId = `chat_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+      const originalPrice = result?.negotiatedDeal?.originalPrice || null;
+      const negotiatedPrice = result?.negotiatedDeal?.negotiatedPrice || null;
+      const savings = (originalPrice && negotiatedPrice) ? (originalPrice - negotiatedPrice) : 0;
+
+      await setDoc(doc(db, 'agentpay_chat_logs', logId), {
+        id: logId,
+        timestamp: new Date().toISOString(),
+        buyerName: buyerName || 'Janitha Dilshan',
+        spendingLimit,
+        userPrompt: latestUserMessage,
+        aiResponse: result?.reply || '',
+        intent: result?.intent || 'discovery',
+        categoryMatched: result?.categoryMatched || null,
+        providerMatched: result?.negotiatedDeal?.providerName || (matchedProviders[0]?.name || null),
+        originalPrice,
+        negotiatedPrice,
+        savings,
+        paypalOrderId: paypalOrderId || null,
+        status: paypalOrderId ? 'escrow_created' : (result?.negotiatedDeal ? 'negotiated' : 'inquiry')
+      });
+    } catch (logErr) {
+      console.warn('[Firestore] Failed to save chat log:', logErr);
     }
 
     return NextResponse.json({

@@ -91,3 +91,32 @@ export interface PlatformSettings {
   adminPasscode: string;
 }
 
+export interface ChatLogEntry {
+  id: string;
+  timestamp: string;
+  buyerName: string;
+  spendingLimit: number;
+  userPrompt: string;
+  aiResponse: string;
+  intent: 'discovery' | 'negotiation' | 'checkout_ready' | 'general_chat';
+  categoryMatched?: string | null;
+  providerMatched?: string | null;
+  originalPrice?: number | null;
+  negotiatedPrice?: number | null;
+  savings?: number;
+  paypalOrderId?: string | null;
+  status: 'inquiry' | 'negotiated' | 'escrow_created' | 'completed';
+}
+
+export interface BuyerUser {
+  id: string;
+  name: string;
+  email: string;
+  avatarUrl: string;
+  spendingLimit: number;
+  ordersCount: number;
+  totalSpent: number;
+  lastActive: string;
+  status: 'active' | 'verified';
+}
+
