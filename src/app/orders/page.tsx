@@ -8,8 +8,9 @@ import type { AgentPayOrder } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 import { 
   CreditCard, ShieldCheck, CheckCircle2, Clock, ExternalLink, 
-  RefreshCw, Bot, User, ArrowRight, Sparkles, AlertCircle, FileText, Lock
+  RefreshCw, Bot, User, ArrowRight, Sparkles, AlertCircle, FileText, Lock, MessageSquare
 } from 'lucide-react';
+import DirectChatModal from '@/components/DirectChatModal';
 
 export default function OrdersPage() {
   const { user, openAuthModal } = useAuth();
@@ -18,6 +19,11 @@ export default function OrdersPage() {
   const [activeTab, setActiveTab] = useState<'my_orders' | 'all_ledger'>('my_orders');
   const [releasingIndex, setReleasingIndex] = useState<{ orderId: string; mIdx: number } | null>(null);
   const [releaseSuccessMsg, setReleaseSuccessMsg] = useState<string | null>(null);
+  const [activeChatOrder, setActiveChatOrder] = useState<{
+    orderId: string;
+    orderTitle: string;
+    providerName: string;
+  } | null>(null);
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -377,18 +383,45 @@ export default function OrdersPage() {
                     <span>Turnaround: 3 Business Days with milestone escrow protection.</span>
                   </div>
 
-                  <Link
-                    href="/"
-                    className="flex items-center gap-1 text-cyan-400 hover:text-cyan-300 font-semibold transition-colors"
-                  >
-                    <span>Message Specialist in AI Chat</span>
-                    <ArrowRight className="h-3 w-3" />
-                  </Link>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setActiveChatOrder({
+                        orderId: order.id,
+                        orderTitle: order.serviceTitle,
+                        providerName: order.providerName
+                      })}
+                      className="px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white font-semibold text-xs border border-zinc-700 flex items-center gap-1.5 transition-all cursor-pointer"
+                    >
+                      <MessageSquare className="h-3.5 w-3.5 text-cyan-400" />
+                      <span>Direct Message {order.providerName.split(' ')[0]}</span>
+                    </button>
+
+                    <Link
+                      href="/"
+                      className="flex items-center gap-1 text-cyan-400 hover:text-cyan-300 font-semibold transition-colors"
+                    >
+                      <span>AI Chat Room</span>
+                      <ArrowRight className="h-3 w-3" />
+                    </Link>
+                  </div>
                 </div>
               </div>
             );
           })}
         </div>
+      )}
+
+      {/* Direct Collaboration Modal */}
+      {activeChatOrder && (
+        <DirectChatModal
+          isOpen={!!activeChatOrder}
+          onClose={() => setActiveChatOrder(null)}
+          orderId={activeChatOrder.orderId}
+          orderTitle={activeChatOrder.orderTitle}
+          currentUserRole="client"
+          currentUserName={user?.name || 'Janitha Dilshan'}
+          otherPartyName={activeChatOrder.providerName}
+        />
       )}
     </div>
   );

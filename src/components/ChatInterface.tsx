@@ -9,7 +9,7 @@ import { PayPalButtons } from '@paypal/react-paypal-js';
 import type { ChatMessage, ServiceProvider } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 import { db } from '@/lib/firebase';
-import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
+import { collection, query, orderBy, limit, getDocs, doc, getDoc } from 'firebase/firestore';
 
 export default function ChatInterface() {
   const { user, openAuthModal } = useAuth();
@@ -138,6 +138,79 @@ export default function ChatInterface() {
     }
     setIsHistoryOpen(false);
   };
+
+  // Provider 1-Click Auto Accept
+  const handleProviderAutoAccept = async (targetSessionId?: string) => {
+    const sid = targetSessionId || sessionId;
+    if (!sid) return;
+
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/providers/respond-inquiry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: sid,
+          action: 'accept'
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        if (Array.isArray(data.messages)) {
+          setMessages(data.messages);
+        }
+        if (data.paypalOrderId) {
+          const lastMsg = data.messages?.[data.messages.length - 1];
+          const deal = lastMsg?.actionPayload?.negotiatedTerms;
+          setActivePayPalOrder({
+            orderId: data.orderRefId || `ord_${Date.now()}`,
+            paypalOrderId: data.paypalOrderId,
+            amount: data.amount || deal?.negotiatedPrice || 160,
+            providerName: deal?.providerName || 'Specialist',
+            scopeTitle: deal?.scopeTitle || 'Milestone Contract'
+          });
+        }
+      } else {
+        alert(`Notice: ${data.error || 'Failed to auto-accept'}`);
+      }
+    } catch (err: any) {
+      console.warn('Auto accept error:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Auto-sync polling while waiting for provider to respond in Provider Workspace
+  useEffect(() => {
+    const isAwaiting = messages.some(m => m.actionPayload?.inquiryStatus === 'awaiting_provider');
+    if (!isAwaiting || !sessionId) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const snap = await getDoc(doc(db, 'agentpay_chat_sessions', sessionId));
+        if (snap.exists()) {
+          const sData = snap.data();
+          if (sData.status === 'negotiated' && Array.isArray(sData.messages) && sData.messages.length > messages.length) {
+            setMessages(sData.messages);
+            if (sData.paypalOrderId && sData.negotiatedDeal) {
+              setActivePayPalOrder({
+                orderId: sData.orderRefId || sessionId,
+                paypalOrderId: sData.paypalOrderId,
+                amount: sData.negotiatedDeal.negotiatedPrice,
+                providerName: sData.negotiatedDeal.providerName,
+                scopeTitle: sData.negotiatedDeal.scopeTitle
+              });
+            }
+          }
+        }
+      } catch (err) {
+        // ignore
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [messages, sessionId]);
 
   const handleSend = async (customPrompt?: string) => {
     const textToSend = customPrompt || input.trim();
@@ -449,14 +522,18 @@ export default function ChatInterface() {
                 <div className="p-4 rounded-2xl bg-zinc-950/95 border border-cyan-500/30 text-xs space-y-3 shadow-xl backdrop-blur-md">
                   <div className="flex items-center justify-between border-b border-zinc-800/80 pb-2.5">
                     <div className="flex items-center gap-2">
-                      <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                      <span className={`h-2 w-2 rounded-full ${msg.actionPayload.inquiryStatus === 'awaiting_provider' ? 'bg-amber-400 animate-ping' : 'bg-emerald-400 animate-pulse'}`} />
                       <span className="font-mono font-bold text-cyan-300 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
                         <Bot className="h-3.5 w-3.5 text-cyan-400" />
                         Autonomous Agent-to-Provider Protocol Channel
                       </span>
                     </div>
-                    <span className="text-[10px] font-mono text-emerald-400/90 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                      Agreement Codified
+                    <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${
+                      msg.actionPayload.inquiryStatus === 'awaiting_provider'
+                        ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                        : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                    }`}>
+                      {msg.actionPayload.inquiryStatus === 'awaiting_provider' ? '⏳ Awaiting Provider Response' : 'Agreement Codified'}
                     </span>
                   </div>
 
@@ -480,6 +557,40 @@ export default function ChatInterface() {
                       </div>
                     ))}
                   </div>
+
+                  {/* Awaiting Provider Interactive Controls */}
+                  {msg.actionPayload.inquiryStatus === 'awaiting_provider' && (
+                    <div className="p-3.5 rounded-xl bg-amber-950/20 border border-amber-500/30 space-y-2.5 mt-2">
+                      <div className="flex items-center justify-between text-[11px] text-amber-300">
+                        <span className="font-semibold flex items-center gap-1.5">
+                          <Clock className="h-3.5 w-3.5 text-amber-400" />
+                          <span>Proposal sent to {msg.actionPayload.providerName || 'Specialist'}&apos;s Workspace & Email</span>
+                        </span>
+                        <span className="text-[10px] text-zinc-400 font-mono">Dual-Sided Sync Active</span>
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row items-center gap-2 pt-1">
+                        <a
+                          href={`/providers?providerId=${msg.actionPayload.providerId || 'prov_1001'}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="w-full sm:w-auto flex-1 py-2 px-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-200 hover:text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5 text-cyan-400" />
+                          <span>Open Provider Workspace (Respond as {msg.actionPayload.providerName?.split(' ')[0] || 'Specialist'})</span>
+                        </a>
+
+                        <button
+                          onClick={() => handleProviderAutoAccept(sessionId)}
+                          disabled={isLoading}
+                          className="w-full sm:w-auto py-2 px-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:opacity-95 text-zinc-950 font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-emerald-950/40 transition-all cursor-pointer"
+                        >
+                          <Sparkles className="h-3.5 w-3.5" />
+                          <span>⚡ 1-Click Auto-Accept as Provider</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

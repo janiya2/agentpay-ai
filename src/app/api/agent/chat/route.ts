@@ -3,6 +3,7 @@ import { geminiRotator } from '@/lib/gemini-rotator';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query, where, limit, doc, setDoc } from 'firebase/firestore';
 import { createPayPalOrder } from '@/lib/paypal';
+import { sendProviderNegotiationAlert } from '@/lib/resend';
 import type { ServiceProvider } from '@/types';
 
 export async function POST(req: NextRequest) {
@@ -198,26 +199,14 @@ Format your response strictly as valid JSON with NO markdown formatting:
           {
             speaker: 'agent',
             speakerName: 'AgentPay Commerce Bot 🤖',
-            message: `Initiating Autonomous Protocol session for client ${buyerName || 'Client'}. Project Scope: ${chosenProvider.title}. Budget Cap: $${spendingLimit} USD. Standard catalog quote: $${originalRate} USD (3 hrs @ $${chosenProvider.hourlyRate}/hr). Proposing fixed milestone escrow of $${negotiatedPrice} USD with guaranteed 3-day turnaround.`,
-            timestamp: timeNow
-          },
-          {
-            speaker: 'provider',
-            speakerName: `${chosenProvider.name} 👨‍💻 (Talent Representative)`,
-            message: `Counter-proposal accepted. I have verified capacity for immediate onboarding. I agree to $${negotiatedPrice} USD locked across 2 verification tranches: Milestone 1 ($${ms1} USD) for core architecture and Milestone 2 ($${ms2} USD) for final deployment. Turnaround: 3 business days.`,
-            timestamp: timeNow
-          },
-          {
-            speaker: 'agent',
-            speakerName: 'AgentPay Commerce Bot 🤖',
-            message: `Contract terms locked into cryptographic manifest. Initializing PayPal Smart Escrow vault for $${negotiatedPrice} USD...`,
+            message: `Initiating Autonomous Protocol session for client ${buyerName || 'Client'}. Project Scope: ${chosenProvider.title}. Budget Cap: $${spendingLimit} USD. Standard catalog quote: $${originalRate} USD (3 hrs @ $${chosenProvider.hourlyRate}/hr). Proposing fixed milestone escrow of $${negotiatedPrice} USD with guaranteed 3-day turnaround across 2 milestones ($${ms1} / $${ms2}). Please review and respond in your Provider Workspace.`,
             timestamp: timeNow
           }
         ];
 
         result = {
-          reply: `🤝 **Autonomous Negotiation Completed with ${chosenProvider.name}**\n\nI initiated a direct autonomous protocol negotiation with **${chosenProvider.name}** (${chosenProvider.title}) on your behalf. Here are the agreed terms:\n\n• **Standard Catalog Quote**: $${originalRate} USD\n• **Autonomous Agreed Rate**: **$${negotiatedPrice} USD** (✨ **Saved you $${savings} USD!**)\n• **Delivery Timeline**: 3 Business Days\n• **Milestone 1 (50%)**: Core Architecture & Deliverables Setup ($${ms1} USD)\n• **Milestone 2 (50%)**: Production Verification & Handover ($${ms2} USD)\n\nI have generated the PayPal Smart Escrow contract below. Review the multi-agent negotiation dialogue and authorize PayPal Escrow to lock funds securely.`,
-          intent: 'checkout_ready',
+          reply: `🚀 **Autonomous Contract Proposal Dispatched to ${chosenProvider.name}!**\n\nI have initiated an official procurement inquiry for **$${negotiatedPrice} USD** (2x $${ms1} milestones) within your $${spendingLimit} budget cap. A notification email has been dispatched to **${chosenProvider.name}** (${chosenProvider.contactEmail}).\n\n⏳ **Status: Awaiting Provider Review & Acceptance**\n${chosenProvider.name} has been notified to review the scope and accept or counter-offer from the **Provider Workspace**.\n\n*You can switch to the Provider Workspace to respond as ${chosenProvider.name}, or use the 1-Click Provider Auto-Accept below.*`,
+          intent: 'inquiry_dispatched',
           categoryMatched: chosenProvider.category,
           selectedProviderName: chosenProvider.name,
           negotiationDialog: dynamicDialog,
@@ -233,8 +222,19 @@ Format your response strictly as valid JSON with NO markdown formatting:
               { title: 'Milestone 2: Final Verification & Deployment', amount: ms2 }
             ]
           },
-          triggerPayPalOrder: true
+          triggerPayPalOrder: false
         };
+
+        // Dispatch Resend transactional email alert to the service provider
+        sendProviderNegotiationAlert({
+          providerEmail: chosenProvider.contactEmail,
+          providerName: chosenProvider.name,
+          buyerName: buyerName || 'Janitha Dilshan',
+          serviceTitle: `${chosenProvider.category.replace('-', ' ').toUpperCase()} Milestone Contract`,
+          agreedPrice: negotiatedPrice,
+          deliveryDays: 3,
+          orderId: sessionId || `session_${Date.now()}`
+        }).catch((err: any) => console.warn('[Resend Async Notice]:', err));
       } else {
         // Project Discovery Stage
         let matchedCategory = 'web-development';
@@ -345,7 +345,10 @@ Format your response strictly as valid JSON with NO markdown formatting:
         content: result?.reply || "I have analyzed your request.",
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         actionPayload: {
-          type: (result?.intent === 'checkout_ready' || isHireIntent) ? 'paypal_checkout' : matchedProviders.length ? 'search_results' : 'negotiation_proposal',
+          type: result?.intent === 'inquiry_dispatched' ? 'inquiry_dispatched' : (result?.intent === 'checkout_ready' ? 'paypal_checkout' : matchedProviders.length ? 'search_results' : 'negotiation_proposal'),
+          inquiryStatus: result?.intent === 'inquiry_dispatched' ? 'awaiting_provider' : (result?.negotiatedDeal ? 'accepted' : undefined),
+          providerId: result?.negotiatedDeal?.providerId || null,
+          providerName: result?.negotiatedDeal?.providerName || null,
           matchedProviders,
           negotiatedTerms: result?.negotiatedDeal || null,
           negotiationDialog: result?.negotiationDialog || null,
@@ -371,6 +374,7 @@ Format your response strictly as valid JSON with NO markdown formatting:
         isRealAI,
         modelUsed,
         categoryMatched: result?.categoryMatched || null,
+        providerId: result?.negotiatedDeal?.providerId || null,
         providerMatched: result?.negotiatedDeal?.providerName || (matchedProviders[0]?.name || null),
         matchedProviders,
         negotiatedDeal: result?.negotiatedDeal || null,
@@ -380,7 +384,7 @@ Format your response strictly as valid JSON with NO markdown formatting:
         savings,
         paypalOrderId: paypalOrderId || null,
         orderRefId: finalOrderRefId || null,
-        status: paypalOrderId ? 'escrow_created' : (result?.negotiatedDeal ? 'negotiated' : 'inquiry'),
+        status: paypalOrderId ? 'escrow_created' : (result?.intent === 'inquiry_dispatched' ? 'awaiting_provider' : (result?.negotiatedDeal ? 'negotiated' : 'inquiry')),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       }));

@@ -37,9 +37,13 @@ export interface ChatMessage {
   content: string;
   timestamp: string;
   actionPayload?: {
-    type: 'search_results' | 'negotiation_proposal' | 'paypal_checkout' | 'escrow_release';
+    type: 'search_results' | 'negotiation_proposal' | 'paypal_checkout' | 'escrow_release' | 'inquiry_dispatched';
     matchedProviders?: ServiceProvider[];
     selectedProvider?: ServiceProvider;
+    inquiryStatus?: 'awaiting_provider' | 'accepted' | 'declined';
+    providerId?: string;
+    providerName?: string;
+    providerEmail?: string;
     negotiatedTerms?: {
       providerName?: string;
       providerId?: string;
@@ -101,6 +105,17 @@ export interface PlatformSettings {
   resendApiKey: string;
   resendFromEmail: string;
   adminPasscode: string;
+}
+
+export interface DirectMessage {
+  id: string;
+  orderId?: string;
+  sessionId?: string;
+  senderRole: 'client' | 'provider';
+  senderName: string;
+  senderAvatar?: string;
+  message: string;
+  timestamp: string;
 }
 
 export interface ChatLogEntry {
