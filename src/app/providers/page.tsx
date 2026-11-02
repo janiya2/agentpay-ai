@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
 import type { AgentPayOrder, ServiceProvider } from '@/types';
 import { 
   ShieldCheck, CheckCircle2, Clock, CreditCard, ExternalLink, 
   Send, Sparkles, UserCheck, MessageSquare, AlertCircle, ArrowRight, User, Ban,
-  Edit3, X, Save, MapPin, Briefcase, Tag, Mail, Check
+  Edit3, X, Save, MapPin, Briefcase, Tag, Mail, Check, Search, Filter, Bot, DollarSign, Layers
 } from 'lucide-react';
 import DirectChatModal from '@/components/DirectChatModal';
 
@@ -25,6 +25,12 @@ export default function ProviderPortalPage() {
   const [chatInputPerTender, setChatInputPerTender] = useState<{ [sid: string]: string }>({});
   const [isSendingMessage, setIsSendingMessage] = useState<{ [sid: string]: boolean }>({});
   const [responseNotice, setResponseNotice] = useState<string | null>(null);
+
+  // 2-Pane Chat & Bidding Workspace State
+  const [selectedTenderId, setSelectedTenderId] = useState<string | null>(null);
+  const [tenderFilter, setTenderFilter] = useState<'all' | 'open' | 'awarded' | 'closed'>('all');
+  const [tenderSearchQuery, setTenderSearchQuery] = useState('');
+  const chatScrollRef = useRef<HTMLDivElement>(null);
 
   // Profile Editor Modal State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -274,6 +280,28 @@ export default function ProviderPortalPage() {
 
   const pendingTendersCount = inquiries.filter(i => i.status === 'tender_open' || i.status === 'awaiting_provider').length;
 
+  const filteredTenders = inquiries.filter(inq => {
+    const isOpen = inq.status === 'tender_open' || inq.status === 'awaiting_provider';
+    const isClosed = inq.status === 'closed_awarded' || inq.status === 'escrow_created';
+    const isWinner = isClosed && (inq.winningBid?.providerId === activeProvider?.id || inq.providerId === activeProvider?.id);
+    const isOutbidLate = isClosed && !isWinner;
+
+    if (tenderFilter === 'open' && !isOpen) return false;
+    if (tenderFilter === 'awarded' && !isWinner) return false;
+    if (tenderFilter === 'closed' && !isOutbidLate) return false;
+
+    if (tenderSearchQuery.trim()) {
+      const q = tenderSearchQuery.toLowerCase();
+      const scope = (inq.projectScope || inq.latestPrompt || '').toLowerCase();
+      const client = (inq.buyerName || '').toLowerCase();
+      return scope.includes(q) || client.includes(q);
+    }
+
+    return true;
+  });
+
+  const activeTender = inquiries.find(i => i.id === selectedTenderId) || filteredTenders[0] || null;
+
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 w-full space-y-8 animate-fadeIn">
       {/* Top Banner */}
@@ -437,220 +465,398 @@ export default function ProviderPortalPage() {
         </button>
       </div>
 
-      {/* TAB 1: Incoming AI Negotiations & Tenders */}
+      {/* TAB 1: Incoming AI Negotiations & Two-Pane Chat Workspace */}
       {activeTab === 'inquiries' && (
-        <div className="space-y-5">
+        <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-zinc-300 uppercase tracking-wider flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-cyan-400" />
-              <span>Incoming Autonomous RFQ Tenders</span>
+              <span>Autonomous Tender Negotiations & Chat Workspace</span>
             </h3>
             <span className="text-xs text-zinc-500">
-              Real-time project scopes transmitted to {activeProvider?.name}
+              Interactive multi-agent communication hub for {activeProvider?.name}
             </span>
           </div>
 
           {inquiries.length === 0 ? (
-            <div className="p-12 text-center rounded-3xl bg-zinc-900/20 border border-zinc-800/60 text-xs text-zinc-500 space-y-2">
-              <Sparkles className="h-8 w-8 text-zinc-600 mx-auto" />
-              <p>No active project tenders currently open for {activeProvider?.name}.</p>
-              <p className="text-[11px] text-zinc-600">
-                Tip: Go to AI Agent Chat, search for a service matching {activeProvider?.name.split(' ')[0]}, and click &quot;Dispatch Tender&quot;!
+            <div className="p-16 text-center rounded-3xl bg-zinc-900/20 border border-zinc-800/60 text-xs text-zinc-500 space-y-3">
+              <div className="h-12 w-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 mx-auto">
+                <Bot className="h-6 w-6" />
+              </div>
+              <p className="text-white font-bold text-sm">No active project tenders currently open for {activeProvider?.name}.</p>
+              <p className="text-[11px] text-zinc-400 max-w-md mx-auto leading-relaxed">
+                When a client searches for services in AI Agent Chat and clicks &quot;Dispatch Tender&quot; or selects {activeProvider?.name.split(' ')[0]}, the tender will arrive here instantly with email alerts!
               </p>
             </div>
           ) : (
-            <div className="space-y-5">
-              {inquiries.map((inq) => {
-                const isOpen = inq.status === 'tender_open' || inq.status === 'awaiting_provider';
-                const isClosed = inq.status === 'closed_awarded' || inq.status === 'escrow_created';
-                const isWinner = isClosed && (inq.winningBid?.providerId === activeProvider.id || inq.providerId === activeProvider.id);
-                const isOutbidLate = isClosed && !isWinner;
-                const isResponding = respondingSessionId === inq.id;
+            <div className="h-[700px] w-full rounded-3xl border border-zinc-800/80 bg-zinc-950/90 shadow-2xl overflow-hidden flex flex-col md:flex-row backdrop-blur-xl">
+              {/* LEFT PANE: Tender & Chat List with Search & Filters */}
+              <div className="w-full md:w-80 lg:w-96 border-b md:border-b-0 md:border-r border-zinc-800/80 bg-zinc-950/60 flex flex-col shrink-0">
+                {/* Search & Filters */}
+                <div className="p-3.5 border-b border-zinc-800/80 space-y-2.5">
+                  <div className="relative">
+                    <Search className="h-3.5 w-3.5 absolute left-3 top-2.5 text-zinc-500" />
+                    <input
+                      type="text"
+                      placeholder="Search tenders, scopes, clients..."
+                      value={tenderSearchQuery}
+                      onChange={e => setTenderSearchQuery(e.target.value)}
+                      className="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-400"
+                    />
+                  </div>
 
-                // Check if active provider already submitted a bid for this tender
-                const myExistingBid = (inq.bids || []).find((b: any) => b.providerId === activeProvider.id);
+                  {/* Filter Pills */}
+                  <div className="flex items-center gap-1 overflow-x-auto no-scrollbar text-[11px]">
+                    {(['all', 'open', 'awarded', 'closed'] as const).map(tab => (
+                      <button
+                        key={tab}
+                        onClick={() => setTenderFilter(tab)}
+                        className={`px-2.5 py-1 rounded-lg font-semibold capitalize whitespace-nowrap transition-colors cursor-pointer ${
+                          tenderFilter === tab
+                            ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
+                            : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
+                        }`}
+                      >
+                        {tab === 'all' ? `All (${inquiries.length})` : tab === 'open' ? 'Open' : tab === 'awarded' ? 'Won' : 'Closed'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-                return (
-                  <div
-                    key={inq.id}
-                    className="p-6 rounded-3xl bg-zinc-900/40 border border-zinc-800/80 hover:border-cyan-500/40 transition-all shadow-xl space-y-4"
-                  >
-                    {/* Header */}
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-zinc-800/80 pb-3">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2.5">
-                          <h4 className="font-bold text-white text-base">
-                            {inq.projectScope || inq.latestPrompt || 'Autonomous Milestone Deliverable'}
+                {/* Tenders List */}
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1.5">
+                  {filteredTenders.length === 0 ? (
+                    <div className="py-16 text-center text-xs text-zinc-500">
+                      No matching tenders found.
+                    </div>
+                  ) : (
+                    filteredTenders.map(inq => {
+                      const isSelected = (activeTender?.id === inq.id);
+                      const isOpen = inq.status === 'tender_open' || inq.status === 'awaiting_provider';
+                      const isClosed = inq.status === 'closed_awarded' || inq.status === 'escrow_created';
+                      const isWinner = isClosed && (inq.winningBid?.providerId === activeProvider.id || inq.providerId === activeProvider.id);
+                      const isOutbidLate = isClosed && !isWinner;
+                      const lastMessage = inq.negotiationDialog?.[inq.negotiationDialog.length - 1];
+
+                      return (
+                        <div
+                          key={inq.id}
+                          onClick={() => setSelectedTenderId(inq.id)}
+                          className={`p-3 rounded-2xl border transition-all cursor-pointer space-y-1.5 ${
+                            isSelected
+                              ? 'bg-zinc-900/90 border-cyan-500/50 shadow-md ring-1 ring-cyan-500/20'
+                              : 'bg-zinc-950/40 border-zinc-850 hover:bg-zinc-900/50 hover:border-zinc-700'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-1.5">
+                            <span className="font-bold text-white text-xs truncate max-w-[170px]">
+                              {inq.projectScope || inq.latestPrompt || 'Milestone Contract'}
+                            </span>
+                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-mono font-bold uppercase tracking-wider shrink-0 ${
+                              isOpen
+                                ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
+                                : isWinner
+                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                                : 'bg-rose-500/10 text-rose-400 border border-rose-500/30'
+                            }`}>
+                              {isOpen ? 'Open' : isWinner ? 'Won' : 'Closed'}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between text-[11px] text-zinc-400">
+                            <span className="truncate max-w-[140px] text-zinc-300">
+                              👤 {inq.buyerName || 'Client'}
+                            </span>
+                            <span className="font-mono font-bold text-emerald-400 text-xs">
+                              ${inq.spendingLimit || 200}
+                            </span>
+                          </div>
+
+                          <p className="text-[10.5px] text-zinc-500 line-clamp-1 italic">
+                            {lastMessage?.message || 'Tender scope initialized'}
+                          </p>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+              {/* RIGHT PANE: Full Interactive Chat Room & Procurement Panel */}
+              {activeTender ? (
+                <div className="flex-1 flex flex-col h-full bg-zinc-950/40">
+                  {/* Active Room Top Header */}
+                  <div className="p-4 border-b border-zinc-800/80 bg-zinc-900/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shrink-0">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shrink-0">
+                        <Bot className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-bold text-white text-sm">
+                            {activeTender.projectScope || 'Milestone Deliverable'}
                           </h4>
-                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider ${
-                            isOpen
-                              ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30 animate-pulse'
-                              : isWinner
-                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
-                              : 'bg-rose-500/10 text-rose-400 border border-rose-500/30'
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase ${
+                            activeTender.status === 'closed_awarded'
+                              ? activeTender.winningBid?.providerId === activeProvider.id
+                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                                : 'bg-rose-500/10 text-rose-400 border border-rose-500/30'
+                              : 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
                           }`}>
-                            {isOpen ? '⏳ Tender Open for Bids' : isWinner ? '🏆 Contract Awarded to You' : '🚫 Opportunity Closed (Late)'}
+                            {activeTender.status === 'closed_awarded' 
+                              ? activeTender.winningBid?.providerId === activeProvider.id ? '🏆 Contract Awarded to You' : '🚫 Opportunity Closed (Late)'
+                              : '⏳ Tender Open for Bids'}
                           </span>
                         </div>
-                        <p className="text-xs text-zinc-400">
-                          Client: <strong className="text-white">{inq.buyerName || 'Client'}</strong> ({inq.buyerEmail || 'client@agentpay.network'}) • Client Budget Cap: <strong className="text-cyan-300">${inq.spendingLimit || 200} USD</strong>
+                        <p className="text-xs text-zinc-400 mt-0.5">
+                          Client: <strong className="text-zinc-200">{activeTender.buyerName}</strong> ({activeTender.buyerEmail})
                         </p>
-                      </div>
-
-                      <div className="text-left sm:text-right shrink-0">
-                        <span className="text-[10px] text-zinc-500 uppercase tracking-wider block">Max Budget Cap</span>
-                        <span className="font-mono font-black text-xl text-emerald-400">
-                          ${inq.spendingLimit || 200} USD
-                        </span>
                       </div>
                     </div>
 
-                    {/* Dialogue History */}
-                    {inq.negotiationDialog && inq.negotiationDialog.length > 0 && (
-                      <div className="p-4 rounded-2xl bg-zinc-950/70 border border-zinc-800/80 space-y-2.5 text-xs">
-                        <span className="text-[10px] font-mono uppercase tracking-wider text-cyan-400 font-bold block">
-                          Autonomous Tender Transmissions:
-                        </span>
-                        {inq.negotiationDialog.map((diag: any, dIdx: number) => (
+                    <div className="text-right shrink-0">
+                      <span className="text-[10px] text-zinc-500 uppercase tracking-wider block">Client Budget Cap</span>
+                      <span className="font-mono font-black text-lg text-emerald-400">
+                        ${activeTender.spendingLimit || 200} USD
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Messages Scroll Area */}
+                  <div className="flex-1 p-4 sm:p-5 overflow-y-auto space-y-4 custom-scrollbar">
+                    {/* Notice Banners */}
+                    {activeTender.status === 'closed_awarded' && activeTender.winningBid?.providerId !== activeProvider.id && (
+                      <div className="p-3.5 rounded-2xl bg-rose-950/20 border border-rose-500/30 flex items-start gap-2.5 text-xs text-rose-300">
+                        <Ban className="h-4 w-4 text-rose-400 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-bold">🚫 Opportunity Closed (Contract Already Awarded)</p>
+                          <p className="text-zinc-300 text-[11px] mt-0.5">
+                            The client has already awarded this project to <strong className="text-white">{activeTender.winningBid?.providerName || 'another specialist'}</strong> for <strong className="text-emerald-400">${activeTender.winningBid?.bidPrice || activeTender.amount} USD</strong> and authorized PayPal Milestone Escrow. Bidding is now locked.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {activeTender.status === 'closed_awarded' && activeTender.winningBid?.providerId === activeProvider.id && (
+                      <div className="p-3.5 rounded-2xl bg-emerald-500/15 border border-emerald-500/40 flex items-start gap-2.5 text-xs text-emerald-300">
+                        <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-bold">🎉 Congratulations! The client accepted your bid and funded PayPal Milestone Escrow.</p>
+                          <p className="text-zinc-300 text-[11px] mt-0.5">
+                            Switch to the Active Escrow Orders tab to submit deliverables and chat directly with the client.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Dialogue Speech Bubbles */}
+                    {(!activeTender.negotiationDialog || activeTender.negotiationDialog.length === 0) ? (
+                      <div className="py-12 text-center text-xs text-zinc-500">
+                        No messages yet in this tender negotiation. Send a message below to start!
+                      </div>
+                    ) : (
+                      activeTender.negotiationDialog.map((diag: any, dIdx: number) => {
+                        const isAgent = diag.speaker === 'agent';
+                        const isMe = !isAgent && diag.speakerName?.toLowerCase().includes(activeProvider.name.toLowerCase());
+
+                        return (
                           <div
                             key={dIdx}
-                            className={`p-3 rounded-xl space-y-1 ${
-                              diag.speaker === 'agent'
-                                ? 'bg-cyan-950/20 border border-cyan-500/30 text-cyan-100'
-                                : 'bg-purple-950/20 border border-purple-500/30 text-purple-100'
-                            }`}
+                            className={`flex items-start gap-3 ${isMe ? 'flex-row-reverse' : ''}`}
                           >
-                            <div className="flex items-center justify-between text-[10px] font-bold">
-                              <span className={diag.speaker === 'agent' ? 'text-cyan-400 font-mono' : 'text-purple-300 font-mono'}>
-                                {diag.speakerName}
-                              </span>
-                              <span className="text-zinc-500 font-mono">{diag.timestamp}</span>
+                            <div className={`h-8 w-8 rounded-xl flex items-center justify-center shrink-0 text-xs font-bold ${
+                              isAgent
+                                ? 'bg-cyan-950 border border-cyan-500/40 text-cyan-400'
+                                : 'bg-purple-950 border border-purple-500/40 text-purple-300'
+                            }`}>
+                              {isAgent ? <Bot className="h-4 w-4" /> : <User className="h-4 w-4" />}
                             </div>
-                            <p className="text-zinc-200 text-[11.5px] leading-relaxed">{diag.message}</p>
-                          </div>
-                        ))}
 
-                        {/* Direct Message Input to Client & AI Bot */}
-                        {isOpen && (
-                          <div className="pt-2 border-t border-zinc-800/80 flex items-center gap-2">
-                            <input
-                              type="text"
-                              value={chatInputPerTender[inq.id] || ''}
-                              onChange={e => setChatInputPerTender({ ...chatInputPerTender, [inq.id]: e.target.value })}
-                              onKeyDown={e => e.key === 'Enter' && handleSendTenderMessage(inq.id)}
-                              placeholder={`Message ${inq.buyerName || 'client'} & AI Bot (ask for scope details, milestones)...`}
-                              className="flex-1 bg-zinc-900 border border-zinc-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-400"
-                            />
-                            <button
-                              onClick={() => handleSendTenderMessage(inq.id)}
-                              disabled={isSendingMessage[inq.id] || !chatInputPerTender[inq.id]?.trim()}
-                              className="px-3.5 py-2 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40 shrink-0"
-                            >
-                              {isSendingMessage[inq.id] ? <span className="animate-spin">⏳</span> : <Send className="h-3 w-3" />}
-                              <span>Send</span>
-                            </button>
+                            <div className={`space-y-1 max-w-[80%] sm:max-w-[70%]`}>
+                              <div className="flex items-center gap-2 text-[10px] text-zinc-400 px-1 font-mono">
+                                <span className={`font-bold ${isAgent ? 'text-cyan-400' : 'text-purple-300'}`}>
+                                  {diag.speakerName}
+                                </span>
+                                <span>{diag.timestamp}</span>
+                              </div>
+                              <div className={`p-3.5 rounded-2xl text-xs leading-relaxed ${
+                                isAgent
+                                  ? 'bg-zinc-900/90 text-zinc-200 border border-cyan-500/20 rounded-tl-none shadow-md'
+                                  : 'bg-purple-950/30 text-purple-100 border border-purple-500/30 rounded-tr-none shadow-md'
+                              }`}>
+                                <p className="whitespace-pre-wrap">{diag.message}</p>
+                              </div>
+                            </div>
                           </div>
-                        )}
-                      </div>
+                        );
+                      })
                     )}
 
-                    {/* CASE 1: Opportunity Closed / Late Bid Notice (Exact edge-case Janitha described) */}
-                    {isOutbidLate && (
-                      <div className="p-4 rounded-2xl bg-rose-950/20 border border-rose-500/30 space-y-1 text-xs">
-                        <div className="flex items-center gap-2 text-rose-300 font-bold">
-                          <Ban className="h-4 w-4 text-rose-400 shrink-0" />
-                          <span>🚫 Opportunity Closed (Contract Already Awarded)</span>
+                    {/* Bot Typing Indicator */}
+                    {isSendingMessage[activeTender.id] && (
+                      <div className="flex items-start gap-3">
+                        <div className="h-8 w-8 rounded-xl bg-cyan-950 border border-cyan-500/40 text-cyan-400 flex items-center justify-center shrink-0">
+                          <Bot className="h-4 w-4 animate-spin text-cyan-300" />
                         </div>
-                        <p className="text-zinc-300 leading-relaxed pl-6">
-                          The client has already awarded this project to <strong className="text-white">{inq.winningBid?.providerName || 'another specialist'}</strong> for <strong className="text-emerald-400">${inq.winningBid?.bidPrice || inq.amount} USD</strong> and authorized PayPal Milestone Escrow. Bidding is now locked for this tender. Thank you for your interest!
-                        </p>
-                      </div>
-                    )}
-
-                    {/* CASE 2: You Won the Contract */}
-                    {isWinner && (
-                      <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center justify-between">
-                        <div className="flex items-center gap-2.5">
-                          <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0" />
-                          <div>
-                            <p className="font-bold">🎉 Congratulations! The client accepted your bid and funded the milestone escrow.</p>
-                            <p className="text-[11px] text-zinc-400 mt-0.5">Please switch to the Active Escrow Orders tab to submit deliverables and chat with the client.</p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* CASE 3: Already Submitted Bid, Awaiting Client Decision */}
-                    {isOpen && myExistingBid && (
-                      <div className="p-4 rounded-2xl bg-cyan-950/30 border border-cyan-500/30 space-y-1 text-xs">
-                        <div className="flex items-center justify-between">
-                          <span className="font-bold text-cyan-300 flex items-center gap-2">
-                            <CheckCircle2 className="h-4 w-4 text-cyan-400" />
-                            <span>Your Bid of ${myExistingBid.bidPrice} USD is Live!</span>
+                        <div className="p-3 rounded-2xl bg-zinc-900 border border-cyan-500/30 rounded-tl-none text-xs text-zinc-400 flex items-center gap-2">
+                          <span className="h-2 w-2 rounded-full bg-cyan-400 animate-ping" />
+                          <span className="font-mono text-cyan-300 text-[11px]">
+                            AgentPay Commerce Bot is analyzing your message...
                           </span>
-                          <span className="font-mono text-zinc-400 text-[10px]">Submitted at {myExistingBid.submittedAt}</span>
-                        </div>
-                        <p className="text-zinc-300 pl-6 text-[11px]">
-                          Turnaround: <strong>{myExistingBid.deliveryDays} Days</strong> • Note: &quot;{myExistingBid.note}&quot; • <em>Awaiting client decision in chat.</em>
-                        </p>
-                      </div>
-                    )}
-
-                    {/* CASE 4: Tender Open & Ready to Submit Bid */}
-                    {isOpen && !myExistingBid && (
-                      <div className="pt-2 border-t border-zinc-800 space-y-3">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                          <div>
-                            <label className="block text-[11px] text-zinc-400 mb-1 font-medium">Your Bid Price (USD)</label>
-                            <input
-                              type="number"
-                              value={customBidPrice[inq.id] || 160}
-                              onChange={e => setCustomBidPrice({ ...customBidPrice, [inq.id]: Number(e.target.value) })}
-                              min="30"
-                              max={inq.spendingLimit || 500}
-                              className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-white font-mono font-bold focus:outline-none focus:border-cyan-400"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-[11px] text-zinc-400 mb-1 font-medium">Delivery Turnaround (Days)</label>
-                            <input
-                              type="number"
-                              value={customDeliveryDays[inq.id] || 3}
-                              onChange={e => setCustomDeliveryDays({ ...customDeliveryDays, [inq.id]: Number(e.target.value) })}
-                              min="1"
-                              max="14"
-                              className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-white font-mono font-bold focus:outline-none focus:border-cyan-400"
-                            />
-                          </div>
-                        </div>
-
-                        <div>
-                          <label className="block text-[11px] text-zinc-400 mb-1 font-medium">Technical Note to Client</label>
-                          <input
-                            type="text"
-                            value={customReplyNote[inq.id] || ''}
-                            onChange={e => setCustomReplyNote({ ...customReplyNote, [inq.id]: e.target.value })}
-                            placeholder="e.g. 'I will deliver Next.js 15 with App Router, Tailwind and full documentation in 3 days'..."
-                            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-400"
-                          />
-                        </div>
-
-                        <div className="flex items-center justify-end gap-3 pt-1">
-                          <button
-                            onClick={() => handleSubmitBid(inq.id)}
-                            disabled={isResponding}
-                            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:opacity-95 text-zinc-950 font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-cyan-950/40 transition-all cursor-pointer disabled:opacity-50"
-                          >
-                            {isResponding ? <span className="animate-spin">⏳</span> : <Send className="h-3.5 w-3.5" />}
-                            <span>Submit Competitive Bid (${customBidPrice[inq.id] || 160} USD)</span>
-                          </button>
                         </div>
                       </div>
                     )}
+
+                    <div ref={chatScrollRef} />
                   </div>
-                );
-              })}
+
+                  {/* BOTTOM ACTION DOCK: Quick Prompts, Chat Input & Bidding */}
+                  <div className="border-t border-zinc-800/80 bg-zinc-900/60 p-3 sm:p-4 space-y-3 shrink-0">
+                    {/* Quick Suggestion Chips */}
+                    {activeTender.status !== 'closed_awarded' && (
+                      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar text-[11px]">
+                        <span className="text-zinc-500 shrink-0 font-medium text-[10px]">Quick Prompts:</span>
+                        <button
+                          onClick={() => setChatInputPerTender({
+                            ...chatInputPerTender,
+                            [activeTender.id]: "Hello! What are the exact deliverable formats and wireframe specs required for this project?"
+                          })}
+                          className="px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 hover:text-white shrink-0 transition-colors cursor-pointer"
+                        >
+                          💬 Ask for Scope Details
+                        </button>
+                        <button
+                          onClick={() => setChatInputPerTender({
+                            ...chatInputPerTender,
+                            [activeTender.id]: `I can deliver this project with full source files for $${Math.round((activeTender.spendingLimit || 200) * 0.8)} USD in 3 days.`
+                          })}
+                          className="px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 hover:text-white shrink-0 transition-colors cursor-pointer"
+                        >
+                          🤝 Propose ${Math.round((activeTender.spendingLimit || 200) * 0.8)} in 3 Days
+                        </button>
+                        <button
+                          onClick={() => setChatInputPerTender({
+                            ...chatInputPerTender,
+                            [activeTender.id]: "I have verified my availability and will start immediately upon PayPal escrow lock."
+                          })}
+                          className="px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 hover:text-white shrink-0 transition-colors cursor-pointer"
+                        >
+                          ⚡ Confirm Immediate Start
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Chat Input Bar */}
+                    {activeTender.status !== 'closed_awarded' && (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={chatInputPerTender[activeTender.id] || ''}
+                          onChange={e => setChatInputPerTender({ ...chatInputPerTender, [activeTender.id]: e.target.value })}
+                          onKeyDown={e => e.key === 'Enter' && handleSendTenderMessage(activeTender.id)}
+                          placeholder={`Message ${activeTender.buyerName} & AI Bot (ask questions, negotiate price)...`}
+                          disabled={isSendingMessage[activeTender.id]}
+                          className="flex-1 bg-zinc-900 border border-zinc-700/80 rounded-2xl px-4 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-400 transition-all disabled:opacity-50"
+                        />
+                        <button
+                          onClick={() => handleSendTenderMessage(activeTender.id)}
+                          disabled={isSendingMessage[activeTender.id] || !chatInputPerTender[activeTender.id]?.trim()}
+                          className="h-10 px-4 rounded-2xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40 shrink-0"
+                        >
+                          {isSendingMessage[activeTender.id] ? <span className="animate-spin">⏳</span> : <Send className="h-3.5 w-3.5" />}
+                          <span className="hidden sm:inline">Send</span>
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Docked Milestone Bid Submission Form */}
+                    {(() => {
+                      const isOpen = activeTender.status === 'tender_open' || activeTender.status === 'awaiting_provider';
+                      const myExistingBid = (activeTender.bids || []).find((b: any) => b.providerId === activeProvider.id);
+
+                      if (isOpen && myExistingBid) {
+                        return (
+                          <div className="p-3 rounded-2xl bg-cyan-950/30 border border-cyan-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs">
+                            <div className="flex items-center gap-2 text-cyan-300 font-semibold">
+                              <CheckCircle2 className="h-4 w-4 text-cyan-400 shrink-0" />
+                              <span>Your Bid of ${myExistingBid.bidPrice} USD ({myExistingBid.deliveryDays} Days) is Live on Client&apos;s Bids Board!</span>
+                            </div>
+                            <span className="text-[10px] text-zinc-400 font-mono">Awaiting client decision in Chat</span>
+                          </div>
+                        );
+                      }
+
+                      if (isOpen && !myExistingBid) {
+                        return (
+                          <div className="p-3.5 rounded-2xl bg-zinc-950/80 border border-cyan-500/30 space-y-2 text-xs">
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-cyan-300 flex items-center gap-1.5 text-[11px]">
+                                <DollarSign className="h-3.5 w-3.5 text-cyan-400" />
+                                Submit Official Milestone Bid to Client
+                              </span>
+                              <span className="text-[10px] text-zinc-400 font-mono">Max Cap: ${activeTender.spendingLimit || 200} USD</span>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                              <div>
+                                <label className="block text-[10px] text-zinc-400 mb-0.5">Bid Price ($ USD)</label>
+                                <input
+                                  type="number"
+                                  value={customBidPrice[activeTender.id] || Math.round((activeTender.spendingLimit || 200) * 0.8)}
+                                  onChange={e => setCustomBidPrice({ ...customBidPrice, [activeTender.id]: Number(e.target.value) })}
+                                  min="30"
+                                  max={activeTender.spendingLimit || 500}
+                                  className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-1.5 text-white font-mono font-bold focus:outline-none focus:border-cyan-400 text-xs"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[10px] text-zinc-400 mb-0.5">Turnaround (Days)</label>
+                                <input
+                                  type="number"
+                                  value={customDeliveryDays[activeTender.id] || 3}
+                                  onChange={e => setCustomDeliveryDays({ ...customDeliveryDays, [activeTender.id]: Number(e.target.value) })}
+                                  min="1"
+                                  max="14"
+                                  className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-1.5 text-white font-mono font-bold focus:outline-none focus:border-cyan-400 text-xs"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[10px] text-zinc-400 mb-0.5">Note to Client</label>
+                                <input
+                                  type="text"
+                                  value={customReplyNote[activeTender.id] || ''}
+                                  onChange={e => setCustomReplyNote({ ...customReplyNote, [activeTender.id]: e.target.value })}
+                                  placeholder="e.g. 'Figma prototype with components'"
+                                  className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-1.5 text-white focus:outline-none focus:border-cyan-400 text-xs placeholder-zinc-500"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="flex justify-end pt-1">
+                              <button
+                                onClick={() => handleSubmitBid(activeTender.id)}
+                                disabled={respondingSessionId === activeTender.id}
+                                className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:opacity-95 text-zinc-950 font-bold text-xs flex items-center gap-1.5 shadow-md shadow-emerald-950/40 transition-all cursor-pointer disabled:opacity-50"
+                              >
+                                {respondingSessionId === activeTender.id ? <span className="animate-spin">⏳</span> : <Sparkles className="h-3.5 w-3.5" />}
+                                <span>Submit Official Bid (${customBidPrice[activeTender.id] || Math.round((activeTender.spendingLimit || 200) * 0.8)} USD)</span>
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      return null;
+                    })()}
+                  </div>
+                </div>
+              ) : (
+                <div className="flex-1 flex items-center justify-center text-xs text-zinc-500">
+                  Select a tender on the left to start negotiating.
+                </div>
+              )}
             </div>
           )}
         </div>
