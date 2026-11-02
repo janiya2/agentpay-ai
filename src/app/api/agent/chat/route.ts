@@ -153,66 +153,11 @@ Format your response strictly as valid JSON with NO markdown formatting:
           negotiatedDeal: null,
           triggerPayPalOrder: false
         };
-      } else if (isHireIntent || result?.intent === 'tender_dispatched') {
-        // Multi-Provider Autonomous Tender Protocol Dispatch
-        const matchedCategory = result?.categoryMatched || 'web-development';
-        const allProvidersSnap = await getDocs(collection(db, 'agentpay_providers'));
-        const allProviders = allProvidersSnap.docs.map(d => d.data() as ServiceProvider);
-
-        // Find primary provider if specifically mentioned by client
-        let chosen = allProviders.find(p => lowerText.includes(p.name.toLowerCase()) || lowerText.includes(p.name.split(' ')[0].toLowerCase()));
-        if (!chosen) {
-          chosen = allProviders.find(p => p.category === matchedCategory) || allProviders[0];
-        }
-
-        // Pick 2 peer specialists in same domain for a 3-way competitive tender
-        const peers = allProviders.filter(p => p.id !== chosen!.id && (p.category === chosen!.category || p.category === matchedCategory)).slice(0, 2);
-        const top3Providers = [chosen, ...peers];
-
-        const targetProviders = top3Providers.map((p) => ({
-          id: p.id,
-          name: p.name,
-          title: p.title,
-          email: p.contactEmail,
-          avatarUrl: p.avatarUrl,
-          rating: p.rating,
-          hourlyRate: p.hourlyRate,
-          status: 'awaiting_bid' as const
-        }));
-
-        const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        const dynamicDialog = [
-          {
-            speaker: 'agent' as const,
-            speakerName: 'AgentPay Commerce Bot 🤖',
-            message: `Initiating Autonomous RFP Tender to ${targetProviders.length} specialists (${targetProviders.map(p => p.name).join(', ')}). Project Scope: ${chosen.title}. Client Budget Cap: $${spendingLimit} USD. Awaiting competitive milestone bids and turnaround terms in Provider Workspace.`,
-            timestamp: timeNow
-          }
-        ];
-
+      } else if (isHireIntent) {
         result = {
-          reply: `🚀 **Autonomous Tender Dispatched to 3 Top Specialists!**\n\nI have transmitted your project requirements to:\n${targetProviders.map(p => `• **${p.name}** (${p.title}) — *${p.email}*`).join('\n')}\n\n⏳ **Status: Awaiting Specialist Bids & Counter-Offers**\nNotification emails have been dispatched via Resend. Each specialist has been alerted to review the project scope in their **Provider Workspace** and submit their competitive milestone bids.\n\n*As bids arrive in real-time, they will stream directly into the Bids Board below for your comparison and PayPal milestone escrow award.*`,
           intent: 'tender_dispatched',
-          categoryMatched: chosen.category,
-          selectedProviderName: chosen.name,
-          negotiationDialog: dynamicDialog,
-          targetProviders,
-          bids: [],
-          triggerPayPalOrder: false
+          categoryMatched: 'web-development'
         };
-
-        // Dispatch Resend transactional email alert to all target providers
-        for (const tp of targetProviders) {
-          sendProviderNegotiationAlert({
-            providerEmail: tp.email,
-            providerName: tp.name,
-            buyerName: buyerName || 'Janitha Dilshan',
-            serviceTitle: `${chosen.category.replace('-', ' ').toUpperCase()} Milestone Contract`,
-            agreedPrice: Math.round(spendingLimit * 0.8),
-            deliveryDays: 3,
-            orderId: sessionId || `session_${Date.now()}`
-          }).catch((err: any) => console.warn('[Resend Async Notice]:', err));
-        }
       } else {
         // Project Discovery Stage
         let matchedCategory = 'web-development';
@@ -235,6 +180,80 @@ Format your response strictly as valid JSON with NO markdown formatting:
           negotiatedDeal: null,
           triggerPayPalOrder: false
         };
+      }
+    }
+
+    // UNIFIED AUTONOMOUS TENDER DISPATCH (Executes ALWAYS when client hires / tenders)
+    if (isHireIntent || result?.intent === 'tender_dispatched') {
+      const allProvidersSnap = await getDocs(collection(db, 'agentpay_providers'));
+      const allProviders = allProvidersSnap.docs.map(d => d.data() as ServiceProvider);
+
+      let matchedCategory = result?.categoryMatched || 'web-development';
+      if (lowerText.includes('design') || lowerText.includes('figma') || lowerText.includes('ui') || lowerText.includes('ux')) {
+        matchedCategory = 'ui-ux-design';
+      } else if (lowerText.includes('ai') || lowerText.includes('automation') || lowerText.includes('bot')) {
+        matchedCategory = 'ai-automation';
+      }
+
+      // Find primary provider if specifically mentioned by client
+      let chosen = allProviders.find(p => 
+        lowerText.includes(p.name.toLowerCase()) || 
+        lowerText.includes(p.name.split(' ')[0].toLowerCase()) ||
+        (result?.selectedProviderName && p.name.toLowerCase().includes(result.selectedProviderName.toLowerCase()))
+      );
+
+      if (!chosen) {
+        chosen = allProviders.find(p => p.category === matchedCategory) || allProviders[0];
+      }
+
+      // Pick 2 peer specialists in same domain for a 3-way competitive tender
+      const peers = allProviders.filter(p => p.id !== chosen!.id && (p.category === chosen!.category || p.category === matchedCategory)).slice(0, 2);
+      const top3Providers = [chosen, ...peers];
+
+      const targetProviders = top3Providers.map((p) => ({
+        id: p.id,
+        name: p.name,
+        title: p.title,
+        email: p.contactEmail,
+        avatarUrl: p.avatarUrl,
+        rating: p.rating,
+        hourlyRate: p.hourlyRate,
+        status: 'awaiting_bid' as const
+      }));
+
+      const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const dynamicDialog = [
+        {
+          speaker: 'agent' as const,
+          speakerName: 'AgentPay Commerce Bot 🤖',
+          message: `Initiating Autonomous RFP Tender to ${targetProviders.length} specialists (${targetProviders.map(p => p.name).join(', ')}). Project Scope: ${chosen.title}. Client Budget Cap: $${spendingLimit} USD. Awaiting competitive milestone bids and turnaround terms in Provider Workspace.`,
+          timestamp: timeNow
+        }
+      ];
+
+      result = {
+        reply: `🚀 **Autonomous Tender Dispatched to ${chosen.name} & Top Specialists!**\n\nI have transmitted your project requirements to:\n${targetProviders.map(p => `• **${p.name}** (${p.title}) — *${p.email}*`).join('\n')}\n\n⏳ **Status: Awaiting Specialist Bids & Counter-Offers**\nNotification emails have been dispatched via Resend to their inboxes. Each specialist has been alerted to review the project scope in their **Provider Workspace** and submit their competitive milestone bids.\n\n*As bids arrive in real-time, they will stream directly into the Bids Board below for your comparison and PayPal milestone escrow award.*`,
+        intent: 'tender_dispatched',
+        categoryMatched: chosen.category,
+        selectedProviderName: chosen.name,
+        providerId: chosen.id,
+        negotiationDialog: dynamicDialog,
+        targetProviders,
+        bids: [],
+        triggerPayPalOrder: false
+      };
+
+      // Dispatch Resend transactional email alert to all target providers
+      for (const tp of targetProviders) {
+        sendProviderNegotiationAlert({
+          providerEmail: tp.email,
+          providerName: tp.name,
+          buyerName: buyerName || 'Janitha Dilshan',
+          serviceTitle: `${chosen.title || chosen.category.replace('-', ' ').toUpperCase()} Milestone Contract`,
+          agreedPrice: Math.round(spendingLimit * 0.8),
+          deliveryDays: 3,
+          orderId: sessionId || `session_${Date.now()}`
+        }).catch((err: any) => console.warn('[Resend Async Notice]:', err));
       }
     }
 

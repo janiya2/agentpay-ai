@@ -22,6 +22,8 @@ export default function ProviderPortalPage() {
   const [customBidPrice, setCustomBidPrice] = useState<{ [sid: string]: number }>({});
   const [customDeliveryDays, setCustomDeliveryDays] = useState<{ [sid: string]: number }>({});
   const [customReplyNote, setCustomReplyNote] = useState<{ [sid: string]: string }>({});
+  const [chatInputPerTender, setChatInputPerTender] = useState<{ [sid: string]: string }>({});
+  const [isSendingMessage, setIsSendingMessage] = useState<{ [sid: string]: boolean }>({});
   const [responseNotice, setResponseNotice] = useState<string | null>(null);
 
   // Profile Editor Modal State
@@ -220,6 +222,37 @@ export default function ProviderPortalPage() {
       alert(`Network error: ${err.message}`);
     } finally {
       setRespondingSessionId(null);
+    }
+  };
+
+  // Handle Provider Sending Message into Tender Transmission Dialogue
+  const handleSendTenderMessage = async (sessionId: string) => {
+    const text = chatInputPerTender[sessionId]?.trim();
+    if (!text || !activeProvider) return;
+
+    setIsSendingMessage(prev => ({ ...prev, [sessionId]: true }));
+    try {
+      const res = await fetch('/api/providers/send-tender-message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId,
+          providerId: activeProvider.id,
+          message: text
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setChatInputPerTender(prev => ({ ...prev, [sessionId]: '' }));
+        await loadProviderData();
+      } else {
+        alert(data.error || 'Failed to send message');
+      }
+    } catch (err: any) {
+      alert(`Network error: ${err.message}`);
+    } finally {
+      setIsSendingMessage(prev => ({ ...prev, [sessionId]: false }));
     }
   };
 
@@ -496,6 +529,28 @@ export default function ProviderPortalPage() {
                             <p className="text-zinc-200 text-[11.5px] leading-relaxed">{diag.message}</p>
                           </div>
                         ))}
+
+                        {/* Direct Message Input to Client & AI Bot */}
+                        {isOpen && (
+                          <div className="pt-2 border-t border-zinc-800/80 flex items-center gap-2">
+                            <input
+                              type="text"
+                              value={chatInputPerTender[inq.id] || ''}
+                              onChange={e => setChatInputPerTender({ ...chatInputPerTender, [inq.id]: e.target.value })}
+                              onKeyDown={e => e.key === 'Enter' && handleSendTenderMessage(inq.id)}
+                              placeholder={`Message ${inq.buyerName || 'client'} & AI Bot (ask for scope details, milestones)...`}
+                              className="flex-1 bg-zinc-900 border border-zinc-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-400"
+                            />
+                            <button
+                              onClick={() => handleSendTenderMessage(inq.id)}
+                              disabled={isSendingMessage[inq.id] || !chatInputPerTender[inq.id]?.trim()}
+                              className="px-3.5 py-2 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40 shrink-0"
+                            >
+                              {isSendingMessage[inq.id] ? <span className="animate-spin">⏳</span> : <Send className="h-3 w-3" />}
+                              <span>Send</span>
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )}
 
