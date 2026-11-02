@@ -1,11 +1,19 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Bot, User, Send, Shield, Sparkles, CheckCircle2, DollarSign, Clock, ArrowRight, ExternalLink } from 'lucide-react';
+import { 
+  Bot, User, Send, Shield, Sparkles, CheckCircle2, DollarSign, Clock, 
+  ArrowRight, ExternalLink, History, X, ChevronRight, Lock, MessageSquare, AlertCircle
+} from 'lucide-react';
 import { PayPalButtons } from '@paypal/react-paypal-js';
 import type { ChatMessage, ServiceProvider } from '@/types';
+import { useAuth } from '@/context/AuthContext';
+import { db } from '@/lib/firebase';
+import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 
 export default function ChatInterface() {
+  const { user, openAuthModal } = useAuth();
+
   const [sessionId, setSessionId] = useState<string>('');
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -36,6 +44,11 @@ export default function ChatInterface() {
     modelUsed: 'gemini-2.5-flash'
   });
 
+  // History Drawer State
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [historySessions, setHistorySessions] = useState<any[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Initialize or restore session ID
@@ -61,7 +74,12 @@ export default function ChatInterface() {
         id: `init_${Date.now()}`,
         role: 'assistant',
         content: "New Autonomous Session Initialized. What service or deliverable would you like to procure and negotiate today within your spending limit?",
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        actionPayload: {
+          type: 'negotiation_proposal',
+          isRealAI: true,
+          modelUsed: 'gemini-2.5-flash'
+        }
       }
     ]);
     setActivePayPalOrder(null);
@@ -76,9 +94,61 @@ export default function ChatInterface() {
     scrollToBottom();
   }, [messages, activePayPalOrder]);
 
+  // Load chat history from Firestore
+  const fetchChatHistory = async () => {
+    setLoadingHistory(true);
+    setIsHistoryOpen(true);
+    try {
+      const q = query(
+        collection(db, 'agentpay_chat_sessions'),
+        orderBy('updatedAt', 'desc'),
+        limit(20)
+      );
+      const snap = await getDocs(q);
+      const sessions = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setHistorySessions(sessions);
+    } catch (err) {
+      console.warn('Failed to load chat sessions:', err);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  const resumeSession = (session: any) => {
+    setSessionId(session.id);
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('agentpay_chat_session_id', session.id);
+    }
+    if (Array.isArray(session.messages) && session.messages.length > 0) {
+      setMessages(session.messages);
+    }
+    if (session.spendingLimit) {
+      setSpendingLimit(session.spendingLimit);
+    }
+    if (session.negotiatedDeal) {
+      setActivePayPalOrder(session.paypalOrderId ? {
+        orderId: session.orderRefId || session.id,
+        paypalOrderId: session.paypalOrderId,
+        amount: session.negotiatedDeal.negotiatedPrice,
+        providerName: session.negotiatedDeal.providerName,
+        scopeTitle: session.negotiatedDeal.scopeTitle
+      } : null);
+    } else {
+      setActivePayPalOrder(null);
+    }
+    setIsHistoryOpen(false);
+  };
+
   const handleSend = async (customPrompt?: string) => {
     const textToSend = customPrompt || input.trim();
     if (!textToSend || isLoading) return;
+
+    // Auto-auth prompt check if user isn't logged in and wants to negotiate
+    const isNegotiateIntent = textToSend.toLowerCase().includes('proceed with') || textToSend.toLowerCase().includes('negotiate');
+    if (isNegotiateIntent && !user) {
+      openAuthModal();
+      return;
+    }
 
     const currentSid = sessionId || `session_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     if (!sessionId) setSessionId(currentSid);
@@ -102,8 +172,8 @@ export default function ChatInterface() {
           sessionId: currentSid,
           messages: [...messages, userMsg],
           spendingLimit,
-          buyerName: 'Janitha Dilshan',
-          buyerEmail: 'janithad2@gmail.com'
+          buyerName: user?.name || 'Janitha Dilshan',
+          buyerEmail: user?.email || 'janithad2@gmail.com'
         })
       });
 
@@ -117,7 +187,7 @@ export default function ChatInterface() {
       const isNegotiationOrCheckout = decision?.intent === 'checkout_ready' || !!decision?.negotiatedDeal || !!data.paypalOrderId;
 
       if (typeof data.isRealAI === 'boolean') {
-        setAiStatus({ isRealAI: data.isRealAI, modelUsed: data.modelUsed || 'Gemini' });
+        setAiStatus({ isRealAI: data.isRealAI, modelUsed: data.modelUsed || 'gemini-2.5-flash' });
       }
 
       const assistantMsg: ChatMessage = {
@@ -190,7 +260,7 @@ export default function ChatInterface() {
           {
             id: `sys_${Date.now()}`,
             role: 'assistant',
-            content: `🎉 Payment successfully verified via PayPal Orders v2! $${captureData.amount || activePayPalOrder.amount} USD is securely locked in Milestone Escrow. A Resend notification has been dispatched to ${activePayPalOrder.providerName}.`,
+            content: `🎉 Payment successfully verified via PayPal Orders v2! $${captureData.amount || activePayPalOrder.amount} USD is securely locked in Milestone Escrow. A transactional notification has been dispatched to ${activePayPalOrder.providerName}. You can track and release milestones in the Escrow Vault page.`,
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
           }
         ]);
@@ -203,7 +273,7 @@ export default function ChatInterface() {
   };
 
   return (
-    <div className="flex flex-col h-[750px] w-full max-w-5xl mx-auto rounded-3xl border border-zinc-800/80 bg-zinc-950/70 backdrop-blur-2xl shadow-2xl overflow-hidden">
+    <div className="relative flex flex-col h-[750px] w-full max-w-5xl mx-auto rounded-3xl border border-zinc-800/80 bg-zinc-950/70 backdrop-blur-2xl shadow-2xl overflow-hidden">
       {/* Top Protocol Header & Spending Guardrail */}
       <div className="p-4 sm:p-5 border-b border-zinc-800/80 bg-zinc-900/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -229,8 +299,19 @@ export default function ChatInterface() {
           </div>
         </div>
 
-        {/* Safe Spending Guardrail Slider & Session Actions */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+        {/* Action Buttons & Safe Spending Guardrail */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full sm:w-auto">
+          {/* Transcript History Button */}
+          <button
+            onClick={fetchChatHistory}
+            title="Browse previous negotiation sessions and transcripts"
+            className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-2xl bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-800 text-xs font-semibold transition-colors cursor-pointer"
+          >
+            <History className="h-3.5 w-3.5 text-cyan-400" />
+            <span>Chat History</span>
+          </button>
+
+          {/* New Session Button */}
           <button
             onClick={handleNewSession}
             title="Start fresh procurement session"
@@ -240,11 +321,12 @@ export default function ChatInterface() {
             <span>New Session</span>
           </button>
 
-          <div className="w-full sm:w-72 px-4 py-2 rounded-2xl bg-zinc-900 border border-zinc-800">
-            <div className="flex items-center justify-between text-xs mb-1.5">
-              <span className="flex items-center gap-1.5 text-zinc-400 font-medium">
-                <Shield className="h-3.5 w-3.5 text-cyan-400" />
-                <span>Safe Spending Limit:</span>
+          {/* Spending Limit Guardrail */}
+          <div className="w-full sm:w-64 px-3.5 py-2 rounded-2xl bg-zinc-900 border border-zinc-800">
+            <div className="flex items-center justify-between text-xs mb-1">
+              <span className="flex items-center gap-1 text-zinc-400 font-medium text-[11px]">
+                <Shield className="h-3 w-3 text-cyan-400" />
+                <span>Budget Cap:</span>
               </span>
               <span className="font-mono font-bold text-cyan-300">${spendingLimit} USD</span>
             </div>
@@ -260,6 +342,24 @@ export default function ChatInterface() {
           </div>
         </div>
       </div>
+
+      {/* Guest Client Notice Banner (When user is not signed in) */}
+      {!user && (
+        <div className="px-4 py-2 bg-gradient-to-r from-blue-950/40 via-cyan-950/40 to-purple-950/40 border-b border-cyan-500/20 flex items-center justify-between text-xs">
+          <div className="flex items-center gap-2 text-zinc-300">
+            <Sparkles className="h-3.5 w-3.5 text-cyan-400 shrink-0" />
+            <span className="text-[11px]">
+              Browsing as Guest. Sign in with <strong className="text-white">1-Click Judge Access</strong> or Google to bind milestone escrow orders to your account.
+            </span>
+          </div>
+          <button
+            onClick={openAuthModal}
+            className="px-2.5 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 font-bold text-[11px] border border-cyan-500/40 transition-all cursor-pointer shrink-0"
+          >
+            1-Click Sign In
+          </button>
+        </div>
+      )}
 
       {/* Chat Messages Body */}
       <div className="flex-1 p-4 sm:p-6 overflow-y-auto space-y-5 custom-scrollbar">
@@ -292,7 +392,7 @@ export default function ChatInterface() {
                     msg.actionPayload?.isRealAI ? (
                       <span className="text-emerald-400 flex items-center gap-1 font-semibold">
                         <Sparkles className="h-3 w-3 text-emerald-400" />
-                        Live Neural AI ({msg.actionPayload.modelUsed || 'Gemini'})
+                        Live Neural AI ({msg.actionPayload.modelUsed || 'gemini-2.5-flash'})
                       </span>
                     ) : (
                       <span className="text-amber-400/90 flex items-center gap-1 font-semibold" title="Configure active key in /admin for Live AI">
@@ -306,7 +406,7 @@ export default function ChatInterface() {
                 </div>
               </div>
 
-              {/* 1. Matched Providers Discovery Cards (Only shown during discovery stage) */}
+              {/* 1. Matched Providers Discovery Cards */}
               {msg.actionPayload?.matchedProviders && msg.actionPayload.matchedProviders.length > 0 && msg.actionPayload.type !== 'paypal_checkout' && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                   {msg.actionPayload.matchedProviders.map((prov) => (
@@ -326,7 +426,13 @@ export default function ChatInterface() {
                         <span className="font-mono font-bold text-emerald-400">${prov.hourlyRate}/hr</span>
                       </div>
                       <button
-                        onClick={() => handleSend(`I want to proceed with ${prov.name} for my project within my $${spendingLimit} budget.`)}
+                        onClick={() => {
+                          if (!user) {
+                            openAuthModal();
+                            return;
+                          }
+                          handleSend(`I want to proceed with ${prov.name} for my project within my $${spendingLimit} budget.`);
+                        }}
                         className="w-full py-2 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 font-semibold border border-cyan-500/30 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
                       >
                         <Bot className="h-3.5 w-3.5 text-cyan-400" />
@@ -338,7 +444,7 @@ export default function ChatInterface() {
                 </div>
               )}
 
-              {/* 2. Autonomous Multi-Agent Protocol Channel (Direct Bot-to-Provider Negotiation Dialog) */}
+              {/* 2. Autonomous Multi-Agent Protocol Channel (Direct Bot-to-Provider Dialogue) */}
               {msg.actionPayload?.negotiationDialog && msg.actionPayload.negotiationDialog.length > 0 && (
                 <div className="p-4 rounded-2xl bg-zinc-950/95 border border-cyan-500/30 text-xs space-y-3 shadow-xl backdrop-blur-md">
                   <div className="flex items-center justify-between border-b border-zinc-800/80 pb-2.5">
@@ -377,7 +483,7 @@ export default function ChatInterface() {
                 </div>
               )}
 
-              {/* 3. Autonomous Negotiation Agreement Summary (Shown when deal is struck) */}
+              {/* 3. Autonomous Negotiation Agreement Summary */}
               {msg.actionPayload?.negotiatedTerms && (
                 <div className="p-4 rounded-2xl bg-gradient-to-br from-purple-950/30 to-blue-950/30 border border-purple-500/40 text-xs space-y-3 shadow-lg">
                   <div className="flex items-center justify-between border-b border-purple-500/20 pb-2">
@@ -461,7 +567,7 @@ export default function ChatInterface() {
             <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-400" />
             <div>
               <p className="font-bold">PayPal Milestone Escrow Active!</p>
-              <p className="text-[11px] text-zinc-400 mt-0.5">Order has been committed to Firestore and provider notified via email.</p>
+              <p className="text-[11px] text-zinc-400 mt-0.5">Order committed to Firestore and provider notified via email. View in Escrow Vault.</p>
             </div>
           </div>
         )}
@@ -524,20 +630,128 @@ export default function ChatInterface() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-          placeholder="Speak to your agent: 'Find me a Next.js dev under $150'..."
+          placeholder={user ? `Speak to your agent as ${user.name.split(' ')[0]}: 'Find me a Next.js dev under $150'...` : "Speak to your agent: 'Find me a Next.js dev under $150'..."}
           disabled={isLoading}
           className="flex-1 bg-zinc-900 border border-zinc-700/80 rounded-2xl px-4 py-3 text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all disabled:opacity-50"
         />
         <button
           onClick={() => handleSend()}
           disabled={isLoading || !input.trim()}
-          className="h-11 px-5 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:opacity-90 disabled:opacity-40 text-zinc-950 font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-cyan-950/40 transition-all shrink-0"
+          className="h-11 px-5 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:opacity-90 disabled:opacity-40 text-zinc-950 font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-cyan-950/40 transition-all shrink-0 cursor-pointer"
         >
           {isLoading ? <span className="animate-spin">⏳</span> : <Send className="h-4 w-4" />}
           <span className="hidden sm:inline">Send</span>
         </button>
       </div>
+
+      {/* Sliding Negotiation History Drawer */}
+      {isHistoryOpen && (
+        <div className="absolute inset-0 z-30 flex justify-end bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full max-w-md h-full bg-zinc-950 border-l border-zinc-800 flex flex-col shadow-2xl overflow-hidden animate-slideLeft">
+            {/* Drawer Header */}
+            <div className="p-4 sm:p-5 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/60">
+              <div className="flex items-center gap-2.5">
+                <History className="h-4 w-4 text-cyan-400" />
+                <div>
+                  <h3 className="text-sm font-bold text-white">Negotiation Transcripts</h3>
+                  <p className="text-[10px] text-zinc-400">All autonomous multi-agent sessions stored in Firestore</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsHistoryOpen(false)}
+                className="p-1.5 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Sessions List */}
+            <div className="flex-1 p-4 overflow-y-auto space-y-3 custom-scrollbar">
+              {loadingHistory ? (
+                <div className="py-20 text-center text-xs text-zinc-500">
+                  <span className="animate-spin inline-block mr-2">⏳</span> Loading Firestore transcripts...
+                </div>
+              ) : historySessions.length === 0 ? (
+                <div className="py-20 text-center text-xs text-zinc-500 space-y-1">
+                  <p>No past chat sessions found.</p>
+                  <p className="text-[11px] text-zinc-600">Start a chat and your sessions will appear here automatically.</p>
+                </div>
+              ) : (
+                historySessions.map((sess) => {
+                  const isCurrent = sess.id === sessionId;
+                  return (
+                    <div
+                      key={sess.id}
+                      className={`p-3.5 rounded-2xl border transition-all space-y-2.5 text-xs ${
+                        isCurrent
+                          ? 'bg-cyan-950/20 border-cyan-500/50 shadow-md'
+                          : 'bg-zinc-900/60 border-zinc-800/80 hover:border-zinc-700'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-[10px] text-zinc-400">
+                          {sess.id.replace('session_', '#').substring(0, 16)}
+                        </span>
+                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
+                          sess.status === 'escrow_created'
+                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                            : sess.status === 'negotiated'
+                            ? 'bg-purple-500/10 text-purple-400 border border-purple-500/30'
+                            : 'bg-zinc-800 text-zinc-400 border border-zinc-700'
+                        }`}>
+                          {sess.status === 'escrow_created' ? 'Escrow Active' : sess.status === 'negotiated' ? 'Negotiated' : 'Inquiry'}
+                        </span>
+                      </div>
+
+                      {sess.providerMatched && (
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="text-zinc-300 font-semibold truncate max-w-[180px]">
+                            Specialist: <strong className="text-cyan-300">{sess.providerMatched}</strong>
+                          </span>
+                          {sess.negotiatedPrice && (
+                            <span className="font-mono font-black text-emerald-400">
+                              ${sess.negotiatedPrice} USD
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      <p className="text-[11px] text-zinc-400 line-clamp-2 leading-relaxed bg-zinc-950/60 p-2 rounded-xl border border-zinc-800/50">
+                        {sess.latestResponse || sess.latestPrompt || 'Session conversation transcript'}
+                      </p>
+
+                      <div className="flex items-center justify-between pt-1 border-t border-zinc-800/60 text-[10px] text-zinc-500">
+                        <span>{sess.messageCount || sess.messages?.length || 1} messages</span>
+                        <button
+                          onClick={() => resumeSession(sess)}
+                          className="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-cyan-500/20 text-zinc-200 hover:text-cyan-300 font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                        >
+                          <span>{isCurrent ? 'Viewing' : 'Resume'}</span>
+                          <ChevronRight className="h-3 w-3" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Drawer Footer */}
+            <div className="p-3.5 border-t border-zinc-800 bg-zinc-900/60 flex items-center justify-between">
+              <button
+                onClick={() => {
+                  handleNewSession();
+                  setIsHistoryOpen(false);
+                }}
+                className="w-full py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Sparkles className="h-3.5 w-3.5 text-cyan-400" />
+                <span>Start New Session</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-

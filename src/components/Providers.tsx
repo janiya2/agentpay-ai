@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { PayPalScriptProvider } from '@paypal/react-paypal-js';
+import { AuthProvider } from '@/context/AuthContext';
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const initialOptions = {
@@ -12,9 +13,11 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <PayPalScriptProvider options={initialOptions}>
-      {children}
-    </PayPalScriptProvider>
+    <AuthProvider>
+      <PayPalScriptProvider options={initialOptions}>
+        {children}
+      </PayPalScriptProvider>
+    </AuthProvider>
   );
 }
 

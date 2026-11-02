@@ -41,8 +41,11 @@ export interface ChatMessage {
     matchedProviders?: ServiceProvider[];
     selectedProvider?: ServiceProvider;
     negotiatedTerms?: {
+      providerName?: string;
+      providerId?: string;
       scopeTitle: string;
-      finalPrice: number;
+      finalPrice?: number;
+      negotiatedPrice?: number;
       originalPrice: number;
       deliveryDays: number;
       milestones: Array<{
