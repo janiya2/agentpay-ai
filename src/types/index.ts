@@ -60,6 +60,8 @@ export interface ChatMessage {
     paypalOrderId?: string;
     amount?: number;
     currency?: string;
+    isRealAI?: boolean;
+    modelUsed?: string;
   };
 }
 

@@ -40,10 +40,12 @@ export async function POST(req: NextRequest) {
                          lowerText.includes('negotiate with');
 
     let result: any = null;
+    let isRealAI = false;
+    let modelUsed = 'Offline Rule Engine';
 
     // Try Real Gemini AI if an active key exists
     try {
-      result = await geminiRotator.executeWithRotation(async (genAI, activeKey) => {
+      const aiResponse = await geminiRotator.executeWithRotation(async (genAI, activeKey) => {
         const candidateModels = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash-latest', 'gemini-pro'];
 
         const systemContext = `
@@ -102,7 +104,7 @@ Format your response strictly as valid JSON with NO markdown formatting:
             const response = await model.generateContent(prompt);
             const text = response.response.text();
             const cleanJson = text.replace(/```json/g, '').replace(/```/g, '').trim();
-            return JSON.parse(cleanJson);
+            return { parsed: JSON.parse(cleanJson), modelName };
           } catch (mErr: any) {
             lastModelErr = mErr;
             if (mErr?.message?.includes('404') || mErr?.message?.includes('not found')) {
@@ -113,8 +115,14 @@ Format your response strictly as valid JSON with NO markdown formatting:
         }
         throw lastModelErr;
       });
+
+      result = aiResponse.parsed;
+      isRealAI = true;
+      modelUsed = aiResponse.modelName;
     } catch (aiErr: any) {
       console.warn('[Gemini AI Engine]: Using resilient conversational intelligence:', aiErr?.message);
+      isRealAI = false;
+      modelUsed = 'Offline Rule Engine';
 
       // Intelligent Conversational State Engine
       if (isGreetingOnly) {
@@ -303,7 +311,9 @@ Format your response strictly as valid JSON with NO markdown formatting:
           negotiatedTerms: result?.negotiatedDeal || null,
           negotiationDialog: result?.negotiationDialog || null,
           paypalOrderId: paypalOrderId || null,
-          amount: result?.negotiatedDeal?.negotiatedPrice
+          amount: result?.negotiatedDeal?.negotiatedPrice,
+          isRealAI,
+          modelUsed
         }
       };
 
@@ -319,6 +329,8 @@ Format your response strictly as valid JSON with NO markdown formatting:
         latestPrompt: latestUserMessage,
         latestResponse: assistantMsg.content,
         intent: result?.intent || 'discovery',
+        isRealAI,
+        modelUsed,
         categoryMatched: result?.categoryMatched || null,
         providerMatched: result?.negotiatedDeal?.providerName || (matchedProviders[0]?.name || null),
         matchedProviders,
@@ -359,6 +371,8 @@ Format your response strictly as valid JSON with NO markdown formatting:
 
     return NextResponse.json({
       success: true,
+      isRealAI,
+      modelUsed,
       agentDecision: result,
       matchedProviders,
       paypalOrderId,

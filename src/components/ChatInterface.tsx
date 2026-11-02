@@ -26,6 +26,10 @@ export default function ChatInterface() {
     scopeTitle: string;
   } | null>(null);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [aiStatus, setAiStatus] = useState<{ isRealAI: boolean; modelUsed: string }>({
+    isRealAI: false,
+    modelUsed: 'Offline Engine'
+  });
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -107,6 +111,10 @@ export default function ChatInterface() {
       const decision = data.agentDecision;
       const isNegotiationOrCheckout = decision?.intent === 'checkout_ready' || !!decision?.negotiatedDeal || !!data.paypalOrderId;
 
+      if (typeof data.isRealAI === 'boolean') {
+        setAiStatus({ isRealAI: data.isRealAI, modelUsed: data.modelUsed || 'Gemini' });
+      }
+
       const assistantMsg: ChatMessage = {
         id: `ast_${Date.now()}`,
         role: 'assistant',
@@ -118,7 +126,9 @@ export default function ChatInterface() {
           negotiatedTerms: decision?.negotiatedDeal,
           negotiationDialog: decision?.negotiationDialog,
           paypalOrderId: data.paypalOrderId,
-          amount: decision?.negotiatedDeal?.negotiatedPrice
+          amount: decision?.negotiatedDeal?.negotiatedPrice,
+          isRealAI: data.isRealAI,
+          modelUsed: data.modelUsed
         }
       };
 
@@ -198,9 +208,17 @@ export default function ChatInterface() {
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-sm font-bold text-white tracking-tight">AgentPay Autonomous Room</h2>
-              <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[10px] text-emerald-400 font-mono">
-                Real Gemini 2.5 Active
-              </span>
+              {aiStatus.isRealAI ? (
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[10px] text-emerald-400 font-mono flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  Live Gemini AI ({aiStatus.modelUsed})
+                </span>
+              ) : (
+                <span className="px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-[10px] text-amber-400 font-mono flex items-center gap-1.5" title="Add a valid Gemini key in /admin to activate Live AI">
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                  Offline Rule Engine
+                </span>
+              )}
             </div>
             <p className="text-xs text-zinc-400">Zero-Mock Multi-Turn Negotiation & PayPal Escrow</p>
           </div>
@@ -264,7 +282,23 @@ export default function ChatInterface() {
                 }`}
               >
                 <p className="whitespace-pre-wrap">{msg.content}</p>
-                <span className="block text-[10px] text-zinc-500 mt-2 text-right font-mono">{msg.timestamp}</span>
+                <div className="flex items-center justify-between text-[10px] text-zinc-500 mt-2 font-mono pt-1.5 border-t border-zinc-800/60">
+                  {msg.role === 'assistant' ? (
+                    msg.actionPayload?.isRealAI ? (
+                      <span className="text-emerald-400 flex items-center gap-1 font-semibold">
+                        <Sparkles className="h-3 w-3 text-emerald-400" />
+                        Live Neural AI ({msg.actionPayload.modelUsed || 'Gemini'})
+                      </span>
+                    ) : (
+                      <span className="text-amber-400/90 flex items-center gap-1 font-semibold" title="Configure active key in /admin for Live AI">
+                        <span>⚠️ Offline Fallback Mode</span>
+                      </span>
+                    )
+                  ) : (
+                    <span />
+                  )}
+                  <span>{msg.timestamp}</span>
+                </div>
               </div>
 
               {/* 1. Matched Providers Discovery Cards (Only shown during discovery stage) */}
