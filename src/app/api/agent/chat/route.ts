@@ -7,7 +7,13 @@ import type { ServiceProvider } from '@/types';
 
 export async function POST(req: NextRequest) {
   try {
-    const { messages, spendingLimit = 250, buyerName = 'Janitha Dilshan' } = await req.json();
+    const { 
+      sessionId, 
+      messages, 
+      spendingLimit = 250, 
+      buyerName = 'Janitha Dilshan', 
+      buyerEmail = 'janithad2@gmail.com' 
+    } = await req.json();
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json({ error: 'Messages are required.' }, { status: 400 });
@@ -182,31 +188,70 @@ Format your response as valid JSON with this structure:
       }
     }
 
-    // Persist real-time chat & autonomous negotiation audit log to Firestore
+    // Persist full real chat session with chronological messages to Firestore agentpay_chat_sessions
     try {
-      const logId = `chat_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+      const sid = sessionId || `session_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
       const originalPrice = result?.negotiatedDeal?.originalPrice || null;
       const negotiatedPrice = result?.negotiatedDeal?.negotiatedPrice || null;
       const savings = (originalPrice && negotiatedPrice) ? (originalPrice - negotiatedPrice) : 0;
 
-      await setDoc(doc(db, 'agentpay_chat_logs', logId), {
-        id: logId,
-        timestamp: new Date().toISOString(),
+      const assistantMsg = {
+        id: `ast_${Date.now()}`,
+        role: 'assistant',
+        content: result?.reply || "I have analyzed your request.",
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        actionPayload: {
+          type: paypalOrderId ? 'paypal_checkout' : matchedProviders.length ? 'search_results' : 'negotiation_proposal',
+          matchedProviders,
+          negotiatedTerms: result?.negotiatedDeal || null,
+          paypalOrderId: paypalOrderId || null,
+          amount: result?.negotiatedDeal?.negotiatedPrice
+        }
+      };
+
+      const fullConversation = [...messages, assistantMsg];
+
+      // Save complete session with entire message thread
+      await setDoc(doc(db, 'agentpay_chat_sessions', sid), {
+        id: sid,
         buyerName: buyerName || 'Janitha Dilshan',
+        buyerEmail: buyerEmail || 'janithad2@gmail.com',
         spendingLimit,
-        userPrompt: latestUserMessage,
-        aiResponse: result?.reply || '',
+        messages: fullConversation,
+        messageCount: fullConversation.length,
+        latestPrompt: latestUserMessage,
+        latestResponse: assistantMsg.content,
         intent: result?.intent || 'discovery',
         categoryMatched: result?.categoryMatched || null,
         providerMatched: result?.negotiatedDeal?.providerName || (matchedProviders[0]?.name || null),
+        matchedProviders,
+        negotiatedDeal: result?.negotiatedDeal || null,
         originalPrice,
         negotiatedPrice,
         savings,
         paypalOrderId: paypalOrderId || null,
-        status: paypalOrderId ? 'escrow_created' : (result?.negotiatedDeal ? 'negotiated' : 'inquiry')
-      });
+        orderRefId: finalOrderRefId || null,
+        status: paypalOrderId ? 'escrow_created' : (result?.negotiatedDeal ? 'negotiated' : 'inquiry'),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+
+      // Update real active user profile in Firestore
+      await setDoc(doc(db, 'agentpay_users', 'usr_janitha'), {
+        id: 'usr_janitha',
+        name: buyerName || 'Janitha Dilshan',
+        email: buyerEmail || 'janithad2@gmail.com',
+        avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Janitha&backgroundColor=b6e3f4',
+        spendingLimit,
+        ordersCount: finalOrderRefId ? 1 : 0,
+        totalSpent: finalOrderRefId ? orderAmount : 0,
+        lastActive: 'Just now',
+        status: 'verified',
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+
     } catch (logErr) {
-      console.warn('[Firestore] Failed to save chat log:', logErr);
+      console.warn('[Firestore] Failed to save chat session:', logErr);
     }
 
     return NextResponse.json({

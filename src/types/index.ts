@@ -108,6 +108,38 @@ export interface ChatLogEntry {
   status: 'inquiry' | 'negotiated' | 'escrow_created' | 'completed';
 }
 
+export interface ChatSession {
+  id: string;
+  buyerName: string;
+  buyerEmail: string;
+  spendingLimit: number;
+  messages: ChatMessage[];
+  messageCount: number;
+  latestPrompt: string;
+  latestResponse: string;
+  intent: 'discovery' | 'negotiation' | 'checkout_ready' | 'general_chat';
+  categoryMatched?: string | null;
+  providerMatched?: string | null;
+  matchedProviders?: ServiceProvider[];
+  negotiatedDeal?: {
+    providerName: string;
+    providerId: string;
+    scopeTitle: string;
+    originalPrice: number;
+    negotiatedPrice: number;
+    deliveryDays: number;
+    milestones: Array<{ title: string; amount: number }>;
+  } | null;
+  originalPrice?: number | null;
+  negotiatedPrice?: number | null;
+  savings?: number;
+  paypalOrderId?: string | null;
+  orderRefId?: string | null;
+  status: 'inquiry' | 'negotiated' | 'escrow_created' | 'completed';
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface BuyerUser {
   id: string;
   name: string;

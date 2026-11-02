@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, setDoc, collection, getDocs, limit, query, orderBy } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, getDocs } from 'firebase/firestore';
 import { 
   LayoutDashboard, 
   Users, 
@@ -28,9 +29,12 @@ import {
   ExternalLink,
   Shield,
   Activity,
-  Layers
+  Layers,
+  User as UserIcon,
+  Sparkles,
+  ArrowRight
 } from 'lucide-react';
-import type { PlatformSettings, ServiceProvider, AgentPayOrder, ChatLogEntry, BuyerUser } from '@/types';
+import type { PlatformSettings, ServiceProvider, AgentPayOrder, ChatSession, BuyerUser } from '@/types';
 
 type AdminTab = 'overview' | 'providers' | 'users' | 'chats' | 'orders' | 'settings';
 
@@ -38,7 +42,7 @@ export default function AdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [passcode, setPasscode] = useState('innoxpert2026');
   const [authError, setAuthError] = useState(false);
-  const [activeTab, setActiveTab] = useState<AdminTab>('overview');
+  const [activeTab, setActiveTab] = useState<AdminTab>('chats');
 
   // Platform Settings State
   const [paypalClientId, setPaypalClientId] = useState('');
@@ -55,10 +59,11 @@ export default function AdminPage() {
   const [isSeeding, setIsSeeding] = useState(false);
   const [seedStatus, setSeedStatus] = useState<string | null>(null);
 
-  // Live Database Collections State
+  // Live Database Collections State (100% REAL from Firestore - Zero Mock Data)
   const [providers, setProviders] = useState<ServiceProvider[]>([]);
   const [orders, setOrders] = useState<AgentPayOrder[]>([]);
-  const [chatLogs, setChatLogs] = useState<ChatLogEntry[]>([]);
+  const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [users, setUsers] = useState<BuyerUser[]>([]);
   const [loadingData, setLoadingData] = useState(false);
 
@@ -108,7 +113,7 @@ export default function AdminPage() {
     }
   };
 
-  // Load all platform data from Firestore
+  // Load ONLY REAL platform data from Firestore
   const loadPlatformData = async () => {
     setLoadingData(true);
     try {
@@ -126,171 +131,46 @@ export default function AdminPage() {
         setGeminiKeys([process.env.NEXT_PUBLIC_GEMINI_API_KEY || 'AIzaSyD_5frWyGBMZ4BXECEeLHB9qKneoJWUC-s']);
       }
 
-      // 2. Providers
+      // 2. Real Providers from Firestore
       const provSnap = await getDocs(collection(db, 'agentpay_providers'));
       if (!provSnap.empty) {
         setProviders(provSnap.docs.map(d => d.data() as ServiceProvider));
+      } else {
+        setProviders([]);
       }
 
-      // 3. Orders
+      // 3. Real Orders from Firestore
       const ordersSnap = await getDocs(collection(db, 'agentpay_orders'));
       if (!ordersSnap.empty) {
         setOrders(ordersSnap.docs.map(d => d.data() as AgentPayOrder));
       } else {
-        // Fallback default sample orders
-        setOrders([
-          {
-            id: 'ord_1730001001',
-            paypalOrderId: '9XX2847291840281H',
-            buyerName: 'Janitha Dilshan',
-            buyerEmail: 'janithad2@gmail.com',
-            providerId: 'prov_1001',
-            providerName: 'Alexander Vance',
-            providerEmail: 'alexander.vance@agentpay.network',
-            serviceTitle: 'Next.js 15 Full-Stack SaaS Architecture & Supabase Auth',
-            amount: 120,
-            currency: 'USD',
-            status: 'in-escrow',
-            milestones: [
-              { id: 'ms_1', title: 'Milestone 1: Project Setup & Authentication', amount: 60, status: 'verified' },
-              { id: 'ms_2', title: 'Milestone 2: Database Schema & Live API Integration', amount: 60, status: 'in-progress' }
-            ],
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          },
-          {
-            id: 'ord_1730001002',
-            paypalOrderId: '7BB1948291048209K',
-            buyerName: 'Sarah Connor',
-            buyerEmail: 'sarah.c@techventure.io',
-            providerId: 'prov_1002',
-            providerName: 'Elena Chen',
-            providerEmail: 'elena.chen@agentpay.network',
-            serviceTitle: 'Figma Design System & Mobile App High-Fidelity UI',
-            amount: 80,
-            currency: 'USD',
-            status: 'completed',
-            milestones: [
-              { id: 'ms_1', title: 'Milestone 1: Wireframes & UX Flow', amount: 40, status: 'released' },
-              { id: 'ms_2', title: 'Milestone 2: High-Fi Interactive Figma Prototypes', amount: 40, status: 'released' }
-            ],
-            createdAt: new Date(Date.now() - 86400000).toISOString(),
-            updatedAt: new Date().toISOString()
-          }
-        ]);
+        setOrders([]);
       }
 
-      // 4. Chat Logs
-      const chatsSnap = await getDocs(collection(db, 'agentpay_chat_logs'));
-      if (!chatsSnap.empty) {
-        setChatLogs(chatsSnap.docs.map(d => d.data() as ChatLogEntry));
+      // 4. Real Chat Sessions from Firestore (agentpay_chat_sessions)
+      const sessionsSnap = await getDocs(collection(db, 'agentpay_chat_sessions'));
+      if (!sessionsSnap.empty) {
+        const list = sessionsSnap.docs.map(d => d.data() as ChatSession);
+        // Sort descending by most recent
+        list.sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime());
+        setChatSessions(list);
+        if (list.length > 0) {
+          setSelectedSessionId(prev => prev || list[0].id);
+        }
       } else {
-        setChatLogs([
-          {
-            id: 'chat_seed_101',
-            timestamp: new Date().toISOString(),
-            buyerName: 'Janitha Dilshan',
-            spendingLimit: 200,
-            userPrompt: 'I need a Next.js 15 developer to build a modern dashboard for under $120.',
-            aiResponse: 'I discovered Alexander Vance (5.0 rating, 48 completed jobs). Autonomously negotiated original rate of $150 down to $120 USD. Structured into 2 milestones and locked via PayPal Smart Escrow.',
-            intent: 'checkout_ready',
-            categoryMatched: 'web-development',
-            providerMatched: 'Alexander Vance',
-            originalPrice: 150,
-            negotiatedPrice: 120,
-            savings: 30,
-            paypalOrderId: '9XX2847291840281H',
-            status: 'escrow_created'
-          },
-          {
-            id: 'chat_seed_102',
-            timestamp: new Date(Date.now() - 3600000 * 3).toISOString(),
-            buyerName: 'Sarah Connor',
-            spendingLimit: 100,
-            userPrompt: 'Find me a Figma UI/UX designer for an e-commerce mobile app with an $80 budget.',
-            aiResponse: 'Matched Elena Chen (Principal UX Designer). Successfully negotiated $110 down to $80. Generated milestone payment breakdown.',
-            intent: 'checkout_ready',
-            categoryMatched: 'ui-ux-design',
-            providerMatched: 'Elena Chen',
-            originalPrice: 110,
-            negotiatedPrice: 80,
-            savings: 30,
-            paypalOrderId: '7BB1948291048209K',
-            status: 'completed'
-          },
-          {
-            id: 'chat_seed_103',
-            timestamp: new Date(Date.now() - 3600000 * 8).toISOString(),
-            buyerName: 'Michael Chen',
-            spendingLimit: 180,
-            userPrompt: 'I want an autonomous AI automation engineer to build an n8n webhook workflow for $150.',
-            aiResponse: 'Evaluated Marcus Schmidt (LLM integration expert). Secured fixed contract at $150 (saving $40 off standard quote).',
-            intent: 'checkout_ready',
-            categoryMatched: 'ai-automation',
-            providerMatched: 'Marcus Schmidt',
-            originalPrice: 190,
-            negotiatedPrice: 150,
-            savings: 40,
-            paypalOrderId: '3PP9482019482011M',
-            status: 'escrow_created'
-          }
-        ]);
+        setChatSessions([]);
       }
 
-      // 5. Users
+      // 5. Real Users from Firestore
       const usersSnap = await getDocs(collection(db, 'agentpay_users'));
       if (!usersSnap.empty) {
         setUsers(usersSnap.docs.map(d => d.data() as BuyerUser));
       } else {
-        setUsers([
-          {
-            id: 'usr_201',
-            name: 'Janitha Dilshan',
-            email: 'janithad2@gmail.com',
-            avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Janitha&backgroundColor=b6e3f4',
-            spendingLimit: 250,
-            ordersCount: 4,
-            totalSpent: 480,
-            lastActive: 'Just now',
-            status: 'verified'
-          },
-          {
-            id: 'usr_202',
-            name: 'Sarah Connor',
-            email: 'sarah.c@techventure.io',
-            avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah&backgroundColor=ffd5dc',
-            spendingLimit: 500,
-            ordersCount: 3,
-            totalSpent: 720,
-            lastActive: '20 mins ago',
-            status: 'verified'
-          },
-          {
-            id: 'usr_203',
-            name: 'Michael Chen',
-            email: 'm.chen@hypergrowth.ai',
-            avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Michael&backgroundColor=c0aede',
-            spendingLimit: 300,
-            ordersCount: 2,
-            totalSpent: 260,
-            lastActive: '1 hour ago',
-            status: 'active'
-          },
-          {
-            id: 'usr_204',
-            name: 'Elena Rostova',
-            email: 'elena@novadesign.studio',
-            avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Elena&backgroundColor=ffdfbf',
-            spendingLimit: 150,
-            ordersCount: 1,
-            totalSpent: 120,
-            lastActive: '3 hours ago',
-            status: 'verified'
-          }
-        ]);
+        setUsers([]);
       }
+
     } catch (err) {
-      console.error('Failed to load platform data:', err);
+      console.error('Failed to load real platform data:', err);
     } finally {
       setLoadingData(false);
     }
@@ -351,13 +231,13 @@ export default function AdminPage() {
   // Trigger Seeder API
   const handleTriggerSeeder = async () => {
     setIsSeeding(true);
-    setSeedStatus('Injecting 100+ verified service providers, users, and audit records into Firestore...');
+    setSeedStatus('Injecting 100+ verified service provider profiles into Firestore...');
 
     try {
       const res = await fetch('/api/admin/seed', { method: 'POST' });
       const data = await res.json();
       if (data.success) {
-        setSeedStatus(`🎉 Success! Seeded ${data.count || 100} providers, ${data.usersCount || 5} buyers, and escrow ledgers.`);
+        setSeedStatus(`🎉 Success! Seeded ${data.count || 100} verified providers into collection "agentpay_providers".`);
         await loadPlatformData();
       } else {
         setSeedStatus(`❌ Seeder error: ${data.error}`);
@@ -369,9 +249,9 @@ export default function AdminPage() {
     }
   };
 
-  // Metrics Calculations
+  // Real Metrics Calculations
   const totalVolume = orders.reduce((acc, curr) => acc + (curr.amount || 0), 0);
-  const totalSavings = chatLogs.reduce((acc, curr) => acc + (curr.savings || 0), 0);
+  const totalSavings = chatSessions.reduce((acc, curr) => acc + (curr.savings || 0), 0);
   const activeEscrowsCount = orders.filter(o => o.status === 'in-escrow').length;
 
   const filteredProviders = providers.filter(p => {
@@ -386,6 +266,8 @@ export default function AdminPage() {
     u.name.toLowerCase().includes(userSearch.toLowerCase()) || 
     u.email.toLowerCase().includes(userSearch.toLowerCase())
   );
+
+  const selectedSession = chatSessions.find(s => s.id === selectedSessionId) || chatSessions[0];
 
   // Lock Screen
   if (!isAuthenticated) {
@@ -488,6 +370,23 @@ export default function AdminPage() {
           {/* Navigation Links */}
           <nav className="space-y-1">
             <button
+              onClick={() => setActiveTab('chats')}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                activeTab === 'chats'
+                  ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 shadow-sm'
+                  : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <MessageSquareCode className="h-4 w-4" />
+                <span>Real AI Chats & Audits</span>
+              </div>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 font-bold">
+                {chatSessions.length}
+              </span>
+            </button>
+
+            <button
               onClick={() => setActiveTab('overview')}
               className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                 activeTab === 'overview'
@@ -515,7 +414,7 @@ export default function AdminPage() {
                 <span>100+ Providers</span>
               </div>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-zinc-800 text-zinc-300">
-                {providers.length || 100}
+                {providers.length}
               </span>
             </button>
 
@@ -533,23 +432,6 @@ export default function AdminPage() {
               </div>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-zinc-800 text-zinc-300">
                 {users.length}
-              </span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('chats')}
-              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                activeTab === 'chats'
-                  ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 shadow-sm'
-                  : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <MessageSquareCode className="h-4 w-4" />
-                <span>AI Negotiations Audit</span>
-              </div>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-purple-500/20 text-purple-300">
-                {chatLogs.length}
               </span>
             </button>
 
@@ -591,13 +473,13 @@ export default function AdminPage() {
 
         {/* Sidebar Footer */}
         <div className="pt-6 border-t border-zinc-800/80 space-y-3">
-          <div className="p-3 rounded-2xl bg-zinc-900/60 border border-zinc-800 text-[11px] text-zinc-400 space-y-1">
-            <div className="flex items-center justify-between text-zinc-300 font-semibold">
-              <span>Security State</span>
-              <span className="text-emerald-400">Locked In</span>
-            </div>
-            <p className="text-[10px] text-zinc-500">AES-256 session authenticated</p>
-          </div>
+          <Link
+            href="/"
+            className="w-full py-2 px-3 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
+          >
+            <Bot className="h-3.5 w-3.5" />
+            <span>Open AI Agent Chat</span>
+          </Link>
 
           <button
             onClick={handleLogout}
@@ -616,19 +498,19 @@ export default function AdminPage() {
           <div>
             <div className="flex items-center gap-2.5">
               <h1 className="text-2xl font-black text-white capitalize">
+                {activeTab === 'chats' && 'Real Autonomous AI Chat Sessions & Full Order History'}
                 {activeTab === 'overview' && 'Executive Analytics & Governance'}
                 {activeTab === 'providers' && '100+ Verified Service Providers'}
                 {activeTab === 'users' && 'Client & Buyer Accounts'}
-                {activeTab === 'chats' && 'Autonomous AI Negotiations & Chats'}
                 {activeTab === 'orders' && 'PayPal Milestone Escrow Vault'}
                 {activeTab === 'settings' && 'Platform Settings & API Failover'}
               </h1>
               <span className="px-2.5 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-xs font-mono font-bold text-cyan-400">
-                Institutional Control
+                Zero Mock • 100% Real Data
               </span>
             </div>
             <p className="text-xs text-zinc-400 mt-1">
-              PayPal AI Hackathon 2026 • Real-Time Autonomous Agentic Protocol Monitor
+              PayPal AI Hackathon 2026 • Live Firestore Synchronization
             </p>
           </div>
 
@@ -639,7 +521,7 @@ export default function AdminPage() {
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-300 text-xs font-semibold cursor-pointer"
             >
               <RefreshCw className={`h-3.5 w-3.5 ${loadingData ? 'animate-spin' : ''}`} />
-              <span>Refresh</span>
+              <span>Refresh Real Data</span>
             </button>
 
             {activeTab === 'settings' && (
@@ -655,7 +537,209 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* ---------------- TAB 1: OVERVIEW & ANALYTICS ---------------- */}
+        {/* ---------------- TAB 1: REAL FULL CHAT THREADS & AUDITS ---------------- */}
+        {activeTab === 'chats' && (
+          <div className="space-y-6">
+            {chatSessions.length === 0 ? (
+              <div className="p-12 rounded-3xl bg-zinc-900/40 border border-zinc-800/80 text-center space-y-4">
+                <div className="h-14 w-14 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center mx-auto text-cyan-400">
+                  <MessageSquareCode className="h-7 w-7" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">No Live Chat Sessions in Firestore Yet</h3>
+                  <p className="text-xs text-zinc-400 max-w-md mx-auto mt-1">
+                    Every message you send in the AI Agent Chat room on the home page will be saved directly into collection <code className="text-cyan-400 font-mono">agentpay_chat_sessions</code> and displayed here in full chronological order with zero fake mock data!
+                  </p>
+                </div>
+                <Link
+                  href="/"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 text-zinc-950 font-bold text-xs hover:opacity-95 shadow-lg shadow-cyan-950/40 transition-all"
+                >
+                  <Bot className="h-4 w-4" />
+                  <span>Start Live AI Chat Now</span>
+                </Link>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                {/* Left Column: Sessions List */}
+                <div className="lg:col-span-5 space-y-3">
+                  <div className="flex items-center justify-between text-xs text-zinc-400 font-medium px-1">
+                    <span>Real Sessions ({chatSessions.length})</span>
+                    <span className="font-mono text-[11px] text-cyan-400">Click to inspect</span>
+                  </div>
+
+                  <div className="space-y-2.5 max-h-[700px] overflow-y-auto pr-1">
+                    {chatSessions.map((session) => {
+                      const isSelected = selectedSession?.id === session.id;
+                      return (
+                        <div
+                          key={session.id}
+                          onClick={() => setSelectedSessionId(session.id)}
+                          className={`p-4 rounded-2xl border transition-all cursor-pointer text-xs space-y-2.5 ${
+                            isSelected
+                              ? 'bg-cyan-950/20 border-cyan-500/50 shadow-lg shadow-cyan-950/20'
+                              : 'bg-zinc-900/40 border-zinc-800/80 hover:border-zinc-700'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-white">{session.buyerName}</span>
+                              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-300">
+                                {session.messages?.length || 1} msgs
+                              </span>
+                            </div>
+
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase ${
+                              session.status === 'escrow_created' 
+                                ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30' 
+                                : session.status === 'completed'
+                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                                : 'bg-zinc-800 text-zinc-400'
+                            }`}>
+                              {session.status.replace('_', ' ')}
+                            </span>
+                          </div>
+
+                          <p className="text-zinc-300 line-clamp-2 text-[11px]">
+                            &ldquo;{session.latestPrompt}&rdquo;
+                          </p>
+
+                          <div className="flex items-center justify-between text-[10px] text-zinc-500 font-mono border-t border-zinc-800/60 pt-2">
+                            <span>Cap: ${session.spendingLimit}</span>
+                            {session.savings ? (
+                              <span className="text-emerald-400 font-bold">✨ Saved ${session.savings}</span>
+                            ) : null}
+                            <span>{new Date(session.updatedAt || session.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Right Column: Full Chronological Chat Thread Viewer */}
+                <div className="lg:col-span-7 rounded-3xl bg-zinc-900/40 border border-zinc-800/80 p-5 space-y-5 flex flex-col h-[700px]">
+                  {/* Thread Header */}
+                  <div className="flex items-center justify-between border-b border-zinc-800/80 pb-4">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-sm font-bold text-white">{selectedSession?.buyerName}&apos;s Live Session</h3>
+                        <span className="px-2 py-0.5 rounded-md bg-zinc-800 text-zinc-300 font-mono text-[10px]">
+                          Budget: ${selectedSession?.spendingLimit} USD
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-zinc-400 font-mono mt-0.5 truncate max-w-md">
+                        Session ID: {selectedSession?.id}
+                      </p>
+                    </div>
+
+                    {selectedSession?.paypalOrderId && (
+                      <span className="px-2.5 py-1 rounded-xl bg-amber-500/10 text-amber-300 font-mono text-[10px] font-bold border border-amber-500/30">
+                        PayPal Escrow Ready
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Messages Scroll Area */}
+                  <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+                    {selectedSession?.messages?.map((msg, idx) => (
+                      <div
+                        key={msg.id || idx}
+                        className={`flex items-start gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
+                      >
+                        <div
+                          className={`h-8 w-8 rounded-xl flex items-center justify-center shrink-0 text-xs font-bold ${
+                            msg.role === 'user'
+                              ? 'bg-gradient-to-tr from-cyan-500 to-blue-600 text-zinc-950'
+                              : 'bg-zinc-800 border border-zinc-700 text-cyan-400'
+                          }`}
+                        >
+                          {msg.role === 'user' ? <UserIcon className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
+                        </div>
+
+                        <div className={`space-y-2.5 max-w-[85%]`}>
+                          <div
+                            className={`p-3.5 rounded-2xl text-xs leading-relaxed ${
+                              msg.role === 'user'
+                                ? 'bg-cyan-600/20 text-cyan-50 border border-cyan-500/30 rounded-tr-none'
+                                : 'bg-zinc-950 text-zinc-200 border border-zinc-800 rounded-tl-none shadow-md'
+                            }`}
+                          >
+                            <p className="whitespace-pre-wrap">{msg.content}</p>
+                            <span className="block text-[9px] text-zinc-500 mt-1.5 text-right font-mono">
+                              {msg.timestamp || 'Real-time'}
+                            </span>
+                          </div>
+
+                          {/* Matched Specialist Cards */}
+                          {msg.actionPayload?.matchedProviders && msg.actionPayload.matchedProviders.length > 0 && (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                              {msg.actionPayload.matchedProviders.map(p => (
+                                <div key={p.id} className="p-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-[11px] space-y-1">
+                                  <div className="flex items-center gap-2">
+                                    <img src={p.avatarUrl} alt={p.name} className="h-6 w-6 rounded-full bg-zinc-800" />
+                                    <div className="truncate">
+                                      <p className="font-bold text-white truncate">{p.name}</p>
+                                      <p className="text-[10px] text-zinc-400">{p.category}</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center justify-between text-[10px] text-zinc-400 pt-1 border-t border-zinc-800/80">
+                                    <span>★ {p.rating}</span>
+                                    <span className="font-mono text-emerald-400 font-bold">${p.hourlyRate}/hr</span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Autonomous Negotiation Proposal Card */}
+                          {msg.actionPayload?.negotiatedTerms && (
+                            <div className="p-3 rounded-xl bg-purple-950/20 border border-purple-500/30 text-xs space-y-2">
+                              <div className="flex items-center justify-between">
+                                <span className="font-bold text-purple-300">🤝 Autonomous Agreement</span>
+                                <span className="font-mono text-emerald-400 font-bold">
+                                  ${msg.actionPayload.negotiatedTerms.finalPrice || msg.actionPayload.negotiatedTerms.originalPrice} USD
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-zinc-300 font-medium">
+                                {msg.actionPayload.negotiatedTerms.scopeTitle}
+                              </p>
+                              {msg.actionPayload.negotiatedTerms.milestones && (
+                                <div className="space-y-1 pt-1 border-t border-purple-500/20">
+                                  {msg.actionPayload.negotiatedTerms.milestones.map((ms, mIdx) => (
+                                    <div key={mIdx} className="flex items-center justify-between text-[10px] text-zinc-400">
+                                      <span>{ms.title}</span>
+                                      <span className="font-mono text-cyan-300">${ms.amount}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* PayPal Escrow Creation Status */}
+                          {msg.actionPayload?.paypalOrderId && (
+                            <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-[11px] flex items-center justify-between">
+                              <span className="text-amber-300 font-medium flex items-center gap-1.5">
+                                <CreditCard className="h-3.5 w-3.5" />
+                                <span>PayPal Order Created</span>
+                              </span>
+                              <span className="font-mono text-amber-200 text-[10px]">
+                                {msg.actionPayload.paypalOrderId}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ---------------- TAB 2: OVERVIEW & ANALYTICS ---------------- */}
         {activeTab === 'overview' && (
           <div className="space-y-8">
             {/* KPI Cards Row */}
@@ -670,7 +754,7 @@ export default function AdminPage() {
                 <p className="text-2xl font-black font-mono text-emerald-400">${totalVolume.toFixed(2)} USD</p>
                 <div className="flex items-center gap-1 text-[11px] text-emerald-400/90 font-mono">
                   <TrendingUp className="h-3 w-3" />
-                  <span>+100% Autonomous PayPal Orders v2</span>
+                  <span>Real PayPal Orders v2 Ledger</span>
                 </div>
               </div>
 
@@ -682,7 +766,7 @@ export default function AdminPage() {
                   </div>
                 </div>
                 <p className="text-2xl font-black font-mono text-cyan-300">${totalSavings.toFixed(2)} USD</p>
-                <p className="text-[11px] text-zinc-400">Saved by AgentPay AI multi-turn negotiation</p>
+                <p className="text-[11px] text-zinc-400">Actual savings achieved by AI multi-turn negotiations</p>
               </div>
 
               <div className="p-5 rounded-3xl bg-zinc-900/40 border border-zinc-800/80 space-y-2 relative overflow-hidden">
@@ -703,64 +787,24 @@ export default function AdminPage() {
                     <Users className="h-4 w-4" />
                   </div>
                 </div>
-                <p className="text-2xl font-black font-mono text-white">{providers.length || 100} Specialists</p>
-                <p className="text-[11px] text-purple-300">Across 6 primary commercial domains</p>
+                <p className="text-2xl font-black font-mono text-white">{providers.length} Specialists</p>
+                <p className="text-[11px] text-purple-300">Live in Firestore collection (`agentpay_providers`)</p>
               </div>
             </div>
 
-            {/* Visual Breakdown Grid */}
+            {/* Protocol Health Row */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Category Volume Breakdown */}
               <div className="p-6 rounded-3xl bg-zinc-900/40 border border-zinc-800/80 space-y-5">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                    <Layers className="h-4 w-4 text-cyan-400" />
-                    <span>Autonomous Escrow Volume by Category</span>
-                  </h3>
-                  <span className="text-[11px] font-mono text-zinc-400">Real-time Allocation</span>
-                </div>
-
-                <div className="space-y-4">
-                  {[
-                    { name: 'Web Development (Next.js & Supabase)', percent: 38, amount: '$560.00' },
-                    { name: 'AI Workflows & n8n Automation', percent: 27, amount: '$400.00' },
-                    { name: 'UI/UX Design Systems (Figma)', percent: 18, amount: '$270.00' },
-                    { name: 'Mobile App Development (React Native)', percent: 10, amount: '$150.00' },
-                    { name: 'Technical SEO & Funnel Growth', percent: 7, amount: '$90.00' }
-                  ].map((cat, i) => (
-                    <div key={i} className="space-y-1.5">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-zinc-300 font-medium">{cat.name}</span>
-                        <span className="font-mono text-cyan-400 font-bold">{cat.amount} ({cat.percent}%)</span>
-                      </div>
-                      <div className="h-2 w-full bg-zinc-950 rounded-full overflow-hidden border border-zinc-800">
-                        <div 
-                          className="h-full bg-gradient-to-r from-cyan-500 to-blue-600 rounded-full" 
-                          style={{ width: `${cat.percent}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Protocol Guardrail & Failover Status */}
-              <div className="p-6 rounded-3xl bg-zinc-900/40 border border-zinc-800/80 space-y-5">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                    <Activity className="h-4 w-4 text-emerald-400" />
-                    <span>Agent Governance & Infrastructure Health</span>
-                  </h3>
-                  <span className="text-[10px] font-mono text-emerald-400 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 font-bold">
-                    100% Operational
-                  </span>
-                </div>
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-emerald-400" />
+                  <span>Protocol Guardrail & Infrastructure Health</span>
+                </h3>
 
                 <div className="space-y-3.5 text-xs">
                   <div className="p-3.5 rounded-2xl bg-zinc-950 border border-zinc-800 flex items-center justify-between">
                     <div>
                       <p className="font-bold text-white">Safe Spending Limit Guardrail</p>
-                      <p className="text-[11px] text-zinc-400">Strictly prevents AI agent from exceeding user cap ($30 - $1000)</p>
+                      <p className="text-[11px] text-zinc-400">Strictly prevents AI agent from exceeding user budget ($30 - $1000)</p>
                     </div>
                     <span className="px-2.5 py-1 rounded-xl bg-emerald-500/10 text-emerald-400 font-mono font-bold">Active</span>
                   </div>
@@ -768,7 +812,7 @@ export default function AdminPage() {
                   <div className="p-3.5 rounded-2xl bg-zinc-950 border border-zinc-800 flex items-center justify-between">
                     <div>
                       <p className="font-bold text-white">Gemini Multi-Key Failover Pool</p>
-                      <p className="text-[11px] text-zinc-400">Rotates automatically upon HTTP 429 rate limits ({geminiKeys.filter(Boolean).length} Keys active)</p>
+                      <p className="text-[11px] text-zinc-400">Auto-rotates upon rate limits ({geminiKeys.filter(Boolean).length} Keys active)</p>
                     </div>
                     <span className="px-2.5 py-1 rounded-xl bg-purple-500/10 text-purple-300 font-mono font-bold">Enabled</span>
                   </div>
@@ -784,61 +828,52 @@ export default function AdminPage() {
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Recent Live Activity Stream */}
-            <div className="p-6 rounded-3xl bg-zinc-900/40 border border-zinc-800/80 space-y-4">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <Bot className="h-4 w-4 text-cyan-400" />
-                <span>Live Autonomous Interactions & Negotiations Stream</span>
-              </h3>
+              {/* Real Live Activity Stream */}
+              <div className="p-6 rounded-3xl bg-zinc-900/40 border border-zinc-800/80 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    <Bot className="h-4 w-4 text-cyan-400" />
+                    <span>Real Live Chat Sessions Stream</span>
+                  </h3>
+                  <span className="text-[11px] font-mono text-zinc-400">
+                    {chatSessions.length} Recorded
+                  </span>
+                </div>
 
-              <div className="space-y-3">
-                {chatLogs.slice(0, 4).map((log, i) => (
-                  <div key={i} className="p-4 rounded-2xl bg-zinc-950/70 border border-zinc-800/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-white">{log.buyerName}</span>
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400">
-                          Budget: ${log.spendingLimit}
-                        </span>
-                        {log.savings ? (
-                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold">
-                            Saved ${log.savings}
-                          </span>
-                        ) : null}
-                      </div>
-                      <p className="text-zinc-400 line-clamp-1">&ldquo;{log.userPrompt}&rdquo;</p>
-                    </div>
-
-                    <div className="flex items-center gap-3 shrink-0">
-                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-mono font-bold uppercase ${
-                        log.status === 'escrow_created' 
-                          ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30' 
-                          : log.status === 'completed'
-                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
-                          : 'bg-zinc-800 text-zinc-400'
-                      }`}>
-                        {log.status.replace('_', ' ')}
-                      </span>
-                      <button
-                        onClick={() => setActiveTab('chats')}
-                        className="text-cyan-400 hover:text-cyan-300 font-semibold cursor-pointer"
-                      >
-                        Inspect →
-                      </button>
-                    </div>
+                {chatSessions.length === 0 ? (
+                  <div className="py-12 text-center text-xs text-zinc-500">
+                    No live sessions yet. Chat on the home page to populate!
                   </div>
-                ))}
+                ) : (
+                  <div className="space-y-3">
+                    {chatSessions.slice(0, 4).map((session) => (
+                      <div key={session.id} className="p-3.5 rounded-2xl bg-zinc-950 border border-zinc-850 flex items-center justify-between text-xs">
+                        <div className="space-y-0.5 truncate max-w-[280px]">
+                          <p className="font-bold text-white truncate">{session.buyerName}</p>
+                          <p className="text-[11px] text-zinc-400 truncate">&ldquo;{session.latestPrompt}&rdquo;</p>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setSelectedSessionId(session.id);
+                            setActiveTab('chats');
+                          }}
+                          className="text-cyan-400 hover:text-cyan-300 font-semibold cursor-pointer shrink-0"
+                        >
+                          View Thread →
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
         )}
 
-        {/* ---------------- TAB 2: 100+ PROVIDERS DIRECTORY ---------------- */}
+        {/* ---------------- TAB 3: 100+ PROVIDERS DIRECTORY ---------------- */}
         {activeTab === 'providers' && (
           <div className="space-y-6">
-            {/* Filter & Search Bar */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-3xl bg-zinc-900/40 border border-zinc-800/80">
               <div className="relative flex-1 w-full sm:w-auto">
                 <Search className="absolute left-3.5 top-3 h-4 w-4 text-zinc-500" />
@@ -851,7 +886,6 @@ export default function AdminPage() {
                 />
               </div>
 
-              {/* Category Pills */}
               <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0">
                 {['all', 'web-development', 'ui-ux-design', 'ai-automation', 'seo-marketing', 'mobile-apps'].map(cat => (
                   <button
@@ -863,13 +897,12 @@ export default function AdminPage() {
                         : 'bg-zinc-950 border border-zinc-800 text-zinc-400 hover:text-white'
                     }`}
                   >
-                    {cat === 'all' ? 'All (100+)' : cat.replace('-', ' ')}
+                    {cat === 'all' ? `All (${providers.length})` : cat.replace('-', ' ')}
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Providers Table */}
             <div className="rounded-3xl bg-zinc-900/40 border border-zinc-800/80 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
@@ -930,14 +963,11 @@ export default function AdminPage() {
                   </tbody>
                 </table>
               </div>
-              <div className="p-4 border-t border-zinc-800 text-center text-xs text-zinc-500">
-                Showing top 20 of {filteredProviders.length} active service providers in Firestore collection (`agentpay_providers`)
-              </div>
             </div>
           </div>
         )}
 
-        {/* ---------------- TAB 3: BUYERS & USERS ---------------- */}
+        {/* ---------------- TAB 4: BUYERS & USERS ---------------- */}
         {activeTab === 'users' && (
           <div className="space-y-6">
             <div className="p-4 rounded-3xl bg-zinc-900/40 border border-zinc-800/80 flex items-center justify-between">
@@ -957,134 +987,59 @@ export default function AdminPage() {
               </div>
             </div>
 
-            <div className="rounded-3xl bg-zinc-900/40 border border-zinc-800/80 overflow-hidden">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-zinc-950/80 border-b border-zinc-800 text-zinc-400 uppercase font-mono text-[10px]">
-                  <tr>
-                    <th className="p-4">Buyer Client</th>
-                    <th className="p-4">Safe Spending Limit</th>
-                    <th className="p-4">Contracts / Orders</th>
-                    <th className="p-4">Total Escrow Volume</th>
-                    <th className="p-4">Last Active</th>
-                    <th className="p-4">KYC / Verification</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-800/60">
-                  {filteredUsers.map(u => (
-                    <tr key={u.id} className="hover:bg-zinc-900/60 transition-colors">
-                      <td className="p-4">
-                        <div className="flex items-center gap-3">
-                          <img src={u.avatarUrl} alt={u.name} className="h-9 w-9 rounded-full bg-zinc-800 border border-zinc-700" />
-                          <div>
-                            <p className="font-bold text-white">{u.name}</p>
-                            <p className="text-[11px] text-zinc-400 font-mono">{u.email}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="p-4 font-mono font-bold text-cyan-400">
-                        ${u.spendingLimit} USD
-                      </td>
-                      <td className="p-4 font-mono text-zinc-300">
-                        {u.ordersCount} Orders
-                      </td>
-                      <td className="p-4 font-mono font-bold text-emerald-400">
-                        ${u.totalSpent} USD
-                      </td>
-                      <td className="p-4 text-zinc-400">
-                        {u.lastActive}
-                      </td>
-                      <td className="p-4">
-                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 uppercase">
-                          {u.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* ---------------- TAB 4: CHATS & NEGOTIATION AUDIT LOG ---------------- */}
-        {activeTab === 'chats' && (
-          <div className="space-y-6">
-            <div className="p-4 rounded-3xl bg-zinc-900/40 border border-zinc-800/80 flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-bold text-white">Autonomous Agent Chat & Procurement Ledger</h3>
-                <p className="text-xs text-zinc-400 mt-0.5">Cryptographic log of AI reasoning, pricing negotiations, and milestone creation</p>
+            {users.length === 0 ? (
+              <div className="p-12 rounded-3xl bg-zinc-900/40 border border-zinc-800/80 text-center space-y-3">
+                <Users className="h-10 w-10 text-zinc-600 mx-auto" />
+                <p className="text-xs text-zinc-400">No client accounts recorded in Firestore yet. User profiles are saved automatically as soon as someone interacts with the AI Agent.</p>
               </div>
-              <span className="px-2.5 py-1 rounded-xl bg-purple-500/10 text-purple-300 font-mono text-xs font-bold border border-purple-500/20">
-                {chatLogs.length} Sessions Logged
-              </span>
-            </div>
-
-            <div className="space-y-4">
-              {chatLogs.map(log => (
-                <div key={log.id} className="p-5 rounded-3xl bg-zinc-900/40 border border-zinc-800/80 space-y-4 hover:border-cyan-500/30 transition-all">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-zinc-800/80 pb-3">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-white text-sm">{log.buyerName}</span>
-                      <span className="text-[10px] font-mono text-zinc-400">• {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                      <span className="px-2 py-0.5 rounded-md bg-zinc-800 text-[10px] font-mono text-zinc-300">
-                        Budget Cap: ${log.spendingLimit}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {log.savings ? (
-                        <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[11px] font-mono font-bold">
-                          ✨ Saved ${log.savings} USD
-                        </span>
-                      ) : null}
-                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase ${
-                        log.status === 'escrow_created' ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30' : 'bg-zinc-800 text-zinc-400'
-                      }`}>
-                        {log.status.replace('_', ' ')}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                    <div className="p-3.5 rounded-2xl bg-zinc-950 border border-zinc-850 space-y-1">
-                      <span className="text-[10px] font-mono text-zinc-500 uppercase">User Prompt</span>
-                      <p className="text-zinc-200">{log.userPrompt}</p>
-                    </div>
-
-                    <div className="p-3.5 rounded-2xl bg-cyan-950/20 border border-cyan-500/20 space-y-1">
-                      <span className="text-[10px] font-mono text-cyan-400 uppercase">AI Autonomous Procurement Decision</span>
-                      <p className="text-cyan-100">{log.aiResponse}</p>
-                    </div>
-                  </div>
-
-                  {log.providerMatched && (
-                    <div className="p-3 rounded-2xl bg-zinc-950 border border-zinc-800/80 flex flex-wrap items-center justify-between gap-3 text-xs">
-                      <div className="flex items-center gap-2">
-                        <span className="text-zinc-400">Matched Specialist:</span>
-                        <span className="font-bold text-white">{log.providerMatched}</span>
-                        {log.categoryMatched && (
-                          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-800 text-zinc-400">
-                            {log.categoryMatched}
+            ) : (
+              <div className="rounded-3xl bg-zinc-900/40 border border-zinc-800/80 overflow-hidden">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-zinc-950/80 border-b border-zinc-800 text-zinc-400 uppercase font-mono text-[10px]">
+                    <tr>
+                      <th className="p-4">Buyer Client</th>
+                      <th className="p-4">Safe Spending Limit</th>
+                      <th className="p-4">Contracts / Orders</th>
+                      <th className="p-4">Total Escrow Volume</th>
+                      <th className="p-4">Last Active</th>
+                      <th className="p-4">KYC / Verification</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-800/60">
+                    {filteredUsers.map(u => (
+                      <tr key={u.id} className="hover:bg-zinc-900/60 transition-colors">
+                        <td className="p-4">
+                          <div className="flex items-center gap-3">
+                            <img src={u.avatarUrl} alt={u.name} className="h-9 w-9 rounded-full bg-zinc-800 border border-zinc-700" />
+                            <div>
+                              <p className="font-bold text-white">{u.name}</p>
+                              <p className="text-[11px] text-zinc-400 font-mono">{u.email}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="p-4 font-mono font-bold text-cyan-400">
+                          ${u.spendingLimit} USD
+                        </td>
+                        <td className="p-4 font-mono text-zinc-300">
+                          {u.ordersCount || 0} Orders
+                        </td>
+                        <td className="p-4 font-mono font-bold text-emerald-400">
+                          ${u.totalSpent || 0} USD
+                        </td>
+                        <td className="p-4 text-zinc-400">
+                          {u.lastActive || 'Recently'}
+                        </td>
+                        <td className="p-4">
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 uppercase">
+                            {u.status || 'Verified'}
                           </span>
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-4 font-mono text-xs">
-                        {log.originalPrice && (
-                          <span className="text-zinc-500 line-through">${log.originalPrice}</span>
-                        )}
-                        {log.negotiatedPrice && (
-                          <span className="text-emerald-400 font-bold">Agreed: ${log.negotiatedPrice} USD</span>
-                        )}
-                        {log.paypalOrderId && (
-                          <span className="text-cyan-400 text-[11px]">PP-ID: {log.paypalOrderId}</span>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
 
@@ -1101,54 +1056,61 @@ export default function AdminPage() {
               </span>
             </div>
 
-            <div className="space-y-4">
-              {orders.map(order => (
-                <div key={order.id} className="p-5 rounded-3xl bg-zinc-900/40 border border-zinc-800/80 hover:border-cyan-500/30 transition-all space-y-4">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-zinc-800/80 pb-3">
-                    <div>
-                      <h4 className="text-sm font-bold text-white">{order.serviceTitle}</h4>
-                      <p className="text-[11px] text-zinc-400 font-mono mt-0.5">
-                        Buyer: {order.buyerName} • Provider: {order.providerName}
-                      </p>
+            {orders.length === 0 ? (
+              <div className="p-12 rounded-3xl bg-zinc-900/40 border border-zinc-800/80 text-center space-y-3">
+                <CreditCard className="h-10 w-10 text-zinc-600 mx-auto" />
+                <p className="text-xs text-zinc-400">No active escrow transactions recorded yet. Escrows are initiated directly through PayPal Smart Buttons inside the chat room.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {orders.map(order => (
+                  <div key={order.id} className="p-5 rounded-3xl bg-zinc-900/40 border border-zinc-800/80 hover:border-cyan-500/30 transition-all space-y-4">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-zinc-800/80 pb-3">
+                      <div>
+                        <h4 className="text-sm font-bold text-white">{order.serviceTitle}</h4>
+                        <p className="text-[11px] text-zinc-400 font-mono mt-0.5">
+                          Buyer: {order.buyerName} • Provider: {order.providerName}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <span className="text-base font-black font-mono text-emerald-400">
+                          ${order.amount} USD
+                        </span>
+                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-mono font-bold uppercase ${
+                          order.status === 'completed'
+                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                            : 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
+                        }`}>
+                          {order.status}
+                        </span>
+                      </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                      <span className="text-base font-black font-mono text-emerald-400">
-                        ${order.amount} USD
-                      </span>
-                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-mono font-bold uppercase ${
-                        order.status === 'completed'
-                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
-                          : 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
-                      }`}>
-                        {order.status}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Milestones */}
-                  <div className="space-y-2">
-                    <span className="text-[11px] font-semibold text-zinc-400">Milestone Tranches:</span>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {order.milestones?.map((ms, idx) => (
-                        <div key={idx} className="p-3 rounded-xl bg-zinc-950 border border-zinc-800 flex items-center justify-between text-xs">
-                          <div>
-                            <p className="text-zinc-200 font-medium">{ms.title}</p>
-                            <span className="text-[10px] font-mono text-zinc-500 uppercase">{ms.status}</span>
+                    {/* Milestones */}
+                    <div className="space-y-2">
+                      <span className="text-[11px] font-semibold text-zinc-400">Milestone Tranches:</span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {order.milestones?.map((ms, idx) => (
+                          <div key={idx} className="p-3 rounded-xl bg-zinc-950 border border-zinc-800 flex items-center justify-between text-xs">
+                            <div>
+                              <p className="text-zinc-200 font-medium">{ms.title}</p>
+                              <span className="text-[10px] font-mono text-zinc-500 uppercase">{ms.status}</span>
+                            </div>
+                            <span className="font-mono font-bold text-cyan-300">${ms.amount}</span>
                           </div>
-                          <span className="font-mono font-bold text-cyan-300">${ms.amount}</span>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 text-[11px] text-zinc-500 font-mono border-t border-zinc-800/60">
+                      <span>PayPal Ref: {order.paypalOrderId}</span>
+                      <span>Created: {new Date(order.createdAt).toLocaleDateString()}</span>
                     </div>
                   </div>
-
-                  <div className="flex items-center justify-between pt-2 text-[11px] text-zinc-500 font-mono border-t border-zinc-800/60">
-                    <span>PayPal Ref: {order.paypalOrderId}</span>
-                    <span>Created: {new Date(order.createdAt).toLocaleDateString()}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -1316,8 +1278,8 @@ export default function AdminPage() {
                     <Database className="h-4 w-4" />
                   </div>
                   <div>
-                    <h2 className="text-sm font-bold text-white">Automated Full-Spectrum Database Seeder</h2>
-                    <p className="text-xs text-zinc-400">Generates 100+ verified talent profiles, verified buyer accounts, and escrow histories.</p>
+                    <h2 className="text-sm font-bold text-white">100+ Providers Database Seeder</h2>
+                    <p className="text-xs text-zinc-400">Generates 100 verified talent profiles in Firestore collection (`agentpay_providers`).</p>
                   </div>
                 </div>
 
@@ -1327,7 +1289,7 @@ export default function AdminPage() {
                   className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-bold transition-all disabled:opacity-50 cursor-pointer"
                 >
                   {isSeeding ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Database className="h-3.5 w-3.5" />}
-                  <span>{isSeeding ? 'Seeding Platform...' : 'Run 1-Click Platform Seeder'}</span>
+                  <span>{isSeeding ? 'Seeding Providers...' : 'Run 1-Click Seeder'}</span>
                 </button>
               </div>
 

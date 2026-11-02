@@ -6,6 +6,7 @@ import { PayPalButtons } from '@paypal/react-paypal-js';
 import type { ChatMessage, ServiceProvider } from '@/types';
 
 export default function ChatInterface() {
+  const [sessionId, setSessionId] = useState<string>('');
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'init_1',
@@ -28,6 +29,36 @@ export default function ChatInterface() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Initialize or restore session ID
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      let stored = sessionStorage.getItem('agentpay_chat_session_id');
+      if (!stored) {
+        stored = `session_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+        sessionStorage.setItem('agentpay_chat_session_id', stored);
+      }
+      setSessionId(stored);
+    }
+  }, []);
+
+  const handleNewSession = () => {
+    const newSid = `session_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('agentpay_chat_session_id', newSid);
+    }
+    setSessionId(newSid);
+    setMessages([
+      {
+        id: `init_${Date.now()}`,
+        role: 'assistant',
+        content: "New Autonomous Session Initialized. What service or deliverable would you like to procure and negotiate today within your spending limit?",
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }
+    ]);
+    setActivePayPalOrder(null);
+    setPaymentSuccess(false);
+  };
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -39,6 +70,9 @@ export default function ChatInterface() {
   const handleSend = async (customPrompt?: string) => {
     const textToSend = customPrompt || input.trim();
     if (!textToSend || isLoading) return;
+
+    const currentSid = sessionId || `session_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    if (!sessionId) setSessionId(currentSid);
 
     const userMsg: ChatMessage = {
       id: `usr_${Date.now()}`,
@@ -56,8 +90,11 @@ export default function ChatInterface() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          sessionId: currentSid,
           messages: [...messages, userMsg],
-          spendingLimit
+          spendingLimit,
+          buyerName: 'Janitha Dilshan',
+          buyerEmail: 'janithad2@gmail.com'
         })
       });
 
@@ -166,24 +203,35 @@ export default function ChatInterface() {
           </div>
         </div>
 
-        {/* Safe Spending Guardrail Slider */}
-        <div className="w-full sm:w-72 px-4 py-2 rounded-2xl bg-zinc-900 border border-zinc-800">
-          <div className="flex items-center justify-between text-xs mb-1.5">
-            <span className="flex items-center gap-1.5 text-zinc-400 font-medium">
-              <Shield className="h-3.5 w-3.5 text-cyan-400" />
-              <span>Safe Spending Limit:</span>
-            </span>
-            <span className="font-mono font-bold text-cyan-300">${spendingLimit} USD</span>
+        {/* Safe Spending Guardrail Slider & Session Actions */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+          <button
+            onClick={handleNewSession}
+            title="Start fresh procurement session"
+            className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-2xl bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-800 text-xs font-semibold transition-colors cursor-pointer"
+          >
+            <Sparkles className="h-3.5 w-3.5 text-cyan-400" />
+            <span>New Session</span>
+          </button>
+
+          <div className="w-full sm:w-72 px-4 py-2 rounded-2xl bg-zinc-900 border border-zinc-800">
+            <div className="flex items-center justify-between text-xs mb-1.5">
+              <span className="flex items-center gap-1.5 text-zinc-400 font-medium">
+                <Shield className="h-3.5 w-3.5 text-cyan-400" />
+                <span>Safe Spending Limit:</span>
+              </span>
+              <span className="font-mono font-bold text-cyan-300">${spendingLimit} USD</span>
+            </div>
+            <input
+              type="range"
+              min="30"
+              max="1000"
+              step="10"
+              value={spendingLimit}
+              onChange={(e) => setSpendingLimit(Number(e.target.value))}
+              className="w-full accent-cyan-400 h-1.5 bg-zinc-800 rounded-lg cursor-pointer"
+            />
           </div>
-          <input
-            type="range"
-            min="30"
-            max="1000"
-            step="10"
-            value={spendingLimit}
-            onChange={(e) => setSpendingLimit(Number(e.target.value))}
-            className="w-full accent-cyan-400 h-1.5 bg-zinc-800 rounded-lg cursor-pointer"
-          />
         </div>
       </div>
 
