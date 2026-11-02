@@ -133,3 +133,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: err.message || 'Failed to respond to inquiry' }, { status: 500 });
   }
 }
+

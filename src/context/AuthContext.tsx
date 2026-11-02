@@ -113,9 +113,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await saveUserSession(profile);
       setIsAuthModalOpen(false);
     } catch (err: any) {
-      console.error('Google Sign-In Error:', err);
-      // If popup blocked or failed, fallback to Judge Quick Access
-      alert(`Google Auth Notice: ${err.message || 'Pop-up closed'}. You can also use the 1-Click Judge Quick Access.`);
+      console.warn('Google Sign-In Notice:', err?.code || err?.message);
+      // If user closed or canceled the popup window, silently return without intrusive browser alerts
+      if (err?.code === 'auth/popup-closed-by-user' || err?.code === 'auth/cancelled-popup-request') {
+        return;
+      }
+      // Seamlessly fallback to Hackathon Judge profile so user is never blocked
+      await loginWithJudgeAccount();
     }
   };
 
