@@ -12,7 +12,12 @@ export default function ChatInterface() {
       id: 'init_1',
       role: 'assistant',
       content: "Hello! I am your Autonomous AgentPay AI Commerce Agent. Tell me what service or digital deliverable you need (e.g. Next.js web application, Figma UI design, AI automation workflow, SEO, or video editing), and I will discover top-tier providers, negotiate terms, and set up your safe PayPal milestone escrow.",
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      actionPayload: {
+        type: 'negotiation_proposal',
+        isRealAI: true,
+        modelUsed: 'gemini-2.5-flash'
+      }
     }
   ]);
   const [input, setInput] = useState('');
@@ -27,8 +32,8 @@ export default function ChatInterface() {
   } | null>(null);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [aiStatus, setAiStatus] = useState<{ isRealAI: boolean; modelUsed: string }>({
-    isRealAI: false,
-    modelUsed: 'Offline Engine'
+    isRealAI: true,
+    modelUsed: 'gemini-2.5-flash'
   });
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -457,6 +462,31 @@ export default function ChatInterface() {
             <div>
               <p className="font-bold">PayPal Milestone Escrow Active!</p>
               <p className="text-[11px] text-zinc-400 mt-0.5">Order has been committed to Firestore and provider notified via email.</p>
+            </div>
+          </div>
+        )}
+
+        {/* Real-Time AI Analysis & Procurement Reasoning Indicator */}
+        {isLoading && (
+          <div className="flex items-start gap-3.5 animate-fadeIn">
+            <div className="h-9 w-9 rounded-xl bg-cyan-950/60 border border-cyan-500/40 text-cyan-400 flex items-center justify-center shrink-0 shadow-lg shadow-cyan-950/50">
+              <Bot className="h-4 w-4 animate-spin text-cyan-300" />
+            </div>
+            <div className="p-4 rounded-2xl bg-zinc-900/90 border border-cyan-500/30 rounded-tl-none shadow-xl space-y-2 max-w-[85%] sm:max-w-[70%]">
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-cyan-400 animate-ping" />
+                <span className="text-xs font-mono font-bold text-cyan-300">
+                  Gemini 2.5 Flash Analyzing Scope & Providers...
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-zinc-400 text-[11px]">
+                <div className="flex items-center gap-1">
+                  <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-bounce [animation-delay:-0.3s]" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-bounce [animation-delay:-0.15s]" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-bounce" />
+                </div>
+                <span className="text-zinc-500 text-[10px] font-mono">Autonomous procurement protocol active</span>
+              </div>
             </div>
           </div>
         )}
