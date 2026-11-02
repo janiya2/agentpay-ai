@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
     // Try Real Gemini AI if an active key exists
     try {
       const aiResponse = await geminiRotator.executeWithRotation(async (genAI, activeKey) => {
-        const candidateModels = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash-latest', 'gemini-pro'];
+        const candidateModels = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.5-flash-lite', 'gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-pro'];
 
         const systemContext = `
 You are AgentPay AI, an institutional-grade Autonomous Commerce & Procurement Agent for the PayPal AI Hackathon 2026.

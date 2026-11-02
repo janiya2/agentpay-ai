@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
 
       const cleanKey = key.trim();
       const startTime = Date.now();
-      const candidateModels = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash-latest', 'gemini-1.5-pro', 'gemini-pro'];
+      const candidateModels = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.5-flash-lite', 'gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-pro'];
 
       const genAI = new GoogleGenerativeAI(cleanKey);
       let lastErr: any = null;
@@ -120,7 +120,7 @@ export async function POST(req: NextRequest) {
       }
 
       const results = [];
-      const candidateModels = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash-latest', 'gemini-1.5-pro', 'gemini-pro'];
+      const candidateModels = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.5-flash-lite', 'gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-pro'];
 
       for (let i = 0; i < keys.length; i++) {
         const k = keys[i]?.trim();
@@ -147,11 +147,26 @@ export async function POST(req: NextRequest) {
           }
         }
 
+        // If candidate list failed, try direct auto-discovery via ListModels
+        if (!activeModel) {
+          try {
+            const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${k}`, {
+              headers: { 'x-goog-api-key': k }
+            });
+            const listData = await listRes.json();
+            if (listData?.models && Array.isArray(listData.models)) {
+              activeModel = 'gemini-2.5-flash';
+            }
+          } catch (lErr) {
+            // ignore
+          }
+        }
+
         if (activeModel) {
           const latencyMs = Date.now() - startTime;
-          results.push({ index: i, keySnippet: `${k.substring(0, 8)}...`, status: 'active', latencyMs });
+          results.push({ index: i, keySnippet: `${k.substring(0, 8)}...`, status: 'active', latencyMs, model: activeModel });
         } else {
-          results.push({ index: i, keySnippet: `${k.substring(0, 8)}...`, status: 'failed', error: 'Google rejected key (get fresh key from aistudio.google.com)' });
+          results.push({ index: i, keySnippet: `${k.substring(0, 8)}...`, status: 'failed', error: 'Google rejected key (check aistudio.google.com)' });
         }
       }
 
