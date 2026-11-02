@@ -41,6 +41,19 @@ export async function POST(req: NextRequest) {
     let botReplyText = '';
     const lower = message.trim().toLowerCase();
 
+    // Parse potential price numbers from provider message
+    const numberMatches = message.match(/\b(\d{2,4})\b/g);
+    let detectedNumber: number | null = null;
+    if (numberMatches && numberMatches.length > 0) {
+      for (const rawNum of numberMatches) {
+        const parsed = Number(rawNum);
+        if (!isNaN(parsed) && parsed >= 30) {
+          detectedNumber = parsed;
+          break;
+        }
+      }
+    }
+
     try {
       await geminiRotator.loadKeysFromFirestore();
       botReplyText = await geminiRotator.executeWithRotation(async (genAI) => {
@@ -48,18 +61,32 @@ export async function POST(req: NextRequest) {
         const prompt = `
 You are AgentPay Commerce Bot 🤖, an institutional autonomous AI procurement agent representing client ${clientName}.
 You are in an active RFP negotiation with specialist ${providerName} for project: "${projectScope}".
-Client Budget Cap: $${budgetCap} USD.
+Client Maximum Budget Cap: $${budgetCap} USD.
 
 Dialogue history:
 ${dialogWithProvider.map((d: any) => `${d.speakerName}: ${d.message}`).join('\n')}
 
 Specialist ${providerName} just sent: "${message.trim()}"
 
-Your task:
-Reply to ${providerName} professionally, constructively, and concisely (1 to 3 sentences max):
-- If greeting: Greet ${providerName}, specify client's $${budgetCap} USD cap, and invite them to submit their proposed milestone price and delivery days.
-- If proposing price/timeline or negotiating: Evaluate against $${budgetCap} USD. If within budget, encourage them to codify it into the bid submitter form below so ${clientName} can review and authorize PayPal Milestone Escrow.
-- If asking questions about scope, wireframes, or stack: Provide technical clarity and state delivery expectations.
+Your strategic negotiation instructions:
+1. OVER-BUDGET PROPOSALS (If ${providerName} asks for or proposes a price HIGHER than $${budgetCap} USD, e.g. $210):
+   - FIRMLY DECLINE THE HIGHER RATE: State that ${clientName}'s maximum authorized budget cap is strictly $${budgetCap} USD and cannot be exceeded.
+   - PERSUADE THEM TO AGREE: Counter-offer at $${budgetCap} USD (or $${Math.round(budgetCap * 0.95)} USD). Explain that ${clientName} pays promptly via secured PayPal Milestone Escrow upon completion, and urge them to accommodate $${budgetCap} USD so they do not lose the contract to competing specialists.
+
+2. WITHIN-BUDGET PROPOSALS (If ${providerName} proposes a price AT OR BELOW $${budgetCap} USD, e.g. $170 or $160):
+   - WELCOME THE OFFER: State that their proposed price fits comfortably within ${clientName}'s $${budgetCap} USD budget.
+   - CALL TO ACTION: Encourage them to codify this offer into the "Submit Official Milestone Bid" form below so ${clientName} can review it on their live decision board and lock PayPal Escrow.
+
+3. QUESTIONS ON SCOPE / WIREFRAMES / STACK:
+   - Answer professionally, confirming high-quality delivery expectations and available specs, and ask for their best price within $${budgetCap} USD.
+
+4. GREETINGS:
+   - Greet ${providerName} warmly and state the $${budgetCap} USD budget cap.
+
+Rules:
+- Speak directly to ${providerName}.
+- Keep your tone sharp, polite, and persuasive (2 to 4 complete sentences).
+- Do NOT truncate. Write the entire complete response without trailing off.
 
 Provide ONLY the text of your response:
         `.trim();
@@ -68,11 +95,14 @@ Provide ONLY the text of your response:
           try {
             const model = genAI.getGenerativeModel({
               model: modelName,
-              generationConfig: { temperature: 0.3, maxOutputTokens: 200 }
+              generationConfig: { 
+                temperature: 0.3, 
+                maxOutputTokens: 1200 
+              }
             });
             const res = await model.generateContent(prompt);
             const text = res.response.text();
-            if (text && text.trim().length > 0) return text.trim();
+            if (text && text.trim().length > 10) return text.trim();
           } catch (mErr: any) {
             if (mErr?.message?.includes('404')) continue;
             throw mErr;
@@ -82,14 +112,18 @@ Provide ONLY the text of your response:
       });
     } catch (aiErr) {
       console.warn('[Bot Reply AI Fallback]:', aiErr);
-      if (lower.includes('hi') || lower.includes('hello') || lower.includes('hey')) {
-        botReplyText = `Hello ${providerName.split(' ')[0]}! I represent ${clientName} for this ${projectScope}. Our budget cap is $${budgetCap} USD. What is your estimated turnaround and proposed price for this deliverable?`;
-      } else if (lower.includes('price') || lower.includes('$') || lower.includes('budget') || lower.includes('dollar') || lower.includes('cost')) {
-        botReplyText = `Understood. Our client has authorized up to $${budgetCap} USD for high quality execution. Please submit your exact milestone proposal using the bid form below so ${clientName} can compare offers and lock PayPal Escrow.`;
-      } else if (lower.includes('day') || lower.includes('time') || lower.includes('week') || lower.includes('schedule')) {
-        botReplyText = `A fast turnaround is highly preferred by ${clientName}. Please enter your delivery timeframe into your bid submission so it streams directly to the client's decision board.`;
+      if (detectedNumber) {
+        if (detectedNumber > budgetCap) {
+          botReplyText = `I appreciate your proposal, ${providerName.split(' ')[0]}. However, our client ${clientName}'s strict budget cap is $${budgetCap} USD, so we cannot approve $${detectedNumber} USD. Could you accommodate ${clientName}'s $${budgetCap} USD cap? If you can agree to $${budgetCap} USD, please submit your bid below so we can lock in this contract for you!`;
+        } else {
+          botReplyText = `That sounds like a fair proposal, ${providerName.split(' ')[0]}! $${detectedNumber} USD is within ${clientName}'s $${budgetCap} USD budget. Please submit this exact amount in the bid form below so ${clientName} can review it and fund the PayPal Milestone Escrow!`;
+        }
+      } else if (lower.includes('hi') || lower.includes('hello') || lower.includes('hey')) {
+        botReplyText = `Hello ${providerName.split(' ')[0]}! I represent ${clientName} for this ${projectScope}. Our client has an authorized budget cap of $${budgetCap} USD. What is your estimated turnaround and proposed price for this deliverable?`;
+      } else if (lower.includes('day') || lower.includes('time') || lower.includes('week') || lower.includes('dya')) {
+        botReplyText = `A fast turnaround is highly preferred by ${clientName}. Please enter your delivery timeframe and proposed price into the bid form below so it streams directly to the client's decision board.`;
       } else {
-        botReplyText = `Thank you for the update, ${providerName.split(' ')[0]}. I've registered your message into the procurement ledger. Please enter your milestone terms and submit your competitive bid below to lock in this opportunity.`;
+        botReplyText = `Thank you for the update, ${providerName.split(' ')[0]}. I've registered your message. Our budget cap is $${budgetCap} USD—please enter your milestone terms and submit your competitive bid below to secure this contract.`;
       }
     }
 
