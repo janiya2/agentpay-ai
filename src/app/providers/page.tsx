@@ -151,13 +151,12 @@ export default function ProviderPortalPage() {
     }
   };
 
-  // Fetch orders and incoming tender RFQs strictly for activeProvider (NO LEAKAGE)
+  // Fetch orders and incoming tender RFQs strictly for activeProvider (NO LEAKAGE, NO FLICKER)
   const loadProviderData = async () => {
     if (!activeProvider) return;
 
     try {
       // 1. Fetch Orders strictly for activeProvider (No fallback to other providers' orders!)
-      setOrders([]);
       const allOrdersSnap = await getDocs(collection(db, 'agentpay_orders'));
       if (!allOrdersSnap.empty) {
         const allList = allOrdersSnap.docs.map(d => ({ id: d.id, ...d.data() } as AgentPayOrder));
@@ -170,8 +169,7 @@ export default function ProviderPortalPage() {
         setOrders([]);
       }
 
-      // 2. Fetch Incoming Tenders & RFQs strictly for activeProvider
-      setInquiries([]);
+      // 2. Fetch Incoming Tenders & RFQs strictly for activeProvider (Silent background refresh)
       const sessionsSnap = await getDocs(collection(db, 'agentpay_chat_sessions'));
       if (!sessionsSnap.empty) {
         const allSessions = sessionsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -196,7 +194,7 @@ export default function ProviderPortalPage() {
     }
   }, [selectedProviderId, activeProvider]);
 
-  // Handle Provider Submitting Bid
+  // Handle Provider Submitting Bid (Optimistic & Zero Flicker)
   const handleSubmitBid = async (sessionId: string) => {
     setRespondingSessionId(sessionId);
     try {
@@ -220,6 +218,24 @@ export default function ProviderPortalPage() {
       if (res.ok && data.success) {
         setResponseNotice(`🎉 Success: Bid of $${price} USD submitted to client!`);
         setTimeout(() => setResponseNotice(null), 6000);
+        // Optimistically update in memory so bid button transforms instantly to live status
+        const myNewBid = {
+          providerId: activeProvider.id,
+          providerName: activeProvider.name,
+          bidPrice: Number(price),
+          deliveryDays: Number(days),
+          note,
+          submittedAt: new Date().toISOString()
+        };
+        setInquiries(prev => prev.map(inq => {
+          if (inq.id === sessionId) {
+            return {
+              ...inq,
+              bids: [...(inq.bids || []), myNewBid]
+            };
+          }
+          return inq;
+        }));
         await loadProviderData();
       } else {
         alert(data.error || 'Failed to submit bid');
@@ -231,12 +247,39 @@ export default function ProviderPortalPage() {
     }
   };
 
-  // Handle Provider Sending Message into Tender Transmission Dialogue
+  // Handle Provider Sending Message into Tender Transmission Dialogue (100% Optimistic & Real-Time)
   const handleSendTenderMessage = async (sessionId: string) => {
     const text = chatInputPerTender[sessionId]?.trim();
     if (!text || !activeProvider) return;
 
+    // 1. Clear input immediately
+    setChatInputPerTender(prev => ({ ...prev, [sessionId]: '' }));
+
+    // 2. Optimistically append provider message to chat immediately
+    const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const optimisticProviderEntry = {
+      speaker: 'provider' as const,
+      speakerName: `${activeProvider.name} 👨‍💻 (Specialist Message)`,
+      message: text,
+      timestamp: timeNow
+    };
+
+    setInquiries(prev => prev.map(inq => {
+      if (inq.id === sessionId) {
+        return {
+          ...inq,
+          negotiationDialog: [...(inq.negotiationDialog || []), optimisticProviderEntry]
+        };
+      }
+      return inq;
+    }));
+
+    // 3. Trigger typing indicator and auto-scroll
     setIsSendingMessage(prev => ({ ...prev, [sessionId]: true }));
+    setTimeout(() => {
+      chatScrollRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 50);
+
     try {
       const res = await fetch('/api/providers/send-tender-message', {
         method: 'POST',
@@ -249,9 +292,20 @@ export default function ProviderPortalPage() {
       });
 
       const data = await res.json();
-      if (res.ok && data.success) {
-        setChatInputPerTender(prev => ({ ...prev, [sessionId]: '' }));
-        await loadProviderData();
+      if (res.ok && data.success && Array.isArray(data.dialog)) {
+        // Seamlessly update in-memory dialogue with server-confirmed dialog + bot reply (No page refresh!)
+        setInquiries(prev => prev.map(inq => {
+          if (inq.id === sessionId) {
+            return {
+              ...inq,
+              negotiationDialog: data.dialog
+            };
+          }
+          return inq;
+        }));
+        setTimeout(() => {
+          chatScrollRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }, 50);
       } else {
         alert(data.error || 'Failed to send message');
       }
@@ -301,6 +355,23 @@ export default function ProviderPortalPage() {
   });
 
   const activeTender = inquiries.find(i => i.id === selectedTenderId) || filteredTenders[0] || null;
+
+  // Auto-scroll chat to latest message smoothly
+  useEffect(() => {
+    chatScrollRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [activeTender?.id, activeTender?.negotiationDialog?.length, isSendingMessage]);
+
+  // Prevent flash of empty content on initial load
+  if (loading && providers.length === 0) {
+    return (
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-28 w-full flex flex-col items-center justify-center space-y-4">
+        <div className="h-12 w-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+          <Sparkles className="h-6 w-6 animate-spin" />
+        </div>
+        <p className="text-zinc-400 font-mono text-xs animate-pulse">Loading Service Provider Workspace & Profiles...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 w-full space-y-8 animate-fadeIn">
