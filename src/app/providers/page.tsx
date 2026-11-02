@@ -6,7 +6,7 @@ import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/fire
 import type { AgentPayOrder, ServiceProvider } from '@/types';
 import { 
   ShieldCheck, CheckCircle2, Clock, CreditCard, ExternalLink, 
-  Send, Sparkles, UserCheck, MessageSquare, AlertCircle, ArrowRight, User
+  Send, Sparkles, UserCheck, MessageSquare, AlertCircle, ArrowRight, User, Ban
 } from 'lucide-react';
 import DirectChatModal from '@/components/DirectChatModal';
 
@@ -18,6 +18,8 @@ export default function ProviderPortalPage() {
   const [inquiries, setInquiries] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [respondingSessionId, setRespondingSessionId] = useState<string | null>(null);
+  const [customBidPrice, setCustomBidPrice] = useState<{ [sid: string]: number }>({});
+  const [customDeliveryDays, setCustomDeliveryDays] = useState<{ [sid: string]: number }>({});
   const [customReplyNote, setCustomReplyNote] = useState<{ [sid: string]: string }>({});
   const [responseNotice, setResponseNotice] = useState<string | null>(null);
 
@@ -36,7 +38,6 @@ export default function ProviderPortalPage() {
           const list = snap.docs.map(d => d.data() as ServiceProvider);
           setProviders(list);
           if (list.length > 0) {
-            // Check if providerId was passed in URL query param
             if (typeof window !== 'undefined') {
               const urlParams = new URLSearchParams(window.location.search);
               const provParam = urlParams.get('providerId');
@@ -59,7 +60,7 @@ export default function ProviderPortalPage() {
 
   const activeProvider = providers.find(p => p.id === selectedProviderId) || providers[0];
 
-  // Fetch orders and incoming inquiries for selected provider
+  // Fetch orders and incoming tender RFQs
   const loadProviderData = async () => {
     if (!activeProvider) return;
 
@@ -75,18 +76,17 @@ export default function ProviderPortalPage() {
         setOrders(filtered.length > 0 ? filtered : allList.slice(0, 3));
       }
 
-      // 2. Fetch Incoming Inquiries from agentpay_chat_sessions
+      // 2. Fetch Incoming Tenders & RFQs
       const sessionsSnap = await getDocs(collection(db, 'agentpay_chat_sessions'));
       if (!sessionsSnap.empty) {
         const allSessions = sessionsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        // Filter sessions that are awaiting this provider or matched with this provider
-        const matchingInquiries = allSessions.filter((s: any) => 
-          (s.providerId === activeProvider.id || 
-           s.providerMatched?.toLowerCase() === activeProvider.name?.toLowerCase() ||
-           s.negotiatedDeal?.providerName?.toLowerCase() === activeProvider.name?.toLowerCase()) &&
-          (s.status === 'awaiting_provider' || s.status === 'inquiry' || s.status === 'negotiated')
-        );
-        setInquiries(matchingInquiries);
+        const matching = allSessions.filter((s: any) => {
+          const targets = s.targetProviders || [];
+          const isInTargets = targets.some((tp: any) => tp.id === activeProvider.id || tp.name === activeProvider.name);
+          const isDirect = s.providerId === activeProvider.id || s.providerMatched === activeProvider.name;
+          return (isInTargets || isDirect) && (s.status === 'tender_open' || s.status === 'awaiting_provider' || s.status === 'closed_awarded' || s.status === 'negotiated');
+        });
+        setInquiries(matching);
       }
     } catch (err) {
       console.warn('Load provider data:', err);
@@ -99,28 +99,33 @@ export default function ProviderPortalPage() {
     }
   }, [selectedProviderId, activeProvider]);
 
-  // Handle Provider Accepting Proposal
-  const handleAcceptProposal = async (sessionId: string) => {
+  // Handle Provider Submitting Bid
+  const handleSubmitBid = async (sessionId: string) => {
     setRespondingSessionId(sessionId);
     try {
-      const note = customReplyNote[sessionId] || '';
-      const res = await fetch('/api/providers/respond-inquiry', {
+      const price = customBidPrice[sessionId] || 160;
+      const days = customDeliveryDays[sessionId] || 3;
+      const note = customReplyNote[sessionId] || 'I have verified capacity and will deliver within 3 days with full code documentation.';
+
+      const res = await fetch('/api/providers/submit-bid', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sessionId,
-          action: 'accept',
-          message: note
+          providerId: activeProvider.id,
+          bidPrice: Number(price),
+          deliveryDays: Number(days),
+          note
         })
       });
 
       const data = await res.json();
       if (res.ok && data.success) {
-        setResponseNotice(`🎉 Success: Agreement Codified! PayPal order generated for client authorization.`);
+        setResponseNotice(`🎉 Success: Bid of $${price} USD submitted to client!`);
         setTimeout(() => setResponseNotice(null), 6000);
         await loadProviderData();
       } else {
-        alert(`Response Error: ${data.error || 'Failed to accept'}`);
+        alert(data.error || 'Failed to submit bid');
       }
     } catch (err: any) {
       alert(`Network error: ${err.message}`);
@@ -145,7 +150,7 @@ export default function ProviderPortalPage() {
     }
   };
 
-  const pendingInquiriesCount = inquiries.filter(i => i.status === 'awaiting_provider').length;
+  const pendingTendersCount = inquiries.filter(i => i.status === 'tender_open' || i.status === 'awaiting_provider').length;
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 w-full space-y-8 animate-fadeIn">
@@ -159,7 +164,7 @@ export default function ProviderPortalPage() {
             </span>
           </div>
           <p className="text-xs text-zinc-400 mt-1">
-            Review incoming AI agent inquiries, respond to client proposals, manage PayPal escrows, and collaborate.
+            Review incoming AI agent tenders, submit competitive milestone bids, manage PayPal escrows, and collaborate.
           </p>
         </div>
 
@@ -190,7 +195,7 @@ export default function ProviderPortalPage() {
           </div>
           <button 
             onClick={() => setResponseNotice(null)}
-            className="text-xs text-emerald-400 hover:text-white font-mono px-2 py-0.5 rounded"
+            className="text-xs text-emerald-400 hover:text-white font-mono px-2 py-0.5 rounded cursor-pointer"
           >
             Dismiss
           </button>
@@ -242,10 +247,10 @@ export default function ProviderPortalPage() {
           }`}
         >
           <Sparkles className="h-4 w-4" />
-          <span>Incoming AI Negotiations</span>
-          {pendingInquiriesCount > 0 && (
+          <span>Incoming AI Tenders</span>
+          {pendingTendersCount > 0 && (
             <span className="h-5 px-2 rounded-full bg-cyan-500 text-zinc-950 font-black text-[10px] flex items-center justify-center animate-pulse">
-              {pendingInquiriesCount} New
+              {pendingTendersCount} Open
             </span>
           )}
         </button>
@@ -263,34 +268,38 @@ export default function ProviderPortalPage() {
         </button>
       </div>
 
-      {/* TAB 1: Incoming AI Negotiations */}
+      {/* TAB 1: Incoming AI Negotiations & Tenders */}
       {activeTab === 'inquiries' && (
         <div className="space-y-5">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-zinc-300 uppercase tracking-wider flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-cyan-400" />
-              <span>Incoming Autonomous Contract Inquiries</span>
+              <span>Incoming Autonomous RFQ Tenders</span>
             </h3>
             <span className="text-xs text-zinc-500">
-              Proposals sent by AgentPay Commerce Bot on behalf of clients
+              Real-time project scopes transmitted to {activeProvider?.name}
             </span>
           </div>
 
           {inquiries.length === 0 ? (
             <div className="p-12 text-center rounded-3xl bg-zinc-900/20 border border-zinc-800/60 text-xs text-zinc-500 space-y-2">
               <Sparkles className="h-8 w-8 text-zinc-600 mx-auto" />
-              <p>No active inquiries currently waiting for {activeProvider?.name}.</p>
+              <p>No active project tenders currently open for {activeProvider?.name}.</p>
               <p className="text-[11px] text-zinc-600">
-                To test: Go to the main AI Agent Chat, request a service matching {activeProvider?.name.split(' ')[0]}, and select &quot;Negotiate&quot;!
+                Tip: Go to AI Agent Chat, search for a service matching {activeProvider?.name.split(' ')[0]}, and click &quot;Dispatch Tender&quot;!
               </p>
             </div>
           ) : (
             <div className="space-y-5">
               {inquiries.map((inq) => {
-                const isAwaiting = inq.status === 'awaiting_provider';
-                const isNegotiated = inq.status === 'negotiated' || inq.status === 'escrow_created';
-                const deal = inq.negotiatedDeal || {};
+                const isOpen = inq.status === 'tender_open' || inq.status === 'awaiting_provider';
+                const isClosed = inq.status === 'closed_awarded' || inq.status === 'escrow_created';
+                const isWinner = isClosed && (inq.winningBid?.providerId === activeProvider.id || inq.providerId === activeProvider.id);
+                const isOutbidLate = isClosed && !isWinner;
                 const isResponding = respondingSessionId === inq.id;
+
+                // Check if active provider already submitted a bid for this tender
+                const myExistingBid = (inq.bids || []).find((b: any) => b.providerId === activeProvider.id);
 
                 return (
                   <div
@@ -302,25 +311,27 @@ export default function ProviderPortalPage() {
                       <div className="space-y-1">
                         <div className="flex items-center gap-2.5">
                           <h4 className="font-bold text-white text-base">
-                            {deal.scopeTitle || inq.latestPrompt || 'Project Contract Proposal'}
+                            {inq.projectScope || inq.latestPrompt || 'Autonomous Milestone Deliverable'}
                           </h4>
                           <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider ${
-                            isAwaiting
+                            isOpen
                               ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30 animate-pulse'
-                              : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                              : isWinner
+                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                              : 'bg-rose-500/10 text-rose-400 border border-rose-500/30'
                           }`}>
-                            {isAwaiting ? '⏳ Awaiting Your Acceptance' : '✓ Agreement Codified'}
+                            {isOpen ? '⏳ Tender Open for Bids' : isWinner ? '🏆 Contract Awarded to You' : '🚫 Opportunity Closed (Late)'}
                           </span>
                         </div>
                         <p className="text-xs text-zinc-400">
-                          Client: <strong className="text-white">{inq.buyerName || 'Client'}</strong> ({inq.buyerEmail || 'client@agentpay.network'}) • Budget Cap: <strong className="text-cyan-300">${inq.spendingLimit || 200} USD</strong>
+                          Client: <strong className="text-white">{inq.buyerName || 'Client'}</strong> ({inq.buyerEmail || 'client@agentpay.network'}) • Client Budget Cap: <strong className="text-cyan-300">${inq.spendingLimit || 200} USD</strong>
                         </p>
                       </div>
 
                       <div className="text-left sm:text-right shrink-0">
-                        <span className="text-[10px] text-zinc-500 uppercase tracking-wider block">Proposed Escrow Rate</span>
+                        <span className="text-[10px] text-zinc-500 uppercase tracking-wider block">Max Budget Cap</span>
                         <span className="font-mono font-black text-xl text-emerald-400">
-                          ${deal.negotiatedPrice || inq.negotiatedPrice || 160} USD
+                          ${inq.spendingLimit || 200} USD
                         </span>
                       </div>
                     </div>
@@ -329,7 +340,7 @@ export default function ProviderPortalPage() {
                     {inq.negotiationDialog && inq.negotiationDialog.length > 0 && (
                       <div className="p-4 rounded-2xl bg-zinc-950/70 border border-zinc-800/80 space-y-2.5 text-xs">
                         <span className="text-[10px] font-mono uppercase tracking-wider text-cyan-400 font-bold block">
-                          Autonomous Protocol Dialogue History:
+                          Autonomous Tender Transmissions:
                         </span>
                         {inq.negotiationDialog.map((diag: any, dIdx: number) => (
                           <div
@@ -352,56 +363,98 @@ export default function ProviderPortalPage() {
                       </div>
                     )}
 
-                    {/* Milestone Breakdown */}
-                    {deal.milestones && (
-                      <div className="space-y-1.5">
-                        <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 font-bold">
-                          Proposed Milestone Structure:
-                        </span>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          {deal.milestones.map((m: any, mIdx: number) => (
-                            <div key={mIdx} className="p-2.5 rounded-xl bg-zinc-950/60 border border-zinc-800 flex items-center justify-between text-xs">
-                              <span className="text-zinc-300 truncate max-w-[200px]">{m.title}</span>
-                              <span className="font-mono font-bold text-cyan-400">${m.amount} USD</span>
-                            </div>
-                          ))}
+                    {/* CASE 1: Opportunity Closed / Late Bid Notice (Exact edge-case Janitha described) */}
+                    {isOutbidLate && (
+                      <div className="p-4 rounded-2xl bg-rose-950/20 border border-rose-500/30 space-y-1 text-xs">
+                        <div className="flex items-center gap-2 text-rose-300 font-bold">
+                          <Ban className="h-4 w-4 text-rose-400 shrink-0" />
+                          <span>🚫 Opportunity Closed (Contract Already Awarded)</span>
+                        </div>
+                        <p className="text-zinc-300 leading-relaxed pl-6">
+                          The client has already awarded this project to <strong className="text-white">{inq.winningBid?.providerName || 'another specialist'}</strong> for <strong className="text-emerald-400">${inq.winningBid?.bidPrice || inq.amount} USD</strong> and authorized PayPal Milestone Escrow. Bidding is now locked for this tender. Thank you for your interest!
+                        </p>
+                      </div>
+                    )}
+
+                    {/* CASE 2: You Won the Contract */}
+                    {isWinner && (
+                      <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0" />
+                          <div>
+                            <p className="font-bold">🎉 Congratulations! The client accepted your bid and funded the milestone escrow.</p>
+                            <p className="text-[11px] text-zinc-400 mt-0.5">Please switch to the Active Escrow Orders tab to submit deliverables and chat with the client.</p>
+                          </div>
                         </div>
                       </div>
                     )}
 
-                    {/* Interactive Response Bar */}
-                    {isAwaiting && (
-                      <div className="pt-2 border-t border-zinc-800 space-y-3">
-                        <input
-                          type="text"
-                          value={customReplyNote[inq.id] || ''}
-                          onChange={e => setCustomReplyNote({ ...customReplyNote, [inq.id]: e.target.value })}
-                          placeholder="Optional note to client (e.g. 'Accepted! Ready to start work immediately on Milestone 1')..."
-                          className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-400"
-                        />
+                    {/* CASE 3: Already Submitted Bid, Awaiting Client Decision */}
+                    {isOpen && myExistingBid && (
+                      <div className="p-4 rounded-2xl bg-cyan-950/30 border border-cyan-500/30 space-y-1 text-xs">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-cyan-300 flex items-center gap-2">
+                            <CheckCircle2 className="h-4 w-4 text-cyan-400" />
+                            <span>Your Bid of ${myExistingBid.bidPrice} USD is Live!</span>
+                          </span>
+                          <span className="font-mono text-zinc-400 text-[10px]">Submitted at {myExistingBid.submittedAt}</span>
+                        </div>
+                        <p className="text-zinc-300 pl-6 text-[11px]">
+                          Turnaround: <strong>{myExistingBid.deliveryDays} Days</strong> • Note: &quot;{myExistingBid.note}&quot; • <em>Awaiting client decision in chat.</em>
+                        </p>
+                      </div>
+                    )}
 
-                        <div className="flex items-center justify-end gap-3">
+                    {/* CASE 4: Tender Open & Ready to Submit Bid */}
+                    {isOpen && !myExistingBid && (
+                      <div className="pt-2 border-t border-zinc-800 space-y-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                          <div>
+                            <label className="block text-[11px] text-zinc-400 mb-1 font-medium">Your Bid Price (USD)</label>
+                            <input
+                              type="number"
+                              value={customBidPrice[inq.id] || 160}
+                              onChange={e => setCustomBidPrice({ ...customBidPrice, [inq.id]: Number(e.target.value) })}
+                              min="30"
+                              max={inq.spendingLimit || 500}
+                              className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-white font-mono font-bold focus:outline-none focus:border-cyan-400"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] text-zinc-400 mb-1 font-medium">Delivery Turnaround (Days)</label>
+                            <input
+                              type="number"
+                              value={customDeliveryDays[inq.id] || 3}
+                              onChange={e => setCustomDeliveryDays({ ...customDeliveryDays, [inq.id]: Number(e.target.value) })}
+                              min="1"
+                              max="14"
+                              className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-white font-mono font-bold focus:outline-none focus:border-cyan-400"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] text-zinc-400 mb-1 font-medium">Technical Note to Client</label>
+                          <input
+                            type="text"
+                            value={customReplyNote[inq.id] || ''}
+                            onChange={e => setCustomReplyNote({ ...customReplyNote, [inq.id]: e.target.value })}
+                            placeholder="e.g. 'I will deliver Next.js 15 with App Router, Tailwind and full documentation in 3 days'..."
+                            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-400"
+                          />
+                        </div>
+
+                        <div className="flex items-center justify-end gap-3 pt-1">
                           <button
-                            onClick={() => handleAcceptProposal(inq.id)}
+                            onClick={() => handleSubmitBid(inq.id)}
                             disabled={isResponding}
-                            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:opacity-95 text-zinc-950 font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-950/40 transition-all cursor-pointer disabled:opacity-50"
+                            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:opacity-95 text-zinc-950 font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-cyan-950/40 transition-all cursor-pointer disabled:opacity-50"
                           >
-                            {isResponding ? <span className="animate-spin">⏳</span> : <CheckCircle2 className="h-4 w-4" />}
-                            <span>Accept Terms & Codify Agreement (${deal.negotiatedPrice || 160} USD)</span>
+                            {isResponding ? <span className="animate-spin">⏳</span> : <Send className="h-3.5 w-3.5" />}
+                            <span>Submit Competitive Bid (${customBidPrice[inq.id] || 160} USD)</span>
                           </button>
                         </div>
-                      </div>
-                    )}
-
-                    {isNegotiated && (
-                      <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                          <span>Agreement codified! Awaiting client authorization in PayPal Smart Escrow.</span>
-                        </div>
-                        {inq.paypalOrderId && (
-                          <span className="font-mono text-[10px] text-zinc-400">PayPal ID: {inq.paypalOrderId}</span>
-                        )}
                       </div>
                     )}
                   </div>

@@ -181,9 +181,91 @@ export default function ChatInterface() {
     }
   };
 
-  // Auto-sync polling while waiting for provider to respond in Provider Workspace
+  // Award Contract to a specific Specialist Bid (Autonomous Reverse Auction Winner)
+  const handleAwardBid = async (targetSessionId: string, providerId: string) => {
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/agent/award-bid', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: targetSessionId || sessionId,
+          providerId
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        if (Array.isArray(data.messages)) {
+          setMessages(data.messages);
+        }
+        if (data.paypalOrderId && data.winningBid) {
+          setActivePayPalOrder({
+            orderId: data.orderRefId || `ord_${Date.now()}`,
+            paypalOrderId: data.paypalOrderId,
+            amount: data.winningBid.bidPrice || data.winningBid.amount || 160,
+            providerName: data.winningBid.providerName || data.winningBid.name || 'Specialist',
+            scopeTitle: data.winningBid.serviceTitle || 'Milestone Contract'
+          });
+        }
+      } else {
+        alert(data.error || 'Failed to award contract');
+      }
+    } catch (err: any) {
+      console.warn('Award bid error:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Quick Simulation Helper for Hackathon Judges / Evaluators
+  const handleSimulateProviderBid = async (
+    targetSessionId: string, 
+    providerId: string, 
+    bidPrice: number, 
+    deliveryDays: number = 3, 
+    note?: string
+  ) => {
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/providers/submit-bid', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: targetSessionId || sessionId,
+          providerId,
+          bidPrice,
+          deliveryDays,
+          note: note || `I have verified capacity and will deliver within ${deliveryDays} days with full documentation.`
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        const snap = await getDoc(doc(db, 'agentpay_chat_sessions', targetSessionId || sessionId));
+        if (snap.exists()) {
+          const sData = snap.data();
+          if (Array.isArray(sData.messages)) {
+            setMessages(sData.messages);
+          }
+        }
+      } else {
+        alert(data.error || 'Simulation notice');
+      }
+    } catch (err: any) {
+      console.warn('Simulate bid error:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Auto-sync polling while waiting for provider to respond or submit bids in Provider Workspace
   useEffect(() => {
-    const isAwaiting = messages.some(m => m.actionPayload?.inquiryStatus === 'awaiting_provider');
+    const isAwaiting = messages.some(
+      m => m.actionPayload?.inquiryStatus === 'awaiting_provider' || 
+           m.actionPayload?.tenderStatus === 'tender_open' ||
+           m.actionPayload?.type === 'tender_dispatched'
+    );
     if (!isAwaiting || !sessionId) return;
 
     const interval = setInterval(async () => {
@@ -191,23 +273,30 @@ export default function ChatInterface() {
         const snap = await getDoc(doc(db, 'agentpay_chat_sessions', sessionId));
         if (snap.exists()) {
           const sData = snap.data();
-          if (sData.status === 'negotiated' && Array.isArray(sData.messages) && sData.messages.length > messages.length) {
-            setMessages(sData.messages);
-            if (sData.paypalOrderId && sData.negotiatedDeal) {
-              setActivePayPalOrder({
-                orderId: sData.orderRefId || sessionId,
-                paypalOrderId: sData.paypalOrderId,
-                amount: sData.negotiatedDeal.negotiatedPrice,
-                providerName: sData.negotiatedDeal.providerName,
-                scopeTitle: sData.negotiatedDeal.scopeTitle
-              });
+          if (Array.isArray(sData.messages)) {
+            const lastCurrentMsg = messages[messages.length - 1];
+            const currentBidsCount = lastCurrentMsg?.actionPayload?.bids?.length || 0;
+            const newBidsCount = sData.bids?.length || 0;
+            const isStatusChanged = sData.status === 'closed_awarded' && lastCurrentMsg?.actionPayload?.tenderStatus !== 'closed_awarded';
+
+            if (newBidsCount !== currentBidsCount || isStatusChanged || sData.messages.length > messages.length) {
+              setMessages(sData.messages);
+              if (sData.status === 'closed_awarded' && sData.paypalOrderId && sData.winningBid) {
+                setActivePayPalOrder({
+                  orderId: sData.orderRefId || sessionId,
+                  paypalOrderId: sData.paypalOrderId,
+                  amount: sData.winningBid.bidPrice || sData.winningBid.amount || 160,
+                  providerName: sData.winningBid.providerName || 'Specialist',
+                  scopeTitle: sData.projectScope || 'Milestone Contract'
+                });
+              }
             }
           }
         }
       } catch (err) {
         // ignore
       }
-    }, 3000);
+    }, 2500);
 
     return () => clearInterval(interval);
   }, [messages, sessionId]);
@@ -257,6 +346,7 @@ export default function ChatInterface() {
       }
 
       const decision = data.agentDecision;
+      const isTender = decision?.intent === 'tender_dispatched';
       const isNegotiationOrCheckout = decision?.intent === 'checkout_ready' || !!decision?.negotiatedDeal || !!data.paypalOrderId;
 
       if (typeof data.isRealAI === 'boolean') {
@@ -269,8 +359,11 @@ export default function ChatInterface() {
         content: decision?.reply || data.fallbackReply || "I have analyzed your request.",
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         actionPayload: {
-          type: isNegotiationOrCheckout ? 'paypal_checkout' : data.matchedProviders?.length ? 'search_results' : 'negotiation_proposal',
-          matchedProviders: isNegotiationOrCheckout ? [] : data.matchedProviders,
+          type: isTender ? 'tender_dispatched' : (isNegotiationOrCheckout ? 'paypal_checkout' : data.matchedProviders?.length ? 'search_results' : 'negotiation_proposal'),
+          tenderStatus: isTender ? 'tender_open' : undefined,
+          targetProviders: decision?.targetProviders || null,
+          bids: decision?.bids || [],
+          matchedProviders: (isNegotiationOrCheckout || isTender) ? [] : data.matchedProviders,
           negotiatedTerms: decision?.negotiatedDeal,
           negotiationDialog: decision?.negotiationDialog,
           paypalOrderId: data.paypalOrderId,
@@ -283,7 +376,7 @@ export default function ChatInterface() {
       setMessages((prev) => [...prev, assistantMsg]);
 
       // If PayPal order was triggered, set it for interactive checkout
-      if (decision?.negotiatedDeal) {
+      if (decision?.negotiatedDeal && data.paypalOrderId) {
         setActivePayPalOrder({
           orderId: data.orderRefId || `ord_${Date.now()}`,
           paypalOrderId: data.paypalOrderId || `PAYPAL_SANDBOX_${Date.now()}`,
@@ -480,40 +573,294 @@ export default function ChatInterface() {
               </div>
 
               {/* 1. Matched Providers Discovery Cards */}
-              {msg.actionPayload?.matchedProviders && msg.actionPayload.matchedProviders.length > 0 && msg.actionPayload.type !== 'paypal_checkout' && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-                  {msg.actionPayload.matchedProviders.map((prov) => (
-                    <div
-                      key={prov.id}
-                      className="p-3.5 rounded-2xl bg-zinc-900/80 border border-zinc-800 hover:border-cyan-500/40 transition-all text-xs space-y-2 group shadow-md"
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <img src={prov.avatarUrl} alt={prov.name} className="h-9 w-9 rounded-full bg-zinc-800 border border-zinc-700" />
-                        <div>
-                          <h4 className="font-bold text-white group-hover:text-cyan-300 transition-colors">{prov.name}</h4>
-                          <p className="text-[10px] text-zinc-400 truncate max-w-[150px]">{prov.title}</p>
-                        </div>
+              {msg.actionPayload?.matchedProviders && msg.actionPayload.matchedProviders.length > 0 && msg.actionPayload.type !== 'paypal_checkout' && msg.actionPayload.type !== 'tender_dispatched' && (
+                <div className="space-y-3 pt-2">
+                  {/* Master Dispatch Tender Button */}
+                  <div className="p-3.5 rounded-2xl bg-gradient-to-r from-blue-950/60 via-cyan-950/40 to-indigo-950/60 border border-cyan-500/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
+                    <div className="flex items-center gap-2.5">
+                      <div className="h-8 w-8 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center shrink-0">
+                        <Sparkles className="h-4 w-4" />
                       </div>
-                      <div className="flex items-center justify-between border-t border-zinc-800/80 pt-2 text-[11px]">
-                        <span className="text-zinc-400">⭐ {prov.rating} ({prov.reviewCount})</span>
-                        <span className="font-mono font-bold text-emerald-400">${prov.hourlyRate}/hr</span>
+                      <div>
+                        <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                          Autonomous RFQ Reverse Auction Protocol
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 font-mono">3 Top Specialists Found</span>
+                        </h4>
+                        <p className="text-[10px] text-zinc-400">
+                          Transmit requirements to all 3 specialists simultaneously. Compare their incoming milestone bids and award the contract to the best offer.
+                        </p>
                       </div>
-                      <button
-                        onClick={() => {
-                          if (!user) {
-                            openAuthModal();
-                            return;
-                          }
-                          handleSend(`I want to proceed with ${prov.name} for my project within my $${spendingLimit} budget.`);
-                        }}
-                        className="w-full py-2 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 font-semibold border border-cyan-500/30 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-                      >
-                        <Bot className="h-3.5 w-3.5 text-cyan-400" />
-                        <span>Negotiate with {prov.name.split(' ')[0]}</span>
-                        <ArrowRight className="h-3 w-3" />
-                      </button>
                     </div>
-                  ))}
+                    <button
+                      onClick={() => {
+                        if (!user) {
+                          openAuthModal();
+                          return;
+                        }
+                        handleSend(`Dispatch autonomous tender to top 3 specialists for my project within my $${spendingLimit} budget.`);
+                      }}
+                      className="w-full sm:w-auto px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:opacity-90 text-zinc-950 font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-cyan-950/40 transition-all cursor-pointer shrink-0"
+                    >
+                      <Bot className="h-3.5 w-3.5" />
+                      <span>🚀 Dispatch Tender to All 3 Specialists</span>
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {msg.actionPayload.matchedProviders.map((prov) => (
+                      <div
+                        key={prov.id}
+                        className="p-3.5 rounded-2xl bg-zinc-900/80 border border-zinc-800 hover:border-cyan-500/40 transition-all text-xs space-y-2 group shadow-md"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <img src={prov.avatarUrl} alt={prov.name} className="h-9 w-9 rounded-full bg-zinc-800 border border-zinc-700" />
+                          <div>
+                            <h4 className="font-bold text-white group-hover:text-cyan-300 transition-colors">{prov.name}</h4>
+                            <p className="text-[10px] text-zinc-400 truncate max-w-[150px]">{prov.title}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between border-t border-zinc-800/80 pt-2 text-[11px]">
+                          <span className="text-zinc-400">⭐ {prov.rating} ({prov.reviewCount})</span>
+                          <span className="font-mono font-bold text-emerald-400">${prov.hourlyRate}/hr</span>
+                        </div>
+                        <button
+                          onClick={() => {
+                            if (!user) {
+                              openAuthModal();
+                              return;
+                            }
+                            handleSend(`I want to proceed with ${prov.name} for my project within my $${spendingLimit} budget.`);
+                          }}
+                          className="w-full py-2 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 font-semibold border border-cyan-500/30 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                        >
+                          <Bot className="h-3.5 w-3.5 text-cyan-400" />
+                          <span>Select {prov.name.split(' ')[0]}</span>
+                          <ArrowRight className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 2. Autonomous RFQ Protocol & Live Competing Bids Board */}
+              {msg.actionPayload?.targetProviders && msg.actionPayload.targetProviders.length > 0 && (
+                <div className="p-4 sm:p-5 rounded-2xl bg-zinc-950/95 border border-cyan-500/30 text-xs space-y-4 shadow-xl backdrop-blur-md">
+                  {/* Board Header */}
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-zinc-800/80 pb-3">
+                    <div className="flex items-center gap-2">
+                      <span className={`h-2.5 w-2.5 rounded-full ${msg.actionPayload.tenderStatus === 'closed_awarded' ? 'bg-emerald-400' : 'bg-cyan-400 animate-ping'}`} />
+                      <div>
+                        <h4 className="font-mono font-bold text-cyan-300 uppercase tracking-wider text-xs flex items-center gap-1.5">
+                          <Bot className="h-4 w-4 text-cyan-400" />
+                          Autonomous RFQ Tender & Competing Bids Board
+                        </h4>
+                        <p className="text-[10px] text-zinc-400">
+                          {msg.actionPayload.tenderStatus === 'closed_awarded' 
+                            ? 'Contract awarded and escrow funded. Competing inquiries locked.'
+                            : 'Tender open to 3 top specialists. Reviewing scope and awaiting competitive bids.'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <span className={`text-[10px] font-mono px-2.5 py-1 rounded-full border font-bold ${
+                      msg.actionPayload.tenderStatus === 'closed_awarded'
+                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                        : 'bg-amber-500/10 text-amber-400 border-amber-500/30 animate-pulse'
+                    }`}>
+                      {msg.actionPayload.tenderStatus === 'closed_awarded' ? '🏆 Contract Awarded' : '⏳ Tender Open for Bids'}
+                    </span>
+                  </div>
+
+                  {/* Tendered Specialists Strip */}
+                  <div className="space-y-1.5">
+                    <span className="text-[10px] uppercase font-mono text-zinc-400 font-bold block">
+                      Tender Transmitted To 3 Specialists:
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                      {msg.actionPayload.targetProviders.map((tp: any) => {
+                        const hasBid = (msg.actionPayload?.bids || []).some((b: any) => b.providerId === tp.id);
+                        const isWon = msg.actionPayload?.tenderStatus === 'closed_awarded' && (msg.actionPayload?.winningBid?.providerId === tp.id || tp.status === 'awarded');
+                        const isLateClosed = msg.actionPayload?.tenderStatus === 'closed_awarded' && !isWon;
+
+                        return (
+                          <div 
+                            key={tp.id} 
+                            className={`p-3 rounded-xl border flex items-center gap-2.5 transition-all ${
+                              isWon 
+                                ? 'bg-emerald-950/30 border-emerald-500/50' 
+                                : isLateClosed 
+                                ? 'bg-zinc-900/40 border-zinc-800/80 opacity-60' 
+                                : hasBid
+                                ? 'bg-cyan-950/20 border-cyan-500/40'
+                                : 'bg-zinc-900/60 border-zinc-800'
+                            }`}
+                          >
+                            <img src={tp.avatarUrl} alt={tp.name} className="h-8 w-8 rounded-full bg-zinc-800 border border-zinc-700 shrink-0" />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center justify-between">
+                                <span className="font-bold text-white text-[11px] truncate">{tp.name}</span>
+                              </div>
+                              <p className="text-[9px] text-zinc-400 truncate">{tp.title}</p>
+                              <div className="pt-1">
+                                {isWon ? (
+                                  <span className="text-[9px] font-bold text-emerald-400 flex items-center gap-1 font-mono">
+                                    <CheckCircle2 className="h-2.5 w-2.5" /> Won & Awarded
+                                  </span>
+                                ) : isLateClosed ? (
+                                  <span className="text-[9px] font-mono text-rose-400 flex items-center gap-1">
+                                    <AlertCircle className="h-2.5 w-2.5" /> Closed (Late)
+                                  </span>
+                                ) : hasBid ? (
+                                  <span className="text-[9px] font-bold text-cyan-400 flex items-center gap-1 font-mono">
+                                    <CheckCircle2 className="h-2.5 w-2.5" /> Bid Received
+                                  </span>
+                                ) : (
+                                  <span className="text-[9px] font-mono text-amber-400 flex items-center gap-1">
+                                    <Clock className="h-2.5 w-2.5 animate-spin" /> Reviewing Scope...
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Competing Bids List */}
+                  <div className="space-y-2 pt-1 border-t border-zinc-800/80">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] uppercase font-mono text-zinc-400 font-bold block">
+                        Received Milestone Bids ({msg.actionPayload.bids?.length || 0}):
+                      </span>
+                      {msg.actionPayload.tenderStatus !== 'closed_awarded' && (
+                        <span className="text-[10px] text-cyan-400 font-mono flex items-center gap-1 animate-pulse">
+                          <span className="h-1.5 w-1.5 rounded-full bg-cyan-400" />
+                          Streaming live from Provider Workspaces
+                        </span>
+                      )}
+                    </div>
+
+                    {(!msg.actionPayload.bids || msg.actionPayload.bids.length === 0) ? (
+                      <div className="p-4 rounded-xl bg-zinc-900/40 border border-zinc-800/80 text-center space-y-1">
+                        <Clock className="h-5 w-5 text-amber-400 mx-auto animate-pulse" />
+                        <p className="text-zinc-300 font-medium text-[11px]">Awaiting bids from tendered specialists...</p>
+                        <p className="text-zinc-500 text-[10px]">
+                          Specialists have been notified via Resend email. You can also open the Provider Workspace in another tab or use the quick-test buttons below.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {msg.actionPayload.bids.map((bid: any) => {
+                          const isWinner = msg.actionPayload?.winningBid?.providerId === bid.providerId;
+                          const isClosedOther = msg.actionPayload?.tenderStatus === 'closed_awarded' && !isWinner;
+
+                          return (
+                            <div
+                              key={bid.providerId}
+                              className={`p-4 rounded-xl border space-y-2.5 transition-all ${
+                                isWinner 
+                                  ? 'bg-gradient-to-r from-emerald-950/30 to-teal-950/30 border-emerald-500/50 shadow-lg' 
+                                  : isClosedOther
+                                  ? 'bg-zinc-900/30 border-zinc-800 opacity-60'
+                                  : 'bg-zinc-900/80 border-cyan-500/30 hover:border-cyan-400'
+                              }`}
+                            >
+                              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-zinc-800/80 pb-2">
+                                <div className="flex items-center gap-2.5">
+                                  {bid.providerAvatar && (
+                                    <img src={bid.providerAvatar} alt={bid.providerName} className="h-7 w-7 rounded-full bg-zinc-800 border border-zinc-700" />
+                                  )}
+                                  <div>
+                                    <span className="font-bold text-white text-xs">{bid.providerName}</span>
+                                    <span className="text-[10px] text-zinc-400 block font-mono">
+                                      Turnaround: <strong className="text-zinc-200">{bid.deliveryDays} Days</strong> • Submitted {bid.submittedAt}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-3">
+                                  <span className="font-mono font-black text-emerald-400 text-base">
+                                    ${bid.bidPrice} USD
+                                  </span>
+                                  {isWinner ? (
+                                    <span className="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 font-bold text-[10px] border border-emerald-500/40">
+                                      🏆 Awarded
+                                    </span>
+                                  ) : isClosedOther ? (
+                                    <span className="px-2 py-0.5 rounded-lg bg-zinc-800 text-zinc-500 text-[10px]">
+                                      Outbid / Closed
+                                    </span>
+                                  ) : (
+                                    <button
+                                      onClick={() => handleAwardBid(sessionId, bid.providerId)}
+                                      disabled={isLoading}
+                                      className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:opacity-95 text-zinc-950 font-bold text-[11px] flex items-center gap-1.5 shadow-md shadow-emerald-950/40 transition-all cursor-pointer"
+                                    >
+                                      <CheckCircle2 className="h-3.5 w-3.5" />
+                                      <span>Award Contract & Pay</span>
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+
+                              <p className="text-zinc-300 text-[11px] italic pl-1">
+                                &quot;{bid.note}&quot;
+                              </p>
+
+                              {bid.milestones && bid.milestones.length > 0 && (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                                  {bid.milestones.map((m: any, mIdx: number) => (
+                                    <div key={mIdx} className="p-2 rounded-lg bg-zinc-950/70 border border-zinc-800 flex items-center justify-between text-[10px]">
+                                      <span className="text-zinc-300 truncate max-w-[130px]">{m.title}</span>
+                                      <span className="font-mono font-bold text-cyan-400">${m.amount}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Evaluator Controls: Workspace Links & 1-Click Simulation */}
+                  <div className="p-3 rounded-xl bg-zinc-900/60 border border-zinc-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 text-[11px]">
+                    <div className="flex items-center gap-2">
+                      <a
+                        href="/providers"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center gap-1.5 text-cyan-400 hover:text-cyan-300 font-semibold"
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                        <span>Open Provider Workspace (/providers)</span>
+                      </a>
+                      <span className="text-zinc-600">|</span>
+                      <span className="text-zinc-400">Quick Test:</span>
+                    </div>
+
+                    {msg.actionPayload.tenderStatus !== 'closed_awarded' && (
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <button
+                          onClick={() => handleSimulateProviderBid(sessionId, 'prov_1001', 160, 3, 'I can start immediately and deliver in 3 days.')}
+                          disabled={isLoading}
+                          className="px-2.5 py-1 rounded-lg bg-cyan-950 hover:bg-cyan-900 text-cyan-300 font-semibold border border-cyan-800/80 cursor-pointer transition-all"
+                        >
+                          ⚡ Auto-Bid Daniel ($160)
+                        </button>
+                        <button
+                          onClick={() => handleSimulateProviderBid(sessionId, 'prov_1002', 150, 4, 'Full Next.js setup with test coverage included.')}
+                          disabled={isLoading}
+                          className="px-2.5 py-1 rounded-lg bg-purple-950 hover:bg-purple-900 text-purple-300 font-semibold border border-purple-800/80 cursor-pointer transition-all"
+                        >
+                          ⚡ Auto-Bid Kasun ($150)
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 

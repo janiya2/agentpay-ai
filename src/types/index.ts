@@ -37,10 +37,34 @@ export interface ChatMessage {
   content: string;
   timestamp: string;
   actionPayload?: {
-    type: 'search_results' | 'negotiation_proposal' | 'paypal_checkout' | 'escrow_release' | 'inquiry_dispatched';
+    type: 'search_results' | 'negotiation_proposal' | 'paypal_checkout' | 'escrow_release' | 'inquiry_dispatched' | 'tender_dispatched';
     matchedProviders?: ServiceProvider[];
     selectedProvider?: ServiceProvider;
     inquiryStatus?: 'awaiting_provider' | 'accepted' | 'declined';
+    tenderStatus?: 'tender_open' | 'closed_awarded';
+    targetProviders?: Array<{
+      id: string;
+      name: string;
+      title: string;
+      email: string;
+      avatarUrl: string;
+      rating: number;
+      hourlyRate: number;
+      status: 'awaiting_bid' | 'bid_received' | 'awarded' | 'closed_late';
+      bidPrice?: number;
+    }>;
+    bids?: Array<{
+      providerId: string;
+      providerName: string;
+      providerAvatar?: string;
+      bidPrice: number;
+      deliveryDays: number;
+      milestones: Array<{ title: string; amount: number }>;
+      note: string;
+      submittedAt: string;
+      status: 'submitted' | 'awarded' | 'closed_late';
+    }>;
+    winningBid?: any;
     providerId?: string;
     providerName?: string;
     providerEmail?: string;

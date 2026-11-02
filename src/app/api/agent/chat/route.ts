@@ -54,38 +54,17 @@ You are AgentPay AI, an institutional-grade Autonomous Commerce & Procurement Ag
 Your role:
 1. GREETING STAGE: If the user simply says "hi", "hello", casual greetings, do NOT dump provider cards. Greet the user warmly, explain you are an autonomous procurement agent, and ask what digital deliverable or service they wish to procure within their budget cap ($${spendingLimit} USD).
 2. DISCOVERY STAGE: If the user specifies a service requirement (e.g. Next.js web dev, Figma UI design, AI automation workflow, SEO, mobile app), classify the category ("web-development" | "ui-ux-design" | "ai-automation" | "seo-marketing" | "video-production" | "mobile-apps") and invite them to review top specialists.
-3. NEGOTIATION STAGE: If the user says "I want to proceed with [Provider Name]" or selects a specialist:
-   - Autonomously negotiate on their behalf with that SPECIFIC named provider.
-   - Negotiate a fair discount (original price -> negotiated price within the $${spendingLimit} budget).
-   - Create a 3-turn multi-agent negotiation dialogue ("negotiationDialog") showing AgentPay Bot inquiring and Provider agreeing to terms and 2 milestones.
-   - Divide into 2 milestones.
-   - Explain the autonomous negotiation outcome clearly and invite PayPal Escrow approval.
+3. TENDER DISPATCH STAGE: If the user says "I want to proceed with [Provider Name]", selects a specialist, or asks to tender:
+   - Do NOT simulate or pretend that the provider already agreed in advance! In real-world commerce, specialists must review the RFP in their Provider Workspace.
+   - Explain clearly that the autonomous proposal has been dispatched to the specialists, email notifications have been sent, and you are waiting for their competitive bids.
+   - Set intent to "tender_dispatched".
 
 Format your response strictly as valid JSON with NO markdown formatting:
 {
-  "reply": "string (your comprehensive, polite, professional response to the client)",
-  "intent": "general_chat" | "discovery" | "checkout_ready",
+  "reply": "string (your comprehensive, polite, professional response explaining the tender dispatch and next steps)",
+  "intent": "general_chat" | "discovery" | "tender_dispatched",
   "categoryMatched": "web-development" | "ui-ux-design" | "ai-automation" | "seo-marketing" | "video-production" | "mobile-apps" | null,
-  "selectedProviderName": string | null,
-  "negotiationDialog": [
-    {
-      "speaker": "agent" | "provider",
-      "speakerName": "string",
-      "message": "string"
-    }
-  ] | null,
-  "negotiatedDeal": {
-    "providerName": string,
-    "providerId": string,
-    "scopeTitle": string,
-    "originalPrice": number,
-    "negotiatedPrice": number,
-    "deliveryDays": number,
-    "milestones": [
-      { "title": string, "amount": number }
-    ]
-  } | null,
-  "triggerPayPalOrder": boolean
+  "selectedProviderName": string | null
 }
         `.trim();
 
@@ -174,67 +153,66 @@ Format your response strictly as valid JSON with NO markdown formatting:
           negotiatedDeal: null,
           triggerPayPalOrder: false
         };
-      } else if (isHireIntent) {
-        // Extract provider name from prompt or previous messages
-        let matchedProviderName = 'Adrian Mercer';
+      } else if (isHireIntent || result?.intent === 'tender_dispatched') {
+        // Multi-Provider Autonomous Tender Protocol Dispatch
+        const matchedCategory = result?.categoryMatched || 'web-development';
         const allProvidersSnap = await getDocs(collection(db, 'agentpay_providers'));
         const allProviders = allProvidersSnap.docs.map(d => d.data() as ServiceProvider);
 
-        for (const p of allProviders) {
-          if (lowerText.includes(p.name.toLowerCase()) || lowerText.includes(p.name.split(' ')[0].toLowerCase())) {
-            matchedProviderName = p.name;
-            break;
-          }
+        // Find primary provider if specifically mentioned by client
+        let chosen = allProviders.find(p => lowerText.includes(p.name.toLowerCase()) || lowerText.includes(p.name.split(' ')[0].toLowerCase()));
+        if (!chosen) {
+          chosen = allProviders.find(p => p.category === matchedCategory) || allProviders[0];
         }
 
-        const chosenProvider = allProviders.find(p => p.name.toLowerCase() === matchedProviderName.toLowerCase()) || allProviders[0];
-        const originalRate = Math.round(chosenProvider.hourlyRate * 3);
-        const negotiatedPrice = Math.min(spendingLimit, Math.max(40, Math.round(originalRate * 0.78)));
-        const savings = Math.max(20, originalRate - negotiatedPrice);
-        const ms1 = Math.round(negotiatedPrice / 2);
-        const ms2 = negotiatedPrice - ms1;
-        const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        // Pick 2 peer specialists in same domain for a 3-way competitive tender
+        const peers = allProviders.filter(p => p.id !== chosen!.id && (p.category === chosen!.category || p.category === matchedCategory)).slice(0, 2);
+        const top3Providers = [chosen, ...peers];
 
+        const targetProviders = top3Providers.map((p) => ({
+          id: p.id,
+          name: p.name,
+          title: p.title,
+          email: p.contactEmail,
+          avatarUrl: p.avatarUrl,
+          rating: p.rating,
+          hourlyRate: p.hourlyRate,
+          status: 'awaiting_bid' as const
+        }));
+
+        const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         const dynamicDialog = [
           {
-            speaker: 'agent',
+            speaker: 'agent' as const,
             speakerName: 'AgentPay Commerce Bot 🤖',
-            message: `Initiating Autonomous Protocol session for client ${buyerName || 'Client'}. Project Scope: ${chosenProvider.title}. Budget Cap: $${spendingLimit} USD. Standard catalog quote: $${originalRate} USD (3 hrs @ $${chosenProvider.hourlyRate}/hr). Proposing fixed milestone escrow of $${negotiatedPrice} USD with guaranteed 3-day turnaround across 2 milestones ($${ms1} / $${ms2}). Please review and respond in your Provider Workspace.`,
+            message: `Initiating Autonomous RFP Tender to ${targetProviders.length} specialists (${targetProviders.map(p => p.name).join(', ')}). Project Scope: ${chosen.title}. Client Budget Cap: $${spendingLimit} USD. Awaiting competitive milestone bids and turnaround terms in Provider Workspace.`,
             timestamp: timeNow
           }
         ];
 
         result = {
-          reply: `🚀 **Autonomous Contract Proposal Dispatched to ${chosenProvider.name}!**\n\nI have initiated an official procurement inquiry for **$${negotiatedPrice} USD** (2x $${ms1} milestones) within your $${spendingLimit} budget cap. A notification email has been dispatched to **${chosenProvider.name}** (${chosenProvider.contactEmail}).\n\n⏳ **Status: Awaiting Provider Review & Acceptance**\n${chosenProvider.name} has been notified to review the scope and accept or counter-offer from the **Provider Workspace**.\n\n*You can switch to the Provider Workspace to respond as ${chosenProvider.name}, or use the 1-Click Provider Auto-Accept below.*`,
-          intent: 'inquiry_dispatched',
-          categoryMatched: chosenProvider.category,
-          selectedProviderName: chosenProvider.name,
+          reply: `🚀 **Autonomous Tender Dispatched to 3 Top Specialists!**\n\nI have transmitted your project requirements to:\n${targetProviders.map(p => `• **${p.name}** (${p.title}) — *${p.email}*`).join('\n')}\n\n⏳ **Status: Awaiting Specialist Bids & Counter-Offers**\nNotification emails have been dispatched via Resend. Each specialist has been alerted to review the project scope in their **Provider Workspace** and submit their competitive milestone bids.\n\n*As bids arrive in real-time, they will stream directly into the Bids Board below for your comparison and PayPal milestone escrow award.*`,
+          intent: 'tender_dispatched',
+          categoryMatched: chosen.category,
+          selectedProviderName: chosen.name,
           negotiationDialog: dynamicDialog,
-          negotiatedDeal: {
-            providerName: chosenProvider.name,
-            providerId: chosenProvider.id,
-            scopeTitle: `${chosenProvider.category.replace('-', ' ').toUpperCase()} Autonomous Milestone Contract`,
-            originalPrice: originalRate,
-            negotiatedPrice,
-            deliveryDays: 3,
-            milestones: [
-              { title: 'Milestone 1: Core Architecture & Components', amount: ms1 },
-              { title: 'Milestone 2: Final Verification & Deployment', amount: ms2 }
-            ]
-          },
+          targetProviders,
+          bids: [],
           triggerPayPalOrder: false
         };
 
-        // Dispatch Resend transactional email alert to the service provider
-        sendProviderNegotiationAlert({
-          providerEmail: chosenProvider.contactEmail,
-          providerName: chosenProvider.name,
-          buyerName: buyerName || 'Janitha Dilshan',
-          serviceTitle: `${chosenProvider.category.replace('-', ' ').toUpperCase()} Milestone Contract`,
-          agreedPrice: negotiatedPrice,
-          deliveryDays: 3,
-          orderId: sessionId || `session_${Date.now()}`
-        }).catch((err: any) => console.warn('[Resend Async Notice]:', err));
+        // Dispatch Resend transactional email alert to all target providers
+        for (const tp of targetProviders) {
+          sendProviderNegotiationAlert({
+            providerEmail: tp.email,
+            providerName: tp.name,
+            buyerName: buyerName || 'Janitha Dilshan',
+            serviceTitle: `${chosen.category.replace('-', ' ').toUpperCase()} Milestone Contract`,
+            agreedPrice: Math.round(spendingLimit * 0.8),
+            deliveryDays: 3,
+            orderId: sessionId || `session_${Date.now()}`
+          }).catch((err: any) => console.warn('[Resend Async Notice]:', err));
+        }
       } else {
         // Project Discovery Stage
         let matchedCategory = 'web-development';
@@ -345,10 +323,10 @@ Format your response strictly as valid JSON with NO markdown formatting:
         content: result?.reply || "I have analyzed your request.",
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         actionPayload: {
-          type: result?.intent === 'inquiry_dispatched' ? 'inquiry_dispatched' : (result?.intent === 'checkout_ready' ? 'paypal_checkout' : matchedProviders.length ? 'search_results' : 'negotiation_proposal'),
-          inquiryStatus: result?.intent === 'inquiry_dispatched' ? 'awaiting_provider' : (result?.negotiatedDeal ? 'accepted' : undefined),
-          providerId: result?.negotiatedDeal?.providerId || null,
-          providerName: result?.negotiatedDeal?.providerName || null,
+          type: result?.intent === 'tender_dispatched' ? 'tender_dispatched' : (result?.intent === 'checkout_ready' ? 'paypal_checkout' : matchedProviders.length ? 'search_results' : 'negotiation_proposal'),
+          tenderStatus: result?.intent === 'tender_dispatched' ? 'tender_open' : undefined,
+          targetProviders: result?.targetProviders || null,
+          bids: result?.bids || [],
           matchedProviders,
           negotiatedTerms: result?.negotiatedDeal || null,
           negotiationDialog: result?.negotiationDialog || null,
@@ -374,6 +352,9 @@ Format your response strictly as valid JSON with NO markdown formatting:
         isRealAI,
         modelUsed,
         categoryMatched: result?.categoryMatched || null,
+        projectScope: `${result?.categoryMatched || 'web-development'} Milestone Deliverable`,
+        targetProviders: result?.targetProviders || null,
+        bids: result?.bids || [],
         providerId: result?.negotiatedDeal?.providerId || null,
         providerMatched: result?.negotiatedDeal?.providerName || (matchedProviders[0]?.name || null),
         matchedProviders,
@@ -384,7 +365,7 @@ Format your response strictly as valid JSON with NO markdown formatting:
         savings,
         paypalOrderId: paypalOrderId || null,
         orderRefId: finalOrderRefId || null,
-        status: paypalOrderId ? 'escrow_created' : (result?.intent === 'inquiry_dispatched' ? 'awaiting_provider' : (result?.negotiatedDeal ? 'negotiated' : 'inquiry')),
+        status: paypalOrderId ? 'escrow_created' : (result?.intent === 'tender_dispatched' ? 'tender_open' : (result?.negotiatedDeal ? 'negotiated' : 'inquiry')),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       }));
