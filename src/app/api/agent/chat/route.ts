@@ -279,7 +279,7 @@ Format your response strictly as valid JSON with NO markdown formatting:
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         };
-        await setDoc(doc(db, 'agentpay_orders', finalOrderRefId), orderDoc);
+        await setDoc(doc(db, 'agentpay_orders', finalOrderRefId), JSON.parse(JSON.stringify(orderDoc)));
       } catch (err) {
         console.warn('[Firestore] Failed to save order:', err);
       }
@@ -309,8 +309,7 @@ Format your response strictly as valid JSON with NO markdown formatting:
 
       const fullConversation = [...messages, assistantMsg];
 
-      // Save complete session with entire message thread
-      await setDoc(doc(db, 'agentpay_chat_sessions', sid), {
+      const sessionDocData = JSON.parse(JSON.stringify({
         id: sid,
         buyerName: buyerName || 'Janitha Dilshan',
         buyerEmail: buyerEmail || 'janithad2@gmail.com',
@@ -333,10 +332,13 @@ Format your response strictly as valid JSON with NO markdown formatting:
         status: paypalOrderId ? 'escrow_created' : (result?.negotiatedDeal ? 'negotiated' : 'inquiry'),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
-      }, { merge: true });
+      }));
+
+      // Save complete session with entire message thread
+      await setDoc(doc(db, 'agentpay_chat_sessions', sid), sessionDocData, { merge: true });
 
       // Update real active user profile in Firestore
-      await setDoc(doc(db, 'agentpay_users', 'usr_janitha'), {
+      const userDocData = JSON.parse(JSON.stringify({
         id: 'usr_janitha',
         name: buyerName || 'Janitha Dilshan',
         email: buyerEmail || 'janithad2@gmail.com',
@@ -347,7 +349,9 @@ Format your response strictly as valid JSON with NO markdown formatting:
         lastActive: 'Just now',
         status: 'verified',
         updatedAt: new Date().toISOString()
-      }, { merge: true });
+      }));
+
+      await setDoc(doc(db, 'agentpay_users', 'usr_janitha'), userDocData, { merge: true });
 
     } catch (logErr) {
       console.warn('[Firestore] Failed to save chat session:', logErr);

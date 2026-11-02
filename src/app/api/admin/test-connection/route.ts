@@ -15,35 +15,52 @@ export async function POST(req: NextRequest) {
 
       const cleanKey = key.trim();
       const startTime = Date.now();
+      const candidateModels = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash-latest', 'gemini-1.5-pro', 'gemini-pro'];
 
-      try {
-        const genAI = new GoogleGenerativeAI(cleanKey);
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-        const result = await model.generateContent("Ping test. Respond strictly with: PONG");
-        const responseText = result.response.text();
+      const genAI = new GoogleGenerativeAI(cleanKey);
+      let lastErr: any = null;
+      let operationalModel = '';
+      let responseText = '';
+
+      for (const modelName of candidateModels) {
+        try {
+          const model = genAI.getGenerativeModel({ model: modelName });
+          const result = await model.generateContent("Ping test. Respond strictly with: PONG");
+          responseText = result.response.text();
+          operationalModel = modelName;
+          break;
+        } catch (mErr: any) {
+          lastErr = mErr;
+          if (mErr?.message?.includes('404') || mErr?.message?.includes('not found')) {
+            continue; // try next candidate model
+          }
+          break; // other error (400, 403, 429)
+        }
+      }
+
+      if (operationalModel) {
         const latencyMs = Date.now() - startTime;
-
         return NextResponse.json({
           success: true,
-          message: `Active & Operational! Latency: ${latencyMs}ms • Model: gemini-1.5-flash (${responseText.trim()})`,
+          message: `Active & Operational! Latency: ${latencyMs}ms • Model: ${operationalModel} (${responseText.trim()})`,
           latencyMs
         });
-      } catch (geminiErr: any) {
-        const raw = geminiErr.message || '';
-        let errorMsg = raw;
-
-        if (raw.includes('leaked')) {
-          errorMsg = '⚠️ Blocked: This API key was reported as leaked by Google. Please generate a fresh key in Google AI Studio (aistudio.google.com).';
-        } else if (raw.includes('API_KEY_INVALID') || raw.includes('400')) {
-          errorMsg = '❌ Invalid Key: API key not recognized by Google Generative AI.';
-        } else if (raw.includes('429')) {
-          errorMsg = '⏳ Rate Limited: Key is active but hit Google free-tier quota (HTTP 429). The Multi-Key pool will auto-failover.';
-        } else if (raw.includes('404')) {
-          errorMsg = '⚠️ Model Not Found for this key tier. Try gemini-1.5-flash or check API permissions.';
-        }
-
-        return NextResponse.json({ success: false, error: errorMsg });
       }
+
+      const raw = lastErr?.message || '';
+      let errorMsg = raw;
+
+      if (raw.includes('leaked')) {
+        errorMsg = '⚠️ Blocked: This API key was reported as leaked/compromised by Google. Please generate a fresh, free key at https://aistudio.google.com/app/apikey.';
+      } else if (raw.includes('API_KEY_INVALID') || raw.includes('400')) {
+        errorMsg = '❌ Invalid Key: API key format or credentials not recognized by Google Generative AI.';
+      } else if (raw.includes('429')) {
+        errorMsg = '⏳ Rate Limited: Key is active but hit Google free-tier quota (HTTP 429). The Multi-Key pool will auto-failover.';
+      } else if (raw.includes('404') || raw.includes('not found')) {
+        errorMsg = '❌ Google API Rejected Key: This key is not enabled for Gemini API (often a Firebase key or wrong project). Please create a fresh Gemini API key at https://aistudio.google.com/app/apikey.';
+      }
+
+      return NextResponse.json({ success: false, error: errorMsg });
     }
 
     // 2. Test Entire Google Gemini Multi-Key Failover Pool
@@ -54,6 +71,8 @@ export async function POST(req: NextRequest) {
       }
 
       const results = [];
+      const candidateModels = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash-latest', 'gemini-1.5-pro', 'gemini-pro'];
+
       for (let i = 0; i < keys.length; i++) {
         const k = keys[i]?.trim();
         if (!k || k.length < 10) {
@@ -62,19 +81,28 @@ export async function POST(req: NextRequest) {
         }
 
         const startTime = Date.now();
-        try {
-          const genAI = new GoogleGenerativeAI(k);
-          const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-          await model.generateContent("Ping");
+        const genAI = new GoogleGenerativeAI(k);
+        let activeModel = '';
+
+        for (const mName of candidateModels) {
+          try {
+            const model = genAI.getGenerativeModel({ model: mName });
+            await model.generateContent("Ping");
+            activeModel = mName;
+            break;
+          } catch (mErr: any) {
+            if (mErr?.message?.includes('404') || mErr?.message?.includes('not found')) {
+              continue;
+            }
+            break;
+          }
+        }
+
+        if (activeModel) {
           const latencyMs = Date.now() - startTime;
           results.push({ index: i, keySnippet: `${k.substring(0, 8)}...`, status: 'active', latencyMs });
-        } catch (err: any) {
-          const raw = err.message || '';
-          let errStr = 'Failed';
-          if (raw.includes('leaked')) errStr = 'Leaked (Blocked)';
-          else if (raw.includes('429')) errStr = 'Rate Limited (429)';
-          else if (raw.includes('API_KEY_INVALID')) errStr = 'Invalid Key';
-          results.push({ index: i, keySnippet: `${k.substring(0, 8)}...`, status: 'failed', error: errStr });
+        } else {
+          results.push({ index: i, keySnippet: `${k.substring(0, 8)}...`, status: 'failed', error: 'Google rejected key (get fresh key from aistudio.google.com)' });
         }
       }
 
