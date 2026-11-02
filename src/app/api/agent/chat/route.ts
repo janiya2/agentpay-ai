@@ -141,9 +141,10 @@ Format your response as valid JSON with this structure:
     // Handle PayPal order creation if triggered
     let paypalOrderId: string | undefined = undefined;
     let finalOrderRefId: string | undefined = undefined;
+    let orderAmount = 0;
 
     if (result?.triggerPayPalOrder && result?.negotiatedDeal) {
-      const orderAmount = Math.min(result.negotiatedDeal.negotiatedPrice, spendingLimit);
+      orderAmount = Math.min(result.negotiatedDeal.negotiatedPrice, spendingLimit);
       finalOrderRefId = `ord_${Date.now()}`;
 
       try {

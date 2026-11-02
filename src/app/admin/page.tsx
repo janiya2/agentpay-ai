@@ -32,7 +32,11 @@ import {
   Layers,
   User as UserIcon,
   Sparkles,
-  ArrowRight
+  ArrowRight,
+  Eye,
+  EyeOff,
+  Copy,
+  Check
 } from 'lucide-react';
 import type { PlatformSettings, ServiceProvider, AgentPayOrder, ChatSession, BuyerUser } from '@/types';
 
@@ -42,7 +46,30 @@ export default function AdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [passcode, setPasscode] = useState('innoxpert2026');
   const [authError, setAuthError] = useState(false);
-  const [activeTab, setActiveTab] = useState<AdminTab>('chats');
+  const [activeTab, setActiveTab] = useState<AdminTab>('settings');
+
+  // Key visibility toggles
+  const [showGeminiKeys, setShowGeminiKeys] = useState<Record<number, boolean>>({});
+  const [showPaypalSecret, setShowPaypalSecret] = useState(false);
+  const [showResendKey, setShowResendKey] = useState(false);
+  const [copiedKeyIndex, setCopiedKeyIndex] = useState<number | null>(null);
+  const [copiedPaypalSecret, setCopiedPaypalSecret] = useState(false);
+
+  const toggleShowGeminiKey = (index: number) => {
+    setShowGeminiKeys(prev => ({ ...prev, [index]: !prev[index] }));
+  };
+
+  const copyToClipboard = (text: string, type: 'gemini' | 'paypal', index?: number) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    if (type === 'gemini' && typeof index === 'number') {
+      setCopiedKeyIndex(index);
+      setTimeout(() => setCopiedKeyIndex(null), 2000);
+    } else if (type === 'paypal') {
+      setCopiedPaypalSecret(true);
+      setTimeout(() => setCopiedPaypalSecret(false), 2000);
+    }
+  };
 
   // Platform Settings State
   const [paypalClientId, setPaypalClientId] = useState('');
@@ -1152,16 +1179,42 @@ export default function AdminPage() {
                 {geminiKeys.map((key, i) => (
                   <div key={i} className="flex items-center gap-2">
                     <span className="font-mono text-xs text-zinc-500 w-16">Key #{i + 1}</span>
-                    <input
-                      type="password"
-                      value={key}
-                      onChange={e => updateKeyField(i, e.target.value)}
-                      placeholder="AIzaSy..."
-                      className="flex-1 bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2 text-xs font-mono text-white placeholder-zinc-600 focus:outline-none focus:border-purple-500/50"
-                    />
+                    <div className="relative flex-1">
+                      <input
+                        type={showGeminiKeys[i] ? 'text' : 'password'}
+                        value={key}
+                        onChange={e => updateKeyField(i, e.target.value)}
+                        placeholder="AIzaSy... (Paste Google Gemini API Key)"
+                        autoComplete="new-password"
+                        autoCorrect="off"
+                        spellCheck="false"
+                        data-lpignore="true"
+                        data-form-type="other"
+                        className="w-full bg-zinc-950 border border-zinc-800 rounded-xl pl-3 pr-20 py-2 text-xs font-mono text-white placeholder-zinc-600 focus:outline-none focus:border-purple-500/50"
+                      />
+                      <div className="absolute right-2 top-1.5 flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => toggleShowGeminiKey(i)}
+                          title={showGeminiKeys[i] ? 'Hide Key' : 'View Key'}
+                          className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer"
+                        >
+                          {showGeminiKeys[i] ? <EyeOff className="h-3.5 w-3.5 text-purple-400" /> : <Eye className="h-3.5 w-3.5" />}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => copyToClipboard(key, 'gemini', i)}
+                          title="Copy Key"
+                          className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer"
+                        >
+                          {copiedKeyIndex === i ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+                        </button>
+                      </div>
+                    </div>
                     {geminiKeys.length > 1 && (
                       <button
                         onClick={() => removeKeyField(i)}
+                        title="Delete Key"
                         className="p-2 rounded-xl bg-zinc-800 hover:bg-red-500/20 text-zinc-400 hover:text-red-400 border border-zinc-700 cursor-pointer"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -1216,19 +1269,46 @@ export default function AdminPage() {
                     value={paypalClientId}
                     onChange={e => setPaypalClientId(e.target.value)}
                     placeholder="e.g. Aed48x... (From developer.paypal.com)"
+                    autoComplete="new-password"
+                    data-lpignore="true"
                     className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2 text-xs font-mono text-white placeholder-zinc-600 focus:outline-none focus:border-amber-500/50"
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs text-zinc-400 font-medium">PayPal Client Secret</label>
-                  <input
-                    type="password"
-                    value={paypalClientSecret}
-                    onChange={e => setPaypalClientSecret(e.target.value)}
-                    placeholder="e.g. ELK94..."
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2 text-xs font-mono text-white placeholder-zinc-600 focus:outline-none focus:border-amber-500/50"
-                  />
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs text-zinc-400 font-medium">PayPal Client Secret</label>
+                    <button
+                      type="button"
+                      onClick={() => setShowPaypalSecret(!showPaypalSecret)}
+                      className="text-[11px] text-zinc-400 hover:text-amber-300 flex items-center gap-1 transition-colors cursor-pointer"
+                    >
+                      {showPaypalSecret ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                      <span>{showPaypalSecret ? 'Hide Secret' : 'View Secret'}</span>
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type={showPaypalSecret ? 'text' : 'password'}
+                      value={paypalClientSecret}
+                      onChange={e => setPaypalClientSecret(e.target.value)}
+                      placeholder="e.g. ELK94..."
+                      autoComplete="new-password"
+                      autoCorrect="off"
+                      spellCheck="false"
+                      data-lpignore="true"
+                      data-form-type="other"
+                      className="w-full bg-zinc-950 border border-zinc-800 rounded-xl pl-3 pr-10 py-2 text-xs font-mono text-white placeholder-zinc-600 focus:outline-none focus:border-amber-500/50"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard(paypalClientSecret, 'paypal')}
+                      title="Copy Secret"
+                      className="absolute right-2 top-1.5 p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer"
+                    >
+                      {copiedPaypalSecret ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1247,12 +1327,27 @@ export default function AdminPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                 <div className="space-y-1.5">
-                  <label className="text-xs text-zinc-400 font-medium">Resend API Key</label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs text-zinc-400 font-medium">Resend API Key</label>
+                    <button
+                      type="button"
+                      onClick={() => setShowResendKey(!showResendKey)}
+                      className="text-[11px] text-zinc-400 hover:text-blue-300 flex items-center gap-1 transition-colors cursor-pointer"
+                    >
+                      {showResendKey ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                      <span>{showResendKey ? 'Hide Key' : 'View Key'}</span>
+                    </button>
+                  </div>
                   <input
-                    type="password"
+                    type={showResendKey ? 'text' : 'password'}
                     value={resendApiKey}
                     onChange={e => setResendApiKey(e.target.value)}
                     placeholder="re_..."
+                    autoComplete="new-password"
+                    autoCorrect="off"
+                    spellCheck="false"
+                    data-lpignore="true"
+                    data-form-type="other"
                     className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2 text-xs font-mono text-white placeholder-zinc-600 focus:outline-none focus:border-blue-500/50"
                   />
                 </div>
@@ -1264,6 +1359,8 @@ export default function AdminPage() {
                     value={resendFromEmail}
                     onChange={e => setResendFromEmail(e.target.value)}
                     placeholder="onboarding@resend.dev"
+                    autoComplete="off"
+                    data-lpignore="true"
                     className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2 text-xs font-mono text-white placeholder-zinc-600 focus:outline-none focus:border-blue-500/50"
                   />
                 </div>
