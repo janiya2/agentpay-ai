@@ -75,13 +75,16 @@ export default function OrdersPage() {
     }
   };
 
-  // Filter orders
-  const myOrders = orders.filter(o => 
-    !user || 
-    user.role === 'judge' || 
-    o.buyerEmail === user.email || 
-    o.buyerName === user.name
-  );
+  // Filter orders strictly for the current logged-in client (No order leakage)
+  const myOrders = orders.filter(o => {
+    if (!user) return false;
+    const userEmail = user.email?.trim().toLowerCase();
+    const userName = user.name?.trim().toLowerCase();
+    const buyerEmail = o.buyerEmail?.trim().toLowerCase();
+    const buyerName = o.buyerName?.trim().toLowerCase();
+
+    return (buyerEmail && buyerEmail === userEmail) || (buyerName && buyerName === userName);
+  });
 
   const displayedOrders = activeTab === 'my_orders' ? myOrders : orders;
   const totalVolume = orders.reduce((acc, curr) => acc + (curr.amount || 0), 0);

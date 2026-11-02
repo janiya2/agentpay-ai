@@ -6,7 +6,8 @@ import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/fire
 import type { AgentPayOrder, ServiceProvider } from '@/types';
 import { 
   ShieldCheck, CheckCircle2, Clock, CreditCard, ExternalLink, 
-  Send, Sparkles, UserCheck, MessageSquare, AlertCircle, ArrowRight, User, Ban
+  Send, Sparkles, UserCheck, MessageSquare, AlertCircle, ArrowRight, User, Ban,
+  Edit3, X, Save, MapPin, Briefcase, Tag, Mail, Check
 } from 'lucide-react';
 import DirectChatModal from '@/components/DirectChatModal';
 
@@ -22,6 +23,31 @@ export default function ProviderPortalPage() {
   const [customDeliveryDays, setCustomDeliveryDays] = useState<{ [sid: string]: number }>({});
   const [customReplyNote, setCustomReplyNote] = useState<{ [sid: string]: string }>({});
   const [responseNotice, setResponseNotice] = useState<string | null>(null);
+
+  // Profile Editor Modal State
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [editForm, setEditForm] = useState<{
+    name: string;
+    title: string;
+    category: string;
+    hourlyRate: number;
+    contactEmail: string;
+    location: string;
+    skills: string;
+    bio: string;
+    status: 'active' | 'busy' | 'offline';
+  }>({
+    name: '',
+    title: '',
+    category: 'web-development',
+    hourlyRate: 50,
+    contactEmail: '',
+    location: 'Remote',
+    skills: '',
+    bio: '',
+    status: 'active'
+  });
 
   // Direct Chat Modal State
   const [activeChatOrder, setActiveChatOrder] = useState<{
@@ -60,33 +86,96 @@ export default function ProviderPortalPage() {
 
   const activeProvider = providers.find(p => p.id === selectedProviderId) || providers[0];
 
-  // Fetch orders and incoming tender RFQs
+  // Open Edit Profile Modal
+  const openEditProfile = () => {
+    if (!activeProvider) return;
+    setEditForm({
+      name: activeProvider.name || '',
+      title: activeProvider.title || '',
+      category: activeProvider.category || 'web-development',
+      hourlyRate: activeProvider.hourlyRate || 50,
+      contactEmail: activeProvider.contactEmail || '',
+      location: activeProvider.location || 'Remote',
+      skills: (activeProvider.skills || []).join(', '),
+      bio: activeProvider.bio || '',
+      status: activeProvider.status || 'active'
+    });
+    setIsEditModalOpen(true);
+  };
+
+  // Save Updated Profile to Firestore
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeProvider) return;
+    setIsSavingProfile(true);
+    try {
+      const res = await fetch('/api/providers/update-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          providerId: activeProvider.id,
+          name: editForm.name,
+          title: editForm.title,
+          category: editForm.category,
+          hourlyRate: Number(editForm.hourlyRate),
+          contactEmail: editForm.contactEmail,
+          location: editForm.location,
+          skills: editForm.skills.split(',').map(s => s.trim()).filter(Boolean),
+          bio: editForm.bio,
+          status: editForm.status
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setResponseNotice(`🎉 Success: Profile for ${editForm.name} updated in Firestore!`);
+        setTimeout(() => setResponseNotice(null), 6000);
+        // Update local state immediately
+        setProviders(prev => prev.map(p => p.id === activeProvider.id ? { ...p, ...data.updatedProfile } : p));
+        setIsEditModalOpen(false);
+      } else {
+        alert(data.error || 'Failed to update profile');
+      }
+    } catch (err: any) {
+      alert(`Network error: ${err.message}`);
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
+  // Fetch orders and incoming tender RFQs strictly for activeProvider (NO LEAKAGE)
   const loadProviderData = async () => {
     if (!activeProvider) return;
 
     try {
-      // 1. Fetch Orders
+      // 1. Fetch Orders strictly for activeProvider (No fallback to other providers' orders!)
+      setOrders([]);
       const allOrdersSnap = await getDocs(collection(db, 'agentpay_orders'));
       if (!allOrdersSnap.empty) {
-        const allList = allOrdersSnap.docs.map(d => d.data() as AgentPayOrder);
+        const allList = allOrdersSnap.docs.map(d => ({ id: d.id, ...d.data() } as AgentPayOrder));
         const filtered = allList.filter(o => 
-          o.providerId === activeProvider.id || 
-          o.providerName?.toLowerCase() === activeProvider.name?.toLowerCase()
+          (o.providerId && o.providerId === activeProvider.id) || 
+          (o.providerName && o.providerName.trim().toLowerCase() === activeProvider.name.trim().toLowerCase())
         );
-        setOrders(filtered.length > 0 ? filtered : allList.slice(0, 3));
+        setOrders(filtered); // Strict: Exactly this provider's orders only!
+      } else {
+        setOrders([]);
       }
 
-      // 2. Fetch Incoming Tenders & RFQs
+      // 2. Fetch Incoming Tenders & RFQs strictly for activeProvider
+      setInquiries([]);
       const sessionsSnap = await getDocs(collection(db, 'agentpay_chat_sessions'));
       if (!sessionsSnap.empty) {
         const allSessions = sessionsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         const matching = allSessions.filter((s: any) => {
           const targets = s.targetProviders || [];
-          const isInTargets = targets.some((tp: any) => tp.id === activeProvider.id || tp.name === activeProvider.name);
-          const isDirect = s.providerId === activeProvider.id || s.providerMatched === activeProvider.name;
+          const isInTargets = targets.some((tp: any) => tp.id === activeProvider.id || tp.name?.trim().toLowerCase() === activeProvider.name?.trim().toLowerCase());
+          const isDirect = s.providerId === activeProvider.id || s.providerMatched?.trim().toLowerCase() === activeProvider.name?.trim().toLowerCase();
           return (isInTargets || isDirect) && (s.status === 'tender_open' || s.status === 'awaiting_provider' || s.status === 'closed_awarded' || s.status === 'negotiated');
         });
         setInquiries(matching);
+      } else {
+        setInquiries([]);
       }
     } catch (err) {
       console.warn('Load provider data:', err);
@@ -204,34 +293,81 @@ export default function ProviderPortalPage() {
 
       {/* Provider Snapshot Card */}
       {activeProvider && (
-        <div className="p-6 rounded-3xl bg-zinc-900/50 border border-zinc-800/80 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-xl">
-          <div className="flex items-center gap-4">
-            <img src={activeProvider.avatarUrl} alt={activeProvider.name} className="h-16 w-16 rounded-2xl bg-zinc-800 border border-zinc-700 shadow-md" />
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold text-white">{activeProvider.name}</h2>
-                <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 text-[10px] font-mono border border-emerald-500/30">
-                  Verified Talent
-                </span>
+        <div className="p-6 rounded-3xl bg-zinc-900/50 border border-zinc-800/80 shadow-xl space-y-4">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div className="flex items-center gap-4">
+              <img src={activeProvider.avatarUrl} alt={activeProvider.name} className="h-16 w-16 rounded-2xl bg-zinc-800 border border-zinc-700 shadow-md" />
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-lg font-bold text-white">{activeProvider.name}</h2>
+                  <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 text-[10px] font-mono border border-emerald-500/30">
+                    Verified Talent
+                  </span>
+                  <span className={`px-2 py-0.5 rounded-md text-[10px] font-mono border ${
+                    activeProvider.status === 'active' 
+                      ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30'
+                      : activeProvider.status === 'busy'
+                      ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                      : 'bg-zinc-800 text-zinc-400 border-zinc-700'
+                  }`}>
+                    ● {activeProvider.status?.toUpperCase() || 'ACTIVE'}
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-300 font-medium">{activeProvider.title}</p>
+                <div className="flex items-center gap-3 text-xs text-zinc-400 font-mono">
+                  <span className="text-cyan-400 flex items-center gap-1">
+                    <Mail className="h-3 w-3" />
+                    {activeProvider.contactEmail}
+                  </span>
+                  {activeProvider.location && (
+                    <span className="text-zinc-500 flex items-center gap-1">
+                      <MapPin className="h-3 w-3" />
+                      {activeProvider.location}
+                    </span>
+                  )}
+                </div>
               </div>
-              <p className="text-xs text-zinc-400">{activeProvider.title}</p>
-              <p className="text-xs text-cyan-400 font-mono">{activeProvider.contactEmail}</p>
+            </div>
+
+            <div className="flex items-center gap-4 sm:gap-6 border-t md:border-t-0 md:border-l border-zinc-800 pt-4 md:pt-0 md:pl-6 text-center w-full md:w-auto justify-between md:justify-end">
+              <div>
+                <span className="text-[10px] text-zinc-500 uppercase tracking-wider block">Standard Rate</span>
+                <span className="text-lg font-black font-mono text-emerald-400">${activeProvider.hourlyRate}/hr</span>
+              </div>
+              <div>
+                <span className="text-[10px] text-zinc-500 uppercase tracking-wider block">Job Score</span>
+                <span className="text-lg font-black font-mono text-amber-400">⭐ {activeProvider.rating}</span>
+              </div>
+              <div>
+                <span className="text-[10px] text-zinc-500 uppercase tracking-wider block">Jobs Completed</span>
+                <span className="text-lg font-black font-mono text-cyan-400">{activeProvider.completedJobs}</span>
+              </div>
+
+              {/* Edit Profile Action Button */}
+              <button
+                onClick={openEditProfile}
+                className="px-3.5 py-2 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-md"
+              >
+                <Edit3 className="h-3.5 w-3.5 text-cyan-400" />
+                <span>Edit Profile</span>
+              </button>
             </div>
           </div>
 
-          <div className="flex items-center gap-6 border-t md:border-t-0 md:border-l border-zinc-800 pt-4 md:pt-0 md:pl-6 text-center">
-            <div>
-              <span className="text-[10px] text-zinc-500 uppercase tracking-wider block">Standard Rate</span>
-              <span className="text-lg font-black font-mono text-emerald-400">${activeProvider.hourlyRate}/hr</span>
-            </div>
-            <div>
-              <span className="text-[10px] text-zinc-500 uppercase tracking-wider block">Job Score</span>
-              <span className="text-lg font-black font-mono text-amber-400">⭐ {activeProvider.rating}</span>
-            </div>
-            <div>
-              <span className="text-[10px] text-zinc-500 uppercase tracking-wider block">Jobs Completed</span>
-              <span className="text-lg font-black font-mono text-cyan-400">{activeProvider.completedJobs}</span>
-            </div>
+          {/* Bio & Skills Tags */}
+          <div className="border-t border-zinc-800/80 pt-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+            <p className="text-zinc-400 line-clamp-2 max-w-2xl leading-relaxed text-[11.5px]">
+              {activeProvider.bio || 'Verified independent specialist on AgentPay network.'}
+            </p>
+            {activeProvider.skills && activeProvider.skills.length > 0 && (
+              <div className="flex items-center gap-1.5 flex-wrap shrink-0">
+                {activeProvider.skills.slice(0, 4).map((s, idx) => (
+                  <span key={idx} className="px-2 py-0.5 rounded-md bg-zinc-800 text-zinc-300 text-[10px] font-mono border border-zinc-700">
+                    {s}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -543,6 +679,209 @@ export default function ProviderPortalPage() {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Specialist Profile Editor Modal */}
+      {isEditModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fadeIn">
+          <div className="w-full max-w-2xl bg-zinc-950 border border-zinc-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            {/* Modal Header */}
+            <div className="p-5 border-b border-zinc-800 bg-zinc-900/60 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+                  <Edit3 className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    Edit Specialist Profile
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 font-mono">
+                      Firestore Sync
+                    </span>
+                  </h3>
+                  <p className="text-xs text-zinc-400">
+                    Updates will sync live across AI Agent discovery and tender negotiations
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsEditModalOpen(false)}
+                className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Modal Form Body */}
+            <form onSubmit={handleSaveProfile} className="p-6 space-y-4 overflow-y-auto custom-scrollbar flex-1 text-xs">
+              {/* Row 1: Name & Title */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[11px] text-zinc-400 font-medium mb-1">Specialist Full Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={editForm.name}
+                    onChange={e => setEditForm({ ...editForm, name: e.target.value })}
+                    className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-white font-medium focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400"
+                    placeholder="e.g. Sophia Patel"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] text-zinc-400 font-medium mb-1">Professional Title / Headline</label>
+                  <input
+                    type="text"
+                    required
+                    value={editForm.title}
+                    onChange={e => setEditForm({ ...editForm, title: e.target.value })}
+                    className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-white font-medium focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400"
+                    placeholder="e.g. SaaS UX Strategist & Interactive Prototyper"
+                  />
+                </div>
+              </div>
+
+              {/* Row 2: Category & Hourly Rate */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[11px] text-zinc-400 font-medium mb-1">Service Category</label>
+                  <select
+                    value={editForm.category}
+                    onChange={e => setEditForm({ ...editForm, category: e.target.value })}
+                    className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-white font-medium focus:outline-none focus:border-cyan-400 cursor-pointer"
+                  >
+                    <option value="web-development">Web Development</option>
+                    <option value="ui-ux-design">UI/UX Design</option>
+                    <option value="ai-automation">AI Automation</option>
+                    <option value="seo-marketing">SEO Marketing</option>
+                    <option value="video-production">Video Production</option>
+                    <option value="mobile-apps">Mobile Apps</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[11px] text-zinc-400 font-medium mb-1">Standard Hourly Rate ($ USD / hr)</label>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-2.5 text-zinc-500 font-bold">$</span>
+                    <input
+                      type="number"
+                      required
+                      min="15"
+                      max="500"
+                      value={editForm.hourlyRate}
+                      onChange={e => setEditForm({ ...editForm, hourlyRate: Number(e.target.value) })}
+                      className="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-8 pr-3.5 py-2.5 text-white font-mono font-bold focus:outline-none focus:border-cyan-400"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Row 3: Email & Location */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[11px] text-zinc-400 font-medium mb-1">Contact Email</label>
+                  <input
+                    type="email"
+                    required
+                    value={editForm.contactEmail}
+                    onChange={e => setEditForm({ ...editForm, contactEmail: e.target.value })}
+                    className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-white font-mono text-[11px] focus:outline-none focus:border-cyan-400"
+                    placeholder="e.g. sophia.patel@innoxpert-agents.io"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] text-zinc-400 font-medium mb-1">Location / Base</label>
+                  <input
+                    type="text"
+                    value={editForm.location}
+                    onChange={e => setEditForm({ ...editForm, location: e.target.value })}
+                    className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-cyan-400"
+                    placeholder="e.g. San Francisco, CA / Remote"
+                  />
+                </div>
+              </div>
+
+              {/* Row 4: Availability Status */}
+              <div>
+                <label className="block text-[11px] text-zinc-400 font-medium mb-1">Availability Status</label>
+                <div className="grid grid-cols-3 gap-3">
+                  {(['active', 'busy', 'offline'] as const).map(st => (
+                    <button
+                      key={st}
+                      type="button"
+                      onClick={() => setEditForm({ ...editForm, status: st })}
+                      className={`py-2 rounded-xl border text-xs font-semibold capitalize transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                        editForm.status === st
+                          ? st === 'active'
+                            ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50 shadow-sm'
+                            : st === 'busy'
+                            ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-sm'
+                            : 'bg-zinc-800 text-zinc-300 border-zinc-600 shadow-sm'
+                          : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:border-zinc-700'
+                      }`}
+                    >
+                      <span className={`h-2 w-2 rounded-full ${
+                        st === 'active' ? 'bg-emerald-400' : st === 'busy' ? 'bg-amber-400' : 'bg-zinc-500'
+                      }`} />
+                      <span>{st}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Row 5: Skills Tags */}
+              <div>
+                <label className="block text-[11px] text-zinc-400 font-medium mb-1">
+                  Core Skills (Comma-separated)
+                </label>
+                <input
+                  type="text"
+                  value={editForm.skills}
+                  onChange={e => setEditForm({ ...editForm, skills: e.target.value })}
+                  placeholder="e.g. Figma, Design Systems, UX Research, Mobile Wireframes, Interactive Prototyping"
+                  className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-cyan-400"
+                />
+              </div>
+
+              {/* Row 6: Bio Overview */}
+              <div>
+                <label className="block text-[11px] text-zinc-400 font-medium mb-1">Professional Bio & Experience</label>
+                <textarea
+                  rows={3}
+                  value={editForm.bio}
+                  onChange={e => setEditForm({ ...editForm, bio: e.target.value })}
+                  placeholder="Tell clients and autonomous AI agents about your experience, track record, and core expertise..."
+                  className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-cyan-400 leading-relaxed resize-none"
+                />
+              </div>
+
+              {/* Modal Actions */}
+              <div className="pt-3 border-t border-zinc-800 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-semibold text-xs border border-zinc-800 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingProfile}
+                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:opacity-95 text-zinc-950 font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-cyan-950/40 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  {isSavingProfile ? (
+                    <>
+                      <span className="animate-spin">⏳</span>
+                      <span>Saving to Firestore...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4" />
+                      <span>Save Profile to Firestore</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
