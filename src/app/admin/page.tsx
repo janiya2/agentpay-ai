@@ -36,7 +36,10 @@ import {
   Eye,
   EyeOff,
   Copy,
-  Check
+  Check,
+  FlaskConical,
+  CheckCircle,
+  XCircle
 } from 'lucide-react';
 import type { PlatformSettings, ServiceProvider, AgentPayOrder, ChatSession, BuyerUser } from '@/types';
 
@@ -55,6 +58,19 @@ export default function AdminPage() {
   const [copiedKeyIndex, setCopiedKeyIndex] = useState<number | null>(null);
   const [copiedPaypalSecret, setCopiedPaypalSecret] = useState(false);
 
+  // Live Test Connection States
+  const [testingKeyIndex, setTestingKeyIndex] = useState<number | null>(null);
+  const [keyTestResults, setKeyTestResults] = useState<Record<number, { success: boolean; message?: string; error?: string }>>({});
+  
+  const [testingPool, setTestingPool] = useState(false);
+  const [poolTestSummary, setPoolTestSummary] = useState<string | null>(null);
+
+  const [testingPaypal, setTestingPaypal] = useState(false);
+  const [paypalTestResult, setPaypalTestResult] = useState<{ success: boolean; message?: string; error?: string } | null>(null);
+
+  const [testingResend, setTestingResend] = useState(false);
+  const [resendTestResult, setResendTestResult] = useState<{ success: boolean; message?: string; error?: string } | null>(null);
+
   const toggleShowGeminiKey = (index: number) => {
     setShowGeminiKeys(prev => ({ ...prev, [index]: !prev[index] }));
   };
@@ -68,6 +84,98 @@ export default function AdminPage() {
     } else if (type === 'paypal') {
       setCopiedPaypalSecret(true);
       setTimeout(() => setCopiedPaypalSecret(false), 2000);
+    }
+  };
+
+  // Test single Gemini key
+  const handleTestGeminiKey = async (index: number) => {
+    const key = geminiKeys[index];
+    if (!key || key.trim().length < 10) {
+      setKeyTestResults(prev => ({ ...prev, [index]: { success: false, error: 'Key is empty or too short' } }));
+      return;
+    }
+    setTestingKeyIndex(index);
+    try {
+      const res = await fetch('/api/admin/test-connection', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'gemini', key: key.trim() })
+      });
+      const data = await res.json();
+      setKeyTestResults(prev => ({ ...prev, [index]: data }));
+    } catch (err: any) {
+      setKeyTestResults(prev => ({ ...prev, [index]: { success: false, error: err.message } }));
+    } finally {
+      setTestingKeyIndex(null);
+    }
+  };
+
+  // Test entire Gemini Pool
+  const handleTestPool = async () => {
+    setTestingPool(true);
+    setPoolTestSummary(null);
+    try {
+      const res = await fetch('/api/admin/test-connection', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'gemini_pool', keys: geminiKeys })
+      });
+      const data = await res.json();
+      setPoolTestSummary(data.poolSummary || `${data.activeCount}/${data.totalCount} operational`);
+      if (data.results) {
+        const mapped: Record<number, any> = {};
+        data.results.forEach((r: any) => {
+          mapped[r.index] = { success: r.status === 'active', message: r.status === 'active' ? `Active (${r.latencyMs}ms)` : undefined, error: r.error };
+        });
+        setKeyTestResults(mapped);
+      }
+    } catch (err: any) {
+      setPoolTestSummary(`Test failed: ${err.message}`);
+    } finally {
+      setTestingPool(false);
+    }
+  };
+
+  // Test PayPal Credentials
+  const handleTestPaypal = async () => {
+    setTestingPaypal(true);
+    setPaypalTestResult(null);
+    try {
+      const res = await fetch('/api/admin/test-connection', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'paypal',
+          clientId: paypalClientId,
+          clientSecret: paypalClientSecret,
+          mode: paypalMode
+        })
+      });
+      const data = await res.json();
+      setPaypalTestResult(data);
+    } catch (err: any) {
+      setPaypalTestResult({ success: false, error: err.message });
+    } finally {
+      setTestingPaypal(false);
+    }
+  };
+
+  // Test Resend Key
+  const handleTestResend = async () => {
+    setTestingResend(true);
+    setResendTestResult(null);
+    try {
+      const res = await fetch('/api/admin/test-connection', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'resend', apiKey: resendApiKey })
+      });
+      const data = await res.json();
+      setResendTestResult(data);
+    } catch (err: any) {
+      setResendTestResult({ success: false, error: err.message });
+    } finally {
+      setTestingResend(false);
     }
   };
 
@@ -1153,7 +1261,7 @@ export default function AdminPage() {
 
             {/* 1. Multi-Key Gemini Failover Pool */}
             <div className="p-6 rounded-3xl bg-zinc-900/40 border border-zinc-800/80 space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <div className="h-9 w-9 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400">
                     <Key className="h-4 w-4" />
@@ -1164,61 +1272,113 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                {geminiKeys.length < 5 && (
+                <div className="flex items-center gap-2">
                   <button
-                    onClick={addKeyField}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 text-xs font-semibold cursor-pointer"
+                    type="button"
+                    onClick={handleTestPool}
+                    disabled={testingPool}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 text-purple-200 border border-purple-500/40 text-xs font-semibold cursor-pointer transition-all disabled:opacity-50"
                   >
-                    <Plus className="h-3.5 w-3.5" />
-                    <span>Add Key ({geminiKeys.length}/5)</span>
+                    {testingPool ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <FlaskConical className="h-3.5 w-3.5 text-purple-300" />}
+                    <span>{testingPool ? 'Testing Pool...' : '🧪 Test Failover Pool'}</span>
                   </button>
-                )}
+
+                  {geminiKeys.length < 5 && (
+                    <button
+                      onClick={addKeyField}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 text-xs font-semibold cursor-pointer"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      <span>Add Key ({geminiKeys.length}/5)</span>
+                    </button>
+                  )}
+                </div>
               </div>
+
+              {poolTestSummary && (
+                <div className="p-3 rounded-2xl bg-purple-950/20 border border-purple-500/30 text-xs text-purple-200 font-mono flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-purple-400" />
+                  <span>Pool Test Summary: {poolTestSummary}</span>
+                </div>
+              )}
 
               <div className="space-y-3 pt-2">
                 {geminiKeys.map((key, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <span className="font-mono text-xs text-zinc-500 w-16">Key #{i + 1}</span>
-                    <div className="relative flex-1">
-                      <input
-                        type={showGeminiKeys[i] ? 'text' : 'password'}
-                        value={key}
-                        onChange={e => updateKeyField(i, e.target.value)}
-                        placeholder="AIzaSy... (Paste Google Gemini API Key)"
-                        autoComplete="new-password"
-                        autoCorrect="off"
-                        spellCheck="false"
-                        data-lpignore="true"
-                        data-form-type="other"
-                        className="w-full bg-zinc-950 border border-zinc-800 rounded-xl pl-3 pr-20 py-2 text-xs font-mono text-white placeholder-zinc-600 focus:outline-none focus:border-purple-500/50"
-                      />
-                      <div className="absolute right-2 top-1.5 flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => toggleShowGeminiKey(i)}
-                          title={showGeminiKeys[i] ? 'Hide Key' : 'View Key'}
-                          className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer"
-                        >
-                          {showGeminiKeys[i] ? <EyeOff className="h-3.5 w-3.5 text-purple-400" /> : <Eye className="h-3.5 w-3.5" />}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => copyToClipboard(key, 'gemini', i)}
-                          title="Copy Key"
-                          className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer"
-                        >
-                          {copiedKeyIndex === i ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
-                        </button>
+                  <div key={i} className="space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs text-zinc-500 w-16">Key #{i + 1}</span>
+                      <div className="relative flex-1">
+                        <input
+                          type={showGeminiKeys[i] ? 'text' : 'password'}
+                          value={key}
+                          onChange={e => updateKeyField(i, e.target.value)}
+                          placeholder="AIzaSy... (Paste Google Gemini API Key)"
+                          autoComplete="new-password"
+                          autoCorrect="off"
+                          spellCheck="false"
+                          data-lpignore="true"
+                          data-form-type="other"
+                          className="w-full bg-zinc-950 border border-zinc-800 rounded-xl pl-3 pr-20 py-2 text-xs font-mono text-white placeholder-zinc-600 focus:outline-none focus:border-purple-500/50"
+                        />
+                        <div className="absolute right-2 top-1.5 flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => toggleShowGeminiKey(i)}
+                            title={showGeminiKeys[i] ? 'Hide Key' : 'View Key'}
+                            className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer"
+                          >
+                            {showGeminiKeys[i] ? <EyeOff className="h-3.5 w-3.5 text-purple-400" /> : <Eye className="h-3.5 w-3.5" />}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => copyToClipboard(key, 'gemini', i)}
+                            title="Copy Key"
+                            className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer"
+                          >
+                            {copiedKeyIndex === i ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                    {geminiKeys.length > 1 && (
+
                       <button
-                        onClick={() => removeKeyField(i)}
-                        title="Delete Key"
-                        className="p-2 rounded-xl bg-zinc-800 hover:bg-red-500/20 text-zinc-400 hover:text-red-400 border border-zinc-700 cursor-pointer"
+                        type="button"
+                        onClick={() => handleTestGeminiKey(i)}
+                        disabled={testingKeyIndex === i || !key.trim()}
+                        title="Test this API Key live"
+                        className="px-3 py-2 rounded-xl bg-zinc-800 hover:bg-purple-500/20 text-zinc-300 hover:text-purple-300 border border-zinc-700 text-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-40 transition-colors shrink-0"
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
+                        {testingKeyIndex === i ? (
+                          <RefreshCw className="h-3.5 w-3.5 animate-spin text-purple-400" />
+                        ) : (
+                          <FlaskConical className="h-3.5 w-3.5 text-purple-400" />
+                        )}
+                        <span className="text-[11px] font-semibold">Test Key</span>
                       </button>
+
+                      {geminiKeys.length > 1 && (
+                        <button
+                          onClick={() => removeKeyField(i)}
+                          title="Delete Key"
+                          className="p-2 rounded-xl bg-zinc-800 hover:bg-red-500/20 text-zinc-400 hover:text-red-400 border border-zinc-700 cursor-pointer"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+
+                    {keyTestResults[i] && (
+                      <div className={`p-2.5 rounded-xl text-[11px] font-mono flex items-center gap-2 border ml-18 ${
+                        keyTestResults[i].success 
+                          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300' 
+                          : 'bg-red-500/10 border-red-500/30 text-red-300'
+                      }`}>
+                        {keyTestResults[i].success ? (
+                          <CheckCircle className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                        ) : (
+                          <XCircle className="h-3.5 w-3.5 text-red-400 shrink-0" />
+                        )}
+                        <span>{keyTestResults[i].success ? keyTestResults[i].message : keyTestResults[i].error}</span>
+                      </div>
                     )}
                   </div>
                 ))}
@@ -1227,7 +1387,7 @@ export default function AdminPage() {
 
             {/* 2. PayPal Gateway Settings */}
             <div className="p-6 rounded-3xl bg-zinc-900/40 border border-zinc-800/80 space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <div className="h-9 w-9 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
                     <CreditCard className="h-4 w-4" />
@@ -1238,28 +1398,55 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                {/* Mode Switcher */}
-                <div className="flex items-center gap-1 p-1 rounded-xl bg-zinc-950 border border-zinc-800 text-xs">
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => setPaypalMode('sandbox')}
-                    className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                      paypalMode === 'sandbox' ? 'bg-amber-500 text-zinc-950' : 'text-zinc-400 hover:text-zinc-200'
-                    }`}
+                    onClick={handleTestPaypal}
+                    disabled={testingPaypal || !paypalClientId.trim() || !paypalClientSecret.trim()}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 text-xs font-semibold cursor-pointer transition-all disabled:opacity-40"
                   >
-                    Sandbox
+                    {testingPaypal ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <FlaskConical className="h-3.5 w-3.5 text-amber-300" />}
+                    <span>{testingPaypal ? 'Testing OAuth...' : '🧪 Test PayPal OAuth'}</span>
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setPaypalMode('live')}
-                    className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                      paypalMode === 'live' ? 'bg-emerald-500 text-zinc-950' : 'text-zinc-400 hover:text-zinc-200'
-                    }`}
-                  >
-                    Live
-                  </button>
+
+                  {/* Mode Switcher */}
+                  <div className="flex items-center gap-1 p-1 rounded-xl bg-zinc-950 border border-zinc-800 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setPaypalMode('sandbox')}
+                      className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                        paypalMode === 'sandbox' ? 'bg-amber-500 text-zinc-950' : 'text-zinc-400 hover:text-zinc-200'
+                      }`}
+                    >
+                      Sandbox
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPaypalMode('live')}
+                      className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                        paypalMode === 'live' ? 'bg-emerald-500 text-zinc-950' : 'text-zinc-400 hover:text-zinc-200'
+                      }`}
+                    >
+                      Live
+                    </button>
+                  </div>
                 </div>
               </div>
+
+              {paypalTestResult && (
+                <div className={`p-3 rounded-2xl text-xs font-mono flex items-center gap-2 border ${
+                  paypalTestResult.success 
+                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300' 
+                    : 'bg-red-500/10 border-red-500/30 text-red-300'
+                }`}>
+                  {paypalTestResult.success ? (
+                    <CheckCircle className="h-4 w-4 text-emerald-400 shrink-0" />
+                  ) : (
+                    <XCircle className="h-4 w-4 text-red-400 shrink-0" />
+                  )}
+                  <span>{paypalTestResult.success ? paypalTestResult.message : paypalTestResult.error}</span>
+                </div>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                 <div className="space-y-1.5">
@@ -1315,15 +1502,42 @@ export default function AdminPage() {
 
             {/* 3. Resend Transactional Email Engine */}
             <div className="p-6 rounded-3xl bg-zinc-900/40 border border-zinc-800/80 space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="h-9 w-9 rounded-xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400">
-                  <Mail className="h-4 w-4" />
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400">
+                    <Mail className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h2 className="text-sm font-bold text-white">Resend Email Notifications</h2>
+                    <p className="text-xs text-zinc-400">Sends instant transactional alerts to service providers upon autonomous negotiation.</p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-sm font-bold text-white">Resend Email Notifications</h2>
-                  <p className="text-xs text-zinc-400">Sends instant transactional alerts to service providers upon autonomous negotiation.</p>
-                </div>
+
+                <button
+                  type="button"
+                  onClick={handleTestResend}
+                  disabled={testingResend || !resendApiKey.trim()}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 text-blue-200 border border-blue-500/40 text-xs font-semibold cursor-pointer transition-all disabled:opacity-40"
+                >
+                  {testingResend ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <FlaskConical className="h-3.5 w-3.5 text-blue-300" />}
+                  <span>{testingResend ? 'Testing Resend...' : '🧪 Test Resend Key'}</span>
+                </button>
               </div>
+
+              {resendTestResult && (
+                <div className={`p-3 rounded-2xl text-xs font-mono flex items-center gap-2 border ${
+                  resendTestResult.success 
+                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300' 
+                    : 'bg-red-500/10 border-red-500/30 text-red-300'
+                }`}>
+                  {resendTestResult.success ? (
+                    <CheckCircle className="h-4 w-4 text-emerald-400 shrink-0" />
+                  ) : (
+                    <XCircle className="h-4 w-4 text-red-400 shrink-0" />
+                  )}
+                  <span>{resendTestResult.success ? resendTestResult.message : resendTestResult.error}</span>
+                </div>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                 <div className="space-y-1.5">
