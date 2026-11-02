@@ -113,6 +113,45 @@ Format your response strictly as valid JSON with NO markdown formatting:
             throw mErr;
           }
         }
+
+        // Auto-discover models if candidate models failed
+        try {
+          const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${activeKey}`, {
+            headers: { 'x-goog-api-key': activeKey }
+          });
+          const listData = await listRes.json();
+          if (listData?.models && Array.isArray(listData.models)) {
+            const availableNames = listData.models
+              .filter((m: any) => m.supportedGenerationMethods?.includes('generateContent'))
+              .map((m: any) => m.name.replace('models/', ''));
+
+            for (const mName of availableNames) {
+              try {
+                const restRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${mName}:generateContent?key=${activeKey}`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'x-goog-api-key': activeKey
+                  },
+                  body: JSON.stringify({
+                    contents: [{ parts: [{ text: prompt }] }]
+                  })
+                });
+                const restData = await restRes.json();
+                const text = restData?.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (text) {
+                  const cleanJson = text.replace(/```json/g, '').replace(/```/g, '').trim();
+                  return { parsed: JSON.parse(cleanJson), modelName: mName };
+                }
+              } catch (innerRestErr) {
+                // try next
+              }
+            }
+          }
+        } catch (listErr) {
+          console.warn('[ListModels Chat Fallback Error]:', listErr);
+        }
+
         throw lastModelErr;
       });
 

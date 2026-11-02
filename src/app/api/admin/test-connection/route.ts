@@ -38,37 +38,49 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // If SDK failed, try Direct REST (handles both AQ auth keys and standard AIza keys)
+      // If SDK candidate loop failed, call ModelService.ListModels to auto-discover active models for this key
       if (!operationalModel) {
-        const restUrls = [
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${cleanKey}`,
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent`
-        ];
+        try {
+          const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${cleanKey}`, {
+            headers: { 'x-goog-api-key': cleanKey }
+          });
+          const listData = await listRes.json();
+          console.log('[Google ListModels Response Status]:', listRes.status, 'Total models found:', listData?.models?.length);
 
-        for (const url of restUrls) {
-          try {
-            const fetchRes = await fetch(url, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'x-goog-api-key': cleanKey
-              },
-              body: JSON.stringify({
-                contents: [{ parts: [{ text: "Ping test. Respond strictly with: PONG" }] }]
-              })
-            });
-            const data = await fetchRes.json();
-            console.log('[Direct REST Gemini Status]:', fetchRes.status, JSON.stringify(data));
-            if (fetchRes.ok && data?.candidates?.[0]?.content?.parts?.[0]?.text) {
-              operationalModel = 'gemini-1.5-flash';
-              responseText = data.candidates[0].content.parts[0].text;
-              break;
-            } else if (data?.error?.message) {
-              lastErr = new Error(data.error.message);
+          if (listData?.models && Array.isArray(listData.models)) {
+            const availableNames = listData.models
+              .filter((m: any) => m.supportedGenerationMethods?.includes('generateContent'))
+              .map((m: any) => m.name.replace('models/', ''));
+            console.log('[Supported generateContent Models for this key]:', availableNames.slice(0, 10));
+
+            for (const mName of availableNames) {
+              try {
+                const testRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${mName}:generateContent?key=${cleanKey}`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'x-goog-api-key': cleanKey
+                  },
+                  body: JSON.stringify({
+                    contents: [{ parts: [{ text: "Ping test. Respond strictly with: PONG" }] }]
+                  })
+                });
+                const testData = await testRes.json();
+                if (testRes.ok && testData?.candidates?.[0]?.content?.parts?.[0]?.text) {
+                  operationalModel = mName;
+                  responseText = testData.candidates[0].content.parts[0].text;
+                  console.log(`[Google Auto-Discovery SUCCESS] Operational Model: ${mName}`);
+                  break;
+                }
+              } catch (innerErr) {
+                // try next
+              }
             }
-          } catch (fErr: any) {
-            console.warn('[Direct REST Attempt Exception]:', fErr?.message);
+          } else if (listData?.error?.message) {
+            lastErr = new Error(listData.error.message);
           }
+        } catch (listErr: any) {
+          console.warn('[ListModels Discovery Error]:', listErr?.message);
         }
       }
 
