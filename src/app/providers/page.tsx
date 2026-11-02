@@ -434,7 +434,7 @@ export default function ProviderPortalPage() {
   // Prevent flash of empty content on initial load
   if (loading && providers.length === 0) {
     return (
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-28 w-full flex flex-col items-center justify-center space-y-4">
+      <div className="max-w-[1550px] mx-auto px-4 sm:px-8 xl:px-12 py-28 w-full flex flex-col items-center justify-center space-y-4">
         <div className="h-12 w-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
           <Sparkles className="h-6 w-6 animate-spin" />
         </div>
@@ -444,7 +444,7 @@ export default function ProviderPortalPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 w-full space-y-8 animate-fadeIn">
+    <div className="max-w-[1550px] mx-auto px-4 sm:px-8 xl:px-12 py-8 w-full space-y-8 animate-fadeIn">
       {/* Top Banner */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-zinc-800/80 pb-6">
         <div>

@@ -91,7 +91,7 @@ export default function OrdersPage() {
   const activeEscrowCount = orders.filter(o => o.status === 'in-escrow').length;
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 w-full space-y-8 animate-fadeIn">
+    <div className="max-w-[1550px] mx-auto px-4 sm:px-8 xl:px-12 py-8 w-full space-y-8 animate-fadeIn">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-zinc-800/80 pb-6">
         <div>
