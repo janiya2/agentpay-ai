@@ -4,8 +4,11 @@ import React, { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, getDocs } from 'firebase/firestore';
 import type { ServiceProvider, ProviderCategory } from '@/types';
-import { Search, Filter, Star, Briefcase, MapPin, ArrowRight, Sparkles } from 'lucide-react';
+import { Search, Filter, Star, Briefcase, MapPin, ArrowRight, Sparkles, User, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
+import ProviderProfileModal from '@/components/ProviderProfileModal';
+import { useRouter } from 'next/navigation';
+import { getSpecialistRealAvatar } from '@/lib/specialistAvatars';
 
 const CATEGORIES: { id: ProviderCategory | 'all'; label: string }[] = [
   { id: 'all', label: 'All Services' },
@@ -18,11 +21,13 @@ const CATEGORIES: { id: ProviderCategory | 'all'; label: string }[] = [
 ];
 
 export default function ServicesPage() {
+  const router = useRouter();
   const [providers, setProviders] = useState<ServiceProvider[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<ProviderCategory | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [maxRate, setMaxRate] = useState(120);
+  const [selectedModalProvider, setSelectedModalProvider] = useState<ServiceProvider | null>(null);
 
   useEffect(() => {
     async function loadProviders() {
@@ -46,7 +51,7 @@ export default function ServicesPage() {
     const matchesSearch = searchQuery === '' || 
       p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.skills.some(s => s.toLowerCase().includes(searchQuery.toLowerCase()));
+      (p.skills && p.skills.some(s => s.toLowerCase().includes(searchQuery.toLowerCase())));
     const matchesRate = p.hourlyRate <= maxRate;
     return matchesCategory && matchesSearch && matchesRate;
   });
@@ -63,13 +68,13 @@ export default function ServicesPage() {
             </span>
           </div>
           <p className="text-xs sm:text-sm text-zinc-400 mt-1">
-            Browse our 100+ talent network or let the Autonomous AI Agent hire & negotiate on your behalf.
+            Browse our verified talent network or let the Autonomous AI Agent hire & negotiate on your behalf.
           </p>
         </div>
 
         <Link
           href="/"
-          className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 text-zinc-950 font-bold text-xs hover:opacity-90 shadow-lg shadow-cyan-950/40 transition-all shrink-0"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 text-zinc-950 font-bold text-xs hover:opacity-90 shadow-lg shadow-cyan-950/40 transition-all shrink-0 cursor-pointer"
         >
           <Sparkles className="h-4 w-4" />
           <span>Launch AI Agent to Negotiate</span>
@@ -84,7 +89,7 @@ export default function ServicesPage() {
             <button
               key={cat.id}
               onClick={() => setSelectedCategory(cat.id)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                 selectedCategory === cat.id
                   ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
                   : 'bg-zinc-800/50 text-zinc-400 hover:text-zinc-200 border border-transparent'
@@ -128,7 +133,7 @@ export default function ServicesPage() {
       {loading ? (
         <div className="text-center py-20 text-zinc-500 text-sm">
           <span className="animate-spin inline-block mr-2">⏳</span>
-          Loading 100+ verified service providers from Firestore...
+          Loading verified service providers from Firestore...
         </div>
       ) : filteredProviders.length === 0 ? (
         <div className="text-center py-20 text-zinc-500 text-sm">
@@ -136,17 +141,27 @@ export default function ServicesPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filteredProviders.map(p => (
+          {filteredProviders.map((p, pIdx) => (
             <div
-              key={p.id}
-              className="p-5 rounded-3xl bg-zinc-900/40 border border-zinc-800/80 hover:border-cyan-500/40 transition-all space-y-4 flex flex-col justify-between group"
+              key={p.id ? `${p.id}_${pIdx}` : `prov_${pIdx}`}
+              className="p-5 rounded-3xl bg-zinc-900/40 border border-zinc-800/80 hover:border-cyan-500/40 transition-all space-y-4 flex flex-col justify-between group shadow-sm"
             >
               <div className="space-y-3">
                 <div className="flex items-start gap-3">
-                  <img src={p.avatarUrl} alt={p.name} className="h-12 w-12 rounded-2xl bg-zinc-800 shrink-0" />
+                  <img 
+                    src={getSpecialistRealAvatar(p.name, p.avatarUrl)} 
+                    alt={p.name} 
+                    onClick={() => setSelectedModalProvider(p)}
+                    className="h-12 w-12 rounded-2xl object-cover bg-zinc-800 shrink-0 cursor-pointer hover:border-2 hover:border-cyan-400 transition-all shadow-md" 
+                    title="View Profile"
+                  />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-1">
-                      <h3 className="font-bold text-white text-sm truncate group-hover:text-cyan-300 transition-colors">
+                      <h3 
+                        onClick={() => setSelectedModalProvider(p)}
+                        className="font-bold text-white text-sm truncate group-hover:text-cyan-300 transition-colors cursor-pointer"
+                        title="Click to view full profile & track record"
+                      >
                         {p.name}
                       </h3>
                       <span className="flex items-center gap-1 text-xs text-amber-400 font-mono font-bold">
@@ -166,11 +181,11 @@ export default function ServicesPage() {
                   {p.bio}
                 </p>
 
-                {/* Skills tags */}
+                {/* Skills tags with 100% unique keys */}
                 <div className="flex flex-wrap gap-1.5 pt-1">
-                  {p.skills.slice(0, 4).map(skill => (
+                  {p.skills && p.skills.slice(0, 4).map((skill, sIdx) => (
                     <span
-                      key={skill}
+                      key={`${p.id || 'prov'}_skill_${sIdx}_${skill}`}
                       className="px-2 py-0.5 rounded-lg bg-zinc-800/60 border border-zinc-700/50 text-[10px] text-zinc-300 font-mono"
                     >
                       {skill}
@@ -186,19 +201,43 @@ export default function ServicesPage() {
                   <span className="font-mono font-black text-sm text-emerald-400">${p.hourlyRate} <span className="text-[10px] text-zinc-500 font-normal">/ hr</span></span>
                 </div>
 
-                <Link
-                  href={`/?hire=${encodeURIComponent(p.name)}`}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 font-bold text-xs border border-cyan-500/30 transition-all"
-                >
-                  <span>Hire with AI</span>
-                  <ArrowRight className="h-3 w-3" />
-                </Link>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedModalProvider(p)}
+                    className="p-2 rounded-xl bg-zinc-800 hover:bg-zinc-750 text-zinc-300 hover:text-white border border-zinc-700 text-xs font-semibold flex items-center justify-center transition-colors cursor-pointer"
+                    title="View Profile Details"
+                  >
+                    <User className="h-3.5 w-3.5 text-zinc-400" />
+                  </button>
+
+                  <Link
+                    href={`/?hire=${encodeURIComponent(p.name)}`}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 font-bold text-xs border border-cyan-500/30 transition-all cursor-pointer"
+                  >
+                    <span>Hire with AI</span>
+                    <ArrowRight className="h-3 w-3" />
+                  </Link>
+                </div>
               </div>
             </div>
           ))}
         </div>
       )}
+
+      {/* Provider Profile Preview Modal */}
+      {selectedModalProvider && (
+        <ProviderProfileModal
+          isOpen={!!selectedModalProvider}
+          onClose={() => setSelectedModalProvider(null)}
+          provider={selectedModalProvider}
+          spendingLimit={maxRate * 3}
+          onSelectProvider={(provName) => {
+            setSelectedModalProvider(null);
+            router.push(`/?hire=${encodeURIComponent(provName)}`);
+          }}
+        />
+      )}
     </div>
   );
 }
-

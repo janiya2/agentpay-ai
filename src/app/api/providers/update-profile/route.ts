@@ -20,7 +20,9 @@ export async function POST(req: NextRequest) {
       autoBiddingEnabled,
       minProjectFloor,
       minTurnaroundDays,
-      autoBidDiscountPercent
+      autoBidDiscountPercent,
+      aiAutoReplyEnabled,
+      aiAutoReplyCustomNote
     } = body;
 
     if (!providerId) {
@@ -73,6 +75,8 @@ export async function POST(req: NextRequest) {
         updatePayload.autoBidDiscountPercent = parsedDiscount;
       }
     }
+    if (typeof aiAutoReplyEnabled === 'boolean') updatePayload.aiAutoReplyEnabled = aiAutoReplyEnabled;
+    if (aiAutoReplyCustomNote !== undefined) updatePayload.aiAutoReplyCustomNote = typeof aiAutoReplyCustomNote === 'string' ? aiAutoReplyCustomNote.trim() : '';
 
     await updateDoc(providerRef, updatePayload);
 

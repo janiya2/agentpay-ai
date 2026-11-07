@@ -35,6 +35,9 @@ export interface ServiceProvider {
   minProjectFloor?: number;
   minTurnaroundDays?: number;
   autoBidDiscountPercent?: number;
+  aiAutoReplyEnabled?: boolean;
+  aiAutoReplyCustomNote?: string;
+  lastActive?: string;
 }
 
 export interface ChatMessage {
@@ -43,9 +46,10 @@ export interface ChatMessage {
   content: string;
   timestamp: string;
   actionPayload?: {
-    type: 'search_results' | 'negotiation_proposal' | 'paypal_checkout' | 'escrow_release' | 'inquiry_dispatched' | 'tender_dispatched';
+    type: 'search_results' | 'negotiation_proposal' | 'paypal_checkout' | 'escrow_release' | 'inquiry_dispatched' | 'tender_dispatched' | 'escrow_success';
     matchedProviders?: ServiceProvider[];
     selectedProvider?: ServiceProvider;
+    winningProvider?: ServiceProvider | any;
     inquiryStatus?: 'awaiting_provider' | 'accepted' | 'declined';
     tenderStatus?: 'tender_open' | 'closed_awarded';
     targetProviders?: Array<{
@@ -104,6 +108,7 @@ export interface ChatMessage {
 
 export interface AgentPayOrder {
   id: string;
+  sessionId?: string;
   paypalOrderId: string;
   paypalCaptureId?: string;
   buyerName: string;
@@ -111,6 +116,7 @@ export interface AgentPayOrder {
   providerId: string;
   providerName: string;
   providerEmail: string;
+  providerAvatar?: string;
   serviceTitle: string;
   amount: number;
   currency: 'USD';
@@ -119,7 +125,10 @@ export interface AgentPayOrder {
   providerPayoutAmount?: number;
   providerPaypalEmail?: string;
   payoutStatus?: 'pending' | 'partially-released' | 'disbursed';
-  status: 'pending-payment' | 'in-escrow' | 'completed' | 'disputed' | 'refunded';
+  status: 'pending-payment' | 'in-escrow' | 'completed' | 'disputed' | 'refunded' | 'cancelled';
+  cancelledAt?: string;
+  cancelledBy?: string;
+  cancellationReason?: string;
   milestones: Array<{
     id: string;
     title: string;
@@ -127,6 +136,87 @@ export interface AgentPayOrder {
     status: 'pending' | 'in-progress' | 'verified' | 'released';
   }>;
   deliverableUrl?: string;
+  deliverable?: {
+    repoUrl?: string;
+    liveDemoUrl?: string;
+    summaryNotes?: string;
+    testInstructions?: string;
+    submittedAt: string;
+    version?: number;
+    paypalEmail?: string;
+  };
+  deliverableHistory?: Array<{
+    version: number;
+    repoUrl?: string;
+    liveDemoUrl?: string;
+    summaryNotes?: string;
+    testInstructions?: string;
+    paypalEmail?: string;
+    submittedAt?: string;
+    auditCertificate?: {
+      version?: number;
+      overallScore?: number;
+      verdict?: string;
+      summary?: string;
+      issues?: string[];
+      auditedAt?: string;
+    } | null;
+  }>;
+  auditCertificate?: {
+    version?: number;
+    overallScore: number; // 0 - 100
+    verdict: 'PASSED_VERIFIED' | 'CHANGES_REQUESTED' | 'FAILED';
+    scopeMatch: number; // 0 - 100
+    qualityScore: number; // 0 - 100
+    securityScore: number; // 0 - 100
+    summary: string;
+    issues?: string[];
+    checklist: Array<{
+      item: string;
+      passed: boolean;
+      details?: string;
+    }>;
+    auditHash: string; // SHA-256
+    auditedAt: string;
+    recheckCount: number;
+    auditedFilesCount?: number;
+    techStack?: string[];
+  };
+  deliverableStatus?: 'awaiting_submission' | 'submitted_pending_audit' | 'audit_passed' | 'changes_requested' | 'disputed' | 'dispute_resolved';
+  arbitrationRuling?: {
+    caseId?: string;
+    status?: 'RULING_ISSUED' | 'EXECUTED_SETTLED';
+    specialistPayoutPct?: number;
+    specialistPayoutAmount?: number;
+    clientRefundPct?: number;
+    clientRefundAmount?: number;
+    title?: string;
+    findings?: string[];
+    precedentSummary?: string;
+    rulingHash?: string;
+    ruledAt?: string;
+    executedAt?: string;
+    paypalCaptureId?: string;
+    ledgerTxId?: string;
+  };
+  revisionNotes?: string;
+  revisionIssues?: string[];
+  revisionRequestedAt?: string;
+  clientReview?: {
+    rating: number;
+    feedback: string;
+    tags?: string[];
+    submittedAt: string;
+    providerId: string;
+    providerName: string;
+  };
+  providerReview?: {
+    rating: number;
+    feedback: string;
+    tags?: string[];
+    submittedAt: string;
+    clientName: string;
+  };
   createdAt: string;
   updatedAt: string;
 }
@@ -146,12 +236,20 @@ export interface PlatformSettings {
 export interface DirectMessage {
   id: string;
   orderId?: string;
+  channelId?: string;
   sessionId?: string;
+  providerId?: string;
+  providerName?: string;
   senderRole: 'client' | 'provider';
   senderName: string;
   senderAvatar?: string;
   message: string;
-  timestamp: string;
+  timestamp?: string;
+  createdAt?: string;
+  isSeen?: boolean;
+  seenAt?: string;
+  status?: 'sent' | 'delivered' | 'seen';
+  isAiAutoReply?: boolean;
 }
 
 export interface ChatLogEntry {
@@ -213,5 +311,78 @@ export interface BuyerUser {
   totalSpent: number;
   lastActive: string;
   status: 'active' | 'verified';
+  company?: string;
+  bio?: string;
+  rating?: number;
+  reviewCount?: number;
 }
+
+export interface ClientReview {
+  id: string;
+  orderId: string;
+  clientEmail: string;
+  clientName: string;
+  providerId: string;
+  providerName: string;
+  providerAvatar?: string;
+  rating: number; // 1 - 5
+  feedback: string;
+  tags?: string[];
+  createdAt: string;
+}
+
+export interface PayPalPayoutRecord {
+  id: string;
+  providerId: string;
+  providerName: string;
+  providerEmail: string;
+  paypalEmail: string;
+  amount: number;
+  fee: number;
+  netAmount: number;
+  currency: string;
+  paypalBatchId: string;
+  paypalPayoutStatus: 'SUCCESS' | 'PENDING' | 'DENIED' | 'UNCLAIMED';
+  createdAt: string;
+  method: 'PAYPAL_SANDBOX_PAYOUT' | 'PAYPAL_V2_PAYOUT';
+  mode: 'sandbox' | 'live';
+  senderBatchId?: string;
+  notes?: string;
+}
+
+export interface PayPalWebhookEvent {
+  id: string;
+  eventType: 
+    | 'CHECKOUT.ORDER.APPROVED'
+    | 'PAYMENT.CAPTURE.COMPLETED'
+    | 'ESCROW.MILESTONE.DISBURSED'
+    | 'PAYMENT.PAYOUTSBATCH.SUCCESS'
+    | 'CUSTOMER.DISPUTE.RESOLVED'
+    | 'PAYMENT.CAPTURE.REFUNDED'
+    | 'MERCHANT.ONBOARDING.COMPLETED';
+  summary: string;
+  resourceType: 'order' | 'capture' | 'disbursement' | 'payout' | 'dispute';
+  orderId?: string;
+  amount?: number;
+  currency: 'USD';
+  buyerName?: string;
+  buyerEmail?: string;
+  providerName?: string;
+  providerEmail?: string;
+  paypalOrderId?: string;
+  paypalCaptureId?: string;
+  payoutBatchId?: string;
+  timestamp: string;
+  headers: {
+    paypalAuthAlgo: string;
+    paypalCertUrl: string;
+    paypalTransmissionId: string;
+    paypalTransmissionTime: string;
+    paypalTransmissionSig: string;
+    hmacVerificationStatus: 'VERIFIED_VALID' | 'SIGNATURE_VALID';
+    httpStatusCode: number;
+  };
+  rawPayload: any;
+}
+
 

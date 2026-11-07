@@ -8,12 +8,13 @@ import type { ServiceProvider } from '@/types';
 
 export async function POST(req: NextRequest) {
   try {
-    const { 
+    let { 
       sessionId, 
       messages, 
       spendingLimit = 250, 
       buyerName = 'Janitha Dilshan', 
-      buyerEmail = 'janithad2@gmail.com' 
+      buyerEmail = 'janithad2@gmail.com',
+      buyerAvatar = ''
     } = await req.json();
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
@@ -26,19 +27,45 @@ export async function POST(req: NextRequest) {
     const latestUserMessage = messages[messages.length - 1].content;
     const lowerText = latestUserMessage.toLowerCase().trim();
 
+    // Auto-detect budget mentioned in client prompt and dynamically enforce as safe spending limit
+    const budgetMatch = latestUserMessage.match(/(?:under|below|max|maximum|cap|budget|price|for|around|up\s*to)\s*(?:of|is|:)?\s*\$?\s*(\d{2,4})\b/i) || 
+                        latestUserMessage.match(/\(\s*\$?\s*(\d{2,4})\s*\)/) ||
+                        latestUserMessage.match(/\$\s*(\d{2,4})\b/);
+    if (budgetMatch && budgetMatch[1]) {
+      const parsedNum = parseInt(budgetMatch[1], 10);
+      if (parsedNum >= 30 && parsedNum <= 1000) {
+        spendingLimit = parsedNum;
+      }
+    }
+
     // 1. Identify Greeting / Casual Chat
     const isGreetingOnly = /^(hi|hello|hey|good morning|good evening|good afternoon|yo|sup|help|who are you|oya kawda|halo|kohomada)[\s!.]*$/i.test(lowerText) ||
-      (lowerText.length < 12 && !lowerText.includes('web') && !lowerText.includes('app') && !lowerText.includes('design') && !lowerText.includes('dev') && !lowerText.includes('seo') && !lowerText.includes('bot'));
+      (lowerText.length < 12 && !lowerText.includes('web') && !lowerText.includes('app') && !lowerText.includes('design') && !lowerText.includes('dev') && !lowerText.includes('seo') && !lowerText.includes('bot') && !lowerText.includes('ai'));
 
-    // 2. Identify Provider Selection / Negotiation Intent
-    const isHireIntent = lowerText.includes('proceed with') || 
-                         lowerText.includes('proceed') ||
-                         lowerText.includes('select') || 
-                         lowerText.includes('hire') || 
-                         lowerText.includes('choose') ||
-                         lowerText.includes('deal with') ||
-                         lowerText.includes('go with') ||
-                         lowerText.includes('negotiate with');
+    // 2. Identify Specific Provider Selection or Explicit Tender Dispatch Command
+    const isExplicitTenderDispatch = 
+      lowerText.includes('dispatch autonomous tender') || 
+      lowerText.includes('dispatch tender') || 
+      lowerText.includes('dispatch rfp') || 
+      lowerText.includes('start tender') ||
+      lowerText.includes('send tender');
+
+    const KNOWN_SPECIALIST_NAMES = [
+      'ethan', 'rossi', 'adrian', 'silva', 'lucas', 'o\'connor', 'oconnor',
+      'sophia', 'patel', 'elena', 'chen', 'marcus', 'vance', 'david', 'alex', 'sarah', 'maya', 'felix'
+    ];
+    const mentionsSpecificSpecialist = KNOWN_SPECIALIST_NAMES.some(name => lowerText.includes(name));
+
+    const hasSelectionAction = 
+      lowerText.includes('proceed with') || 
+      lowerText.includes('negotiate with') || 
+      lowerText.includes('deal with') || 
+      lowerText.includes('go with') ||
+      (lowerText.includes('select ') && mentionsSpecificSpecialist) ||
+      (lowerText.includes('hire ') && mentionsSpecificSpecialist);
+
+    // A hire/tender intent is strictly valid ONLY if an explicit tender command was given or a specific specialist was named
+    const isHireIntent = !isGreetingOnly && (isExplicitTenderDispatch || (hasSelectionAction && mentionsSpecificSpecialist));
 
     let result: any = null;
     let isRealAI = false;
@@ -53,15 +80,16 @@ export async function POST(req: NextRequest) {
 You are AgentPay AI, an institutional-grade Autonomous Commerce & Procurement Agent for the PayPal AI Hackathon 2026.
 Your role:
 1. GREETING STAGE: If the user simply says "hi", "hello", casual greetings, do NOT dump provider cards. Greet the user warmly, explain you are an autonomous procurement agent, and ask what digital deliverable or service they wish to procure within their budget cap ($${spendingLimit} USD).
-2. DISCOVERY STAGE: If the user specifies a service requirement (e.g. Next.js web dev, Figma UI design, AI automation workflow, SEO, mobile app), classify the category ("web-development" | "ui-ux-design" | "ai-automation" | "seo-marketing" | "video-production" | "mobile-apps") and invite them to review top specialists.
-3. TENDER DISPATCH STAGE: If the user says "I want to proceed with [Provider Name]", selects a specialist, or asks to tender:
-   - Do NOT simulate or pretend that the provider already agreed in advance! In real-world commerce, specialists must review the RFP in their Provider Workspace.
-   - Explain clearly that the autonomous proposal has been dispatched to the specialists, email notifications have been sent, and you are waiting for their competitive bids.
+2. DISCOVERY STAGE: If the user specifies a service requirement or general need (e.g. "I want to hire ai web developer", Next.js web dev, Figma UI design, AI automation workflow, SEO, mobile app), classify the category ("web-development" | "ui-ux-design" | "ai-automation" | "seo-marketing" | "video-production" | "mobile-apps").
+   - Set intent strictly to "discovery".
+   - Do NOT dispatch tenders or start messaging providers yet! Explain that you found top matching verified specialists and invite the client to review their cards and click "Select Specialist" or "Dispatch Tender".
+3. TENDER DISPATCH STAGE: ONLY if the user explicitly says "I want to proceed with [Provider Name]", names a specific specialist, or explicitly clicks/asks to "dispatch autonomous tender":
+   - Explain clearly that the proposal has been dispatched to the specialists and you are awaiting bids.
    - Set intent to "tender_dispatched".
 
 Format your response strictly as valid JSON with NO markdown formatting:
 {
-  "reply": "string (your comprehensive, polite, professional response explaining the tender dispatch and next steps)",
+  "reply": "string (your comprehensive, polite, professional response explaining the candidate specialists or tender dispatch)",
   "intent": "general_chat" | "discovery" | "tender_dispatched",
   "categoryMatched": "web-development" | "ui-ux-design" | "ai-automation" | "seo-marketing" | "video-production" | "mobile-apps" | null,
   "selectedProviderName": string | null
@@ -138,6 +166,17 @@ Format your response strictly as valid JSON with NO markdown formatting:
       result = aiResponse.parsed;
       isRealAI = true;
       modelUsed = aiResponse.modelName;
+
+      // Enforce strict greeting and discovery rules even if AI model was used
+      if (isGreetingOnly) {
+        result.intent = 'general_chat';
+        result.categoryMatched = null;
+        result.selectedProviderName = null;
+      } else if (!isHireIntent && result.intent === 'tender_dispatched') {
+        // Client expressed a general requirement without selecting a specific specialist:
+        // Keep in Discovery mode so candidate directory cards are presented for the client to select from!
+        result.intent = 'discovery';
+      }
     } catch (aiErr: any) {
       console.warn('[Gemini AI Engine]: Using resilient conversational intelligence:', aiErr?.message);
       isRealAI = false;
@@ -183,8 +222,8 @@ Format your response strictly as valid JSON with NO markdown formatting:
       }
     }
 
-    // UNIFIED AUTONOMOUS TENDER DISPATCH (Executes ALWAYS when client hires / tenders)
-    if (isHireIntent || result?.intent === 'tender_dispatched') {
+    // UNIFIED AUTONOMOUS TENDER DISPATCH (Executes ONLY when client explicitly hires / tenders and NOT greeting)
+    if (!isGreetingOnly && (isHireIntent || result?.intent === 'tender_dispatched')) {
       const allProvidersSnap = await getDocs(collection(db, 'agentpay_providers'));
       const allProviders = allProvidersSnap.docs.map(d => d.data() as ServiceProvider);
 
@@ -195,91 +234,65 @@ Format your response strictly as valid JSON with NO markdown formatting:
         matchedCategory = 'ai-automation';
       }
 
-      // Find primary provider if specifically mentioned by client
-      let chosen = allProviders.find(p => 
-        lowerText.includes(p.name.toLowerCase()) || 
-        lowerText.includes(p.name.split(' ')[0].toLowerCase()) ||
-        (result?.selectedProviderName && p.name.toLowerCase().includes(result.selectedProviderName.toLowerCase()))
-      );
+      // 1. Check for exact full name matches in client prompt (supports 1, 2, or 3 chosen providers)
+      const exactFullNameMatches = allProviders.filter(p => lowerText.includes(p.name.toLowerCase()));
 
-      if (!chosen) {
-        chosen = allProviders.find(p => p.category === matchedCategory) || allProviders[0];
+      let targetSpecialists: ServiceProvider[] = [];
+      if (exactFullNameMatches.length >= 1) {
+        // If client explicitly selected specific provider(s), strictly respect their exact choice!
+        targetSpecialists = exactFullNameMatches.slice(0, 3);
+      } else {
+        // Check for unique first name matches ONLY IF no full name was provided
+        const firstNameMatches = allProviders.filter(p => {
+          const firstName = p.name.split(' ')[0].toLowerCase();
+          return firstName.length > 2 && lowerText.includes(firstName);
+        });
+
+        if (firstNameMatches.length > 0) {
+          targetSpecialists = firstNameMatches.slice(0, 3);
+        } else {
+          // No specific provider mentioned: find top 3 in category
+          const catSpecialists = allProviders.filter(p => p.category === matchedCategory);
+          targetSpecialists = catSpecialists.length >= 3 ? catSpecialists.slice(0, 3) : allProviders.slice(0, 3);
+        }
       }
 
-      // Pick 2 peer specialists in same domain for a 3-way competitive tender
-      const peers = allProviders.filter(p => p.id !== chosen!.id && (p.category === chosen!.category || p.category === matchedCategory)).slice(0, 2);
-      const top3Providers = [chosen, ...peers];
+      const chosen = targetSpecialists[0] || allProviders[0];
+      const top3Providers = targetSpecialists;
 
-      // Autonomous Swarm Bidding: Any provider with autoBiddingEnabled !== false generates an instant bid
+      // Autonomous Swarm RFP Tender: Specialists are alerted and initially placed in 'awaiting_bid' status.
+      // Bids are only added when a specialist actually submits via chat negotiation, provider workspace form, or evaluator simulation!
       const swarmBids: any[] = [];
       const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-      const targetProviders = top3Providers.map((p, pIdx) => {
-        const isAuto = p.autoBiddingEnabled !== false;
-
-        if (isAuto) {
-          const floor = p.minProjectFloor || 120;
-          const targetCap = spendingLimit || 200;
-          // Natural competitive variance among specialists
-          const variance = pIdx === 0 ? 30 : pIdx === 1 ? 40 : 25;
-          let calculatedPrice = Math.max(floor, targetCap - variance);
-          if (calculatedPrice > targetCap) calculatedPrice = targetCap;
-          const turnaround = Math.max(p.minTurnaroundDays || 2, pIdx === 1 ? 2 : pIdx === 0 ? 3 : 4);
-
-          swarmBids.push({
-            providerId: p.id,
-            providerName: p.name,
-            providerAvatar: p.avatarUrl,
-            providerTitle: p.title,
-            bidPrice: calculatedPrice,
-            deliveryDays: turnaround,
-            note: `Autonomous Proposal via ${p.name}'s AI Delegate: Guaranteed ${p.title} deliverables adhering strictly to contract specifications with ${turnaround}-day turnaround.`,
-            milestones: [
-              { title: 'Milestone 1: Architectural Draft & Components', amount: Math.round(calculatedPrice * 0.5) },
-              { title: 'Milestone 2: Final Delivery, Testing & Handoff', amount: Math.round(calculatedPrice * 0.5) }
-            ],
-            submittedAt: timeNow,
-            isAutoBid: true
-          });
-
-          return {
-            id: p.id,
-            name: p.name,
-            title: p.title,
-            email: p.contactEmail,
-            avatarUrl: p.avatarUrl,
-            rating: p.rating,
-            hourlyRate: p.hourlyRate,
-            autoBiddingEnabled: true,
-            status: 'bid_received' as const,
-            bidPrice: calculatedPrice
-          };
-        } else {
-          return {
-            id: p.id,
-            name: p.name,
-            title: p.title,
-            email: p.contactEmail,
-            avatarUrl: p.avatarUrl,
-            rating: p.rating,
-            hourlyRate: p.hourlyRate,
-            autoBiddingEnabled: false,
-            status: 'awaiting_bid' as const
-          };
-        }
-      });
+      const targetProviders = top3Providers.map((p) => ({
+        id: p.id,
+        name: p.name,
+        title: p.title,
+        email: p.contactEmail,
+        avatarUrl: p.avatarUrl,
+        rating: p.rating,
+        hourlyRate: p.hourlyRate,
+        autoBiddingEnabled: p.autoBiddingEnabled !== false,
+        status: 'awaiting_bid' as const,
+        bidPrice: undefined
+      }));
 
       const dynamicDialog = [
         {
           speaker: 'agent' as const,
           speakerName: 'AgentPay Commerce Bot 🤖',
-          message: `Initiating Autonomous RFP Tender to ${targetProviders.length} specialists (${targetProviders.map(p => p.name).join(', ')}). Project Scope: ${chosen.title}. Client Budget Cap: $${spendingLimit} USD. ${swarmBids.length} autonomous bids received.`,
+          message: targetProviders.length === 1
+            ? `Transmitting direct milestone RFP to ${chosen.name}. Project Scope: ${chosen.title}. Client Budget Cap: $${spendingLimit} USD. Awaiting specialist response.`
+            : `Initiating Autonomous RFP Tender to ${targetProviders.length} specialists (${targetProviders.map(p => p.name).join(', ')}). Project Scope: ${chosen.title}. Client Budget Cap: $${spendingLimit} USD. Transmitted to specialists' workspaces — awaiting competitive bids.`,
           timestamp: timeNow
         }
       ];
 
       result = {
-        reply: `🚀 **Autonomous Swarm Tender Dispatched!**\n\nI have transmitted your RFP scope to 3 top verified specialists:\n${targetProviders.map(p => `• **${p.name}** (${p.title}) — ${p.autoBiddingEnabled ? '⚡ *Instant AI Delegate Active*' : '⏳ *Manual Bidding Mode*'}`).join('\n')}\n\n🏆 **Bidding Status:** ${swarmBids.length} competitive milestone bids have been autonomously submitted to your decision board below. Review their price, turnaround, and milestone tranches, or open a **Direct 1-on-1 Chat** to negotiate further!`,
+        reply: targetProviders.length === 1
+          ? `🚀 **Direct Proposal Transmitted to ${chosen.name}!**\n\nI have transmitted your RFP scope directly to **${chosen.name}** (${chosen.title}).\n\n⏳ **Bidding Status:** Awaiting response. Once terms are confirmed in chat or submitted, you can lock PayPal milestone escrow.`
+          : `🚀 **Autonomous Swarm Tender Dispatched!**\n\nI have transmitted your RFP scope to ${targetProviders.length} verified specialists:\n${targetProviders.map(p => `• **${p.name}** (${p.title}) — ⏳ *Reviewing Scope & Milestones*`).join('\n')}\n\n🏆 **Bidding Status:** Tender is open for milestone bids. When specialists review your scope and submit their proposals via chat or workspace, their bids will appear on your decision board below for comparison and 1-click PayPal Escrow lock!`,
         intent: 'tender_dispatched',
         categoryMatched: chosen.category,
         selectedProviderName: chosen.name,
@@ -307,7 +320,10 @@ Format your response strictly as valid JSON with NO markdown formatting:
     // Fetch matched providers from Firestore
     let matchedProviders: ServiceProvider[] = [];
 
-    if (result?.intent === 'checkout_ready' || isHireIntent) {
+    if (isGreetingOnly || result?.intent === 'general_chat') {
+      // Never show candidate providers on casual greetings or general chat
+      matchedProviders = [];
+    } else if (result?.intent === 'checkout_ready' || isHireIntent) {
       // When negotiating / checking out with a specific provider, NEVER show candidate search cards
       matchedProviders = [];
     } else if (result?.intent === 'discovery' && result?.categoryMatched) {
@@ -347,10 +363,13 @@ Format your response strictly as valid JSON with NO markdown formatting:
         paypalOrderId = `PAYPAL_SANDBOX_${Date.now()}`;
       }
 
+      const sid = sessionId || `session_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+
       // Persist order to Firestore agentpay_orders
       try {
         const orderDoc = {
           id: finalOrderRefId,
+          sessionId: sid,
           paypalOrderId: paypalOrderId,
           buyerName: buyerName || 'Janitha Dilshan',
           buyerEmail: buyerEmail || 'janithad2@gmail.com',
@@ -409,6 +428,7 @@ Format your response strictly as valid JSON with NO markdown formatting:
         id: sid,
         buyerName: buyerName || 'Janitha Dilshan',
         buyerEmail: buyerEmail || 'janithad2@gmail.com',
+        buyerAvatar: buyerAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop&q=80',
         spendingLimit,
         messages: fullConversation,
         messageCount: fullConversation.length,
@@ -418,7 +438,27 @@ Format your response strictly as valid JSON with NO markdown formatting:
         isRealAI,
         modelUsed,
         categoryMatched: result?.categoryMatched || null,
-        projectScope: `${result?.categoryMatched || 'web-development'} Milestone Deliverable`,
+        projectScope: (() => {
+          if (result?.intent === 'general_chat' || isGreetingOnly) return 'General Inquiry';
+          const userMsgs = fullConversation.filter((m: any) => m.role === 'user');
+          const lastUserMsg = userMsgs[userMsgs.length - 1]?.content || latestUserMessage;
+          let cleaned = lastUserMsg
+            .replace(/^dispatch\s+(autonomous\s+)?tender\s+to\s+[^]+?for\s+/i, '')
+            .replace(/\s+for\s+my\s+project\s+within\s+my\s+\$\d+\s+budget\.?/i, '')
+            .replace(/^i want to hire\s+/i, 'Hire ')
+            .replace(/^i want to\s+/i, '')
+            .replace(/^i need to\s+/i, '')
+            .replace(/^please\s+/i, '')
+            .replace(/^"|"$/g, '')
+            .trim();
+          if (cleaned.length >= 3 && !/^(hi|hello|hey)/i.test(cleaned)) {
+            return cleaned.charAt(0).toUpperCase() + cleaned.slice(1, 60);
+          }
+          if (result?.categoryMatched) {
+            return `${result.categoryMatched.replace(/[-_]/g, ' ').toUpperCase()} Project`;
+          }
+          return 'Milestone Contract';
+        })(),
         targetProviders: result?.targetProviders || null,
         bids: result?.bids || [],
         providerId: result?.negotiatedDeal?.providerId || null,
@@ -444,7 +484,7 @@ Format your response strictly as valid JSON with NO markdown formatting:
         id: 'usr_janitha',
         name: buyerName || 'Janitha Dilshan',
         email: buyerEmail || 'janithad2@gmail.com',
-        avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Janitha&backgroundColor=b6e3f4',
+        avatarUrl: buyerAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop&q=80',
         spendingLimit,
         ordersCount: finalOrderRefId ? 1 : 0,
         totalSpent: finalOrderRefId ? orderAmount : 0,
@@ -463,6 +503,7 @@ Format your response strictly as valid JSON with NO markdown formatting:
       success: true,
       isRealAI,
       modelUsed,
+      spendingLimit,
       agentDecision: result,
       matchedProviders,
       paypalOrderId,

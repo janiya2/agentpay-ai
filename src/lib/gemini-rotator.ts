@@ -8,6 +8,14 @@ interface KeyHealth {
   lastFailureTime: number;
 }
 
+// Accepts both standard Google Cloud keys (AIzaSy...) and modern Google AI Studio project keys (AQ....)
+const isValidGeminiKey = (k: string): boolean => {
+  if (!k || typeof k !== 'string') return false;
+  const trimmed = k.trim();
+  if (trimmed.length < 10) return false;
+  return trimmed.startsWith('AQ.') || trimmed.startsWith('AIzaSy');
+};
+
 class GeminiKeyRotator {
   private keys: string[] = [];
   private currentIndex: number = 0;
@@ -23,7 +31,9 @@ class GeminiKeyRotator {
       if (snap.exists()) {
         const data = snap.data();
         if (data.geminiKeys && Array.isArray(data.geminiKeys)) {
-          const validKeys = data.geminiKeys.filter((k: string) => k && k.trim().length > 10);
+          const validKeys = data.geminiKeys
+            .map((k: string) => k?.trim())
+            .filter(isValidGeminiKey);
           if (validKeys.length > 0) {
             this.refreshKeys(validKeys);
             return;
@@ -36,36 +46,41 @@ class GeminiKeyRotator {
   }
 
   public refreshKeys(customKeys?: string[]) {
+    const envKey = (process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || '').trim();
+    const poolString = (process.env.GEMINI_API_KEY_POOL || '').trim();
+    
+    let keyList: string[] = [];
     if (customKeys && customKeys.length > 0) {
-      this.keys = customKeys.filter(k => k && k.trim().length > 10);
+      keyList = customKeys.filter(isValidGeminiKey);
     } else {
-      const defaultKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || '';
-      const poolString = process.env.GEMINI_API_KEY_POOL || '';
-      
       const parsedPool = poolString
         .split(',')
         .map(k => k.trim())
-        .filter(k => k.length > 10);
-
-      this.keys = parsedPool.length > 0 ? parsedPool : [defaultKey].filter(Boolean);
+        .filter(isValidGeminiKey);
+      
+      if (isValidGeminiKey(envKey)) {
+        keyList.push(envKey);
+      }
+      if (parsedPool.length > 0) {
+        keyList.push(...parsedPool);
+      }
     }
+
+    this.keys = Array.from(new Set(keyList.filter(isValidGeminiKey)));
+    this.currentIndex = 0; // Always start with primary key
 
     this.keys.forEach(key => {
       if (!this.keyHealthMap.has(key)) {
         this.keyHealthMap.set(key, { key, failures: 0, lastFailureTime: 0 });
       }
     });
-
-    if (this.keys.length === 0) {
-      console.warn('[GeminiRotator] No Gemini API keys configured!');
-    }
   }
 
   public getActiveKey(): string {
     if (this.keys.length === 0) {
-      return process.env.GEMINI_API_KEY || '';
+      return (process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || '').trim();
     }
-    return this.keys[this.currentIndex % this.keys.length];
+    return this.keys[this.currentIndex % this.keys.length] || '';
   }
 
   public reportFailure(failedKey: string) {
@@ -81,7 +96,7 @@ class GeminiKeyRotator {
 
   public async executeWithRotation<T>(
     operation: (genAI: GoogleGenerativeAI, activeKey: string) => Promise<T>,
-    maxRetries = 3
+    maxRetries = 2
   ): Promise<T> {
     let attempts = 0;
     const totalKeys = Math.max(1, this.keys.length);
@@ -91,7 +106,10 @@ class GeminiKeyRotator {
       const currentKey = this.getActiveKey();
       try {
         const genAI = new GoogleGenerativeAI(currentKey);
-        const result = await operation(genAI, currentKey);
+        const timeoutPromise = new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('Gemini API call timed out after 4000ms')), 4000)
+        );
+        const result = await Promise.race([operation(genAI, currentKey), timeoutPromise]);
         return result;
       } catch (error: any) {
         attempts++;

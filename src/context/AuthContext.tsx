@@ -18,6 +18,11 @@ export interface UserProfile {
   spendingLimit: number;
   role: 'buyer' | 'judge' | 'admin';
   createdAt: string;
+  company?: string;
+  bio?: string;
+  totalSpent?: number;
+  rating?: number;
+  reviewCount?: number;
 }
 
 interface AuthContextType {
@@ -29,6 +34,7 @@ interface AuthContextType {
   loginWithGoogle: () => Promise<void>;
   loginWithJudgeAccount: () => Promise<void>;
   loginWithCustomEmail: (name: string, email: string) => Promise<void>;
+  updateUserProfile: (updates: Partial<UserProfile>) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -39,13 +45,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
-  // Restore user from sessionStorage on mount
+  // Restore user from persistent localStorage (and fallback to sessionStorage) on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const stored = sessionStorage.getItem('agentpay_active_user');
+      const stored = localStorage.getItem('agentpay_active_user') || sessionStorage.getItem('agentpay_active_user');
       if (stored) {
         try {
-          setUser(JSON.parse(stored));
+          const parsed = JSON.parse(stored);
+          setUser(parsed);
+          // Ensure it is saved in permanent localStorage
+          localStorage.setItem('agentpay_active_user', stored);
         } catch (e) {
           console.warn('Failed to parse stored user:', e);
         }
@@ -57,6 +66,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const saveUserSession = async (userObj: UserProfile) => {
     setUser(userObj);
     if (typeof window !== 'undefined') {
+      // Save permanently in localStorage so session survives browser close & PC reboot
+      localStorage.setItem('agentpay_active_user', JSON.stringify(userObj));
       sessionStorage.setItem('agentpay_active_user', JSON.stringify(userObj));
     }
 
@@ -84,7 +95,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       id: 'usr_judge_janitha',
       name: 'Janitha Dilshan (Judge / Evaluator)',
       email: 'janithad2@gmail.com',
-      avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Janitha&backgroundColor=b6e3f4',
+      avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop&q=80',
       spendingLimit: 250,
       role: 'judge',
       createdAt: new Date().toISOString()
@@ -139,6 +150,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsAuthModalOpen(false);
   };
 
+  // Update Client Profile (Name, Avatar, Company, Bio, Spending Cap)
+  const updateUserProfile = async (updates: Partial<UserProfile>) => {
+    if (!user) return;
+    const updated: UserProfile = {
+      ...user,
+      ...updates
+    };
+    await saveUserSession(updated);
+  };
+
   // Sign out
   const logout = async () => {
     try {
@@ -148,6 +169,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     setUser(null);
     if (typeof window !== 'undefined') {
+      localStorage.removeItem('agentpay_active_user');
       sessionStorage.removeItem('agentpay_active_user');
     }
   };
@@ -163,6 +185,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         loginWithGoogle,
         loginWithJudgeAccount,
         loginWithCustomEmail,
+        updateUserProfile,
         logout
       }}
     >

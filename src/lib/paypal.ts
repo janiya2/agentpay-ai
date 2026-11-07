@@ -147,3 +147,64 @@ export async function capturePayPalOrder(paypalOrderId: string) {
   return await res.json();
 }
 
+export async function executePayPalPayout(params: {
+  recipientEmail: string;
+  amount: number;
+  currency?: string;
+  note?: string;
+  senderItemId?: string;
+}) {
+  const config = await getPayPalConfig();
+  const accessToken = await getPayPalAccessToken();
+  const baseUrl = getPayPalBaseUrl(config.mode);
+
+  const currency = params.currency || 'USD';
+  const amountStr = Number(params.amount).toFixed(2);
+  const senderBatchId = `AgentPay_Batch_${Date.now()}_${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
+  const senderItemId = params.senderItemId || `item_${Date.now()}`;
+
+  const payload = {
+    sender_batch_header: {
+      sender_batch_id: senderBatchId,
+      recipient_type: 'EMAIL',
+      email_subject: 'AgentPay AI: Your Escrow Milestone Payout has been Disbursed!',
+      email_message: 'Congratulations! Your earnings from AgentPay AI milestone completion have been disbursed to your PayPal account.'
+    },
+    items: [
+      {
+        recipient_type: 'EMAIL',
+        amount: {
+          value: amountStr,
+          currency: currency
+        },
+        note: params.note || 'AgentPay AI Milestone Escrow Disbursement',
+        sender_item_id: senderItemId,
+        receiver: params.recipientEmail
+      }
+    ]
+  };
+
+  const res = await fetch(`${baseUrl}/v1/payments/payouts`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    const errorMsg = data.details?.[0]?.issue || data.message || data.error_description || JSON.stringify(data);
+    throw new Error(`PayPal Payouts API Error (${res.status}): ${errorMsg}`);
+  }
+
+  return {
+    batchId: data.batch_header?.payout_batch_id || `PAYPAL_BATCH_${Date.now()}`,
+    batchStatus: (data.batch_header?.batch_status || 'PENDING') as 'SUCCESS' | 'PENDING' | 'DENIED',
+    senderBatchId,
+    raw: data
+  };
+}
+

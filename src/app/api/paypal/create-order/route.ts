@@ -6,7 +6,7 @@ import { doc, setDoc } from 'firebase/firestore';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { amount, currency = 'USD', providerId, providerName, providerEmail, serviceTitle, buyerName, buyerEmail, milestones } = body;
+    const { amount, currency = 'USD', providerId, providerName, providerEmail, serviceTitle, buyerName, buyerEmail, milestones, sessionId } = body;
 
     if (!amount || Number(amount) <= 0) {
       return NextResponse.json({ error: 'Valid amount is required.' }, { status: 400 });
@@ -27,6 +27,7 @@ export async function POST(req: NextRequest) {
     // Save pending order to Firestore
     const orderData = {
       id: orderReferenceId,
+      sessionId: sessionId || null,
       paypalOrderId,
       amount: Number(amount),
       currency,

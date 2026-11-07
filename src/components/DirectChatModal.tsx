@@ -1,11 +1,14 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { 
   X, Send, Bot, User, MessageSquare, ShieldCheck, Clock, 
-  CreditCard, Sparkles, CheckCircle2, AlertCircle 
+  CreditCard, Sparkles, CheckCircle2, AlertCircle, ExternalLink, CheckCheck, Check
 } from 'lucide-react';
 import type { DirectMessage } from '@/types';
+import { getSpecialistRealAvatar } from '@/lib/specialistAvatars';
+import { formatLastSeen, isUserOnline } from '@/lib/lastSeen';
 
 export interface DirectChatModalProps {
   isOpen: boolean;
@@ -15,6 +18,7 @@ export interface DirectChatModalProps {
   currentUserRole: 'client' | 'provider';
   currentUserName: string;
   otherPartyName: string;
+  otherPartyLastSeen?: string;
   isPurchasedOrder?: boolean;
   orderAmount?: number;
   escrowStatus?: string;
@@ -22,6 +26,8 @@ export interface DirectChatModalProps {
   deliveryDays?: number;
   clientBudgetCap?: number;
   paypalOrderId?: string;
+  providerId?: string;
+  sessionId?: string;
 }
 
 export default function DirectChatModal({
@@ -32,13 +38,16 @@ export default function DirectChatModal({
   currentUserRole,
   currentUserName,
   otherPartyName,
+  otherPartyLastSeen,
   isPurchasedOrder = false,
   orderAmount,
   escrowStatus,
   bidPrice,
   deliveryDays,
   clientBudgetCap,
-  paypalOrderId
+  paypalOrderId,
+  providerId,
+  sessionId
 }: DirectChatModalProps) {
   const [messages, setMessages] = useState<DirectMessage[]>([]);
   const [input, setInput] = useState('');
@@ -49,7 +58,14 @@ export default function DirectChatModal({
   const fetchMessages = async () => {
     if (!channelId) return;
     try {
-      const res = await fetch(`/api/direct-messages?orderId=${encodeURIComponent(channelId)}`);
+      const params = new URLSearchParams();
+      params.set('orderId', channelId);
+      params.set('channelId', channelId);
+      if (providerId) params.set('providerId', providerId);
+      if (otherPartyName) params.set('providerName', otherPartyName);
+      if (sessionId) params.set('sessionId', sessionId);
+
+      const res = await fetch(`/api/direct-messages?${params.toString()}`);
       const data = await res.json();
       if (data.success && Array.isArray(data.messages)) {
         setMessages(data.messages);
@@ -68,10 +84,27 @@ export default function DirectChatModal({
       const interval = setInterval(fetchMessages, 3500);
       return () => clearInterval(interval);
     }
-  }, [isOpen, channelId]);
+  }, [isOpen, channelId, providerId, otherPartyName]);
+
+  // Mark unread messages as seen when modal is open
+  useEffect(() => {
+    if (isOpen && messages.length > 0) {
+      const unreadMsgs = messages.filter(m => m.senderRole !== currentUserRole && !m.isSeen);
+      if (unreadMsgs.length > 0) {
+        fetch('/api/direct-messages', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            messageIds: unreadMsgs.map(m => m.id),
+            seenByRole: currentUserRole
+          })
+        }).catch(() => {});
+      }
+    }
+  }, [isOpen, messages, currentUserRole]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [messages]);
 
   if (!isOpen) return null;
@@ -89,6 +122,10 @@ export default function DirectChatModal({
     const optimisticMsg: DirectMessage = {
       id: tempId,
       orderId: channelId,
+      channelId: channelId,
+      providerId: providerId,
+      providerName: otherPartyName,
+      sessionId: sessionId,
       senderRole: currentUserRole,
       senderName: currentUserName,
       message: text,
@@ -102,6 +139,10 @@ export default function DirectChatModal({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           orderId: channelId,
+          channelId: channelId,
+          providerId: providerId || '',
+          providerName: currentUserRole === 'provider' ? currentUserName : otherPartyName,
+          sessionId: sessionId || '',
           senderRole: currentUserRole,
           senderName: currentUserName,
           message: text
@@ -118,6 +159,12 @@ export default function DirectChatModal({
       setSending(false);
     }
   };
+
+  // Dynamic status computation for other party
+  const latestOtherMsg = messages.filter(m => m.senderRole !== currentUserRole).slice(-1)[0];
+  const lastActiveTimestamp = otherPartyLastSeen || latestOtherMsg?.timestamp || (latestOtherMsg as any)?.createdAt || (currentUserRole === 'provider' ? new Date().toISOString() : undefined);
+  const isOnline = isUserOnline(lastActiveTimestamp);
+  const lastSeenText = formatLastSeen(lastActiveTimestamp);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
@@ -150,18 +197,39 @@ export default function DirectChatModal({
                   </span>
                 )}
               </div>
-              <p className="text-xs text-zinc-400">
-                Between <strong className="text-white">{currentUserName}</strong> ({currentUserRole === 'client' ? 'Client' : 'Specialist'}) and <strong className="text-cyan-300">{otherPartyName}</strong>
-              </p>
+              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                <p className="text-xs text-zinc-400">
+                  Between <strong className="text-white">{currentUserName}</strong> ({currentUserRole === 'client' ? 'Client' : 'Specialist'}) and <strong className="text-cyan-300">{otherPartyName}</strong>
+                </p>
+                <span className="text-zinc-600 hidden sm:inline">•</span>
+                <span className={`inline-flex items-center gap-1 font-mono text-[10px] ${isOnline ? 'text-emerald-400 font-semibold' : 'text-zinc-400'}`}>
+                  <span className={`h-1.5 w-1.5 rounded-full ${isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-zinc-500'}`} />
+                  {otherPartyName}: {lastSeenText}
+                </span>
+              </div>
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer"
-          >
-            <X className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            {currentUserRole === 'client' && (
+              <Link
+                href={`/?tab=specialists&providerId=${providerId || ''}&orderId=${channelId}&sessionId=${sessionId || ''}&providerName=${encodeURIComponent(otherPartyName)}`}
+                onClick={onClose}
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-cyan-300 hover:text-white text-xs font-semibold border border-cyan-500/30 transition-all cursor-pointer shadow-sm"
+                title="Open full specialist chat room in main dashboard"
+              >
+                <span>Full Workspace</span>
+                <ExternalLink className="h-3 w-3" />
+              </Link>
+            )}
+
+            <button
+              onClick={onClose}
+              className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
         {/* Dynamic Context Card: Clearly identifies Client status to Provider and vice versa */}
@@ -216,19 +284,40 @@ export default function DirectChatModal({
                   key={m.id}
                   className={`flex items-start gap-3 ${isMe ? 'flex-row-reverse' : ''}`}
                 >
-                  <div className={`h-8 w-8 rounded-xl flex items-center justify-center text-xs font-bold shrink-0 ${
-                    isMe 
-                      ? 'bg-gradient-to-tr from-cyan-500 to-blue-600 text-zinc-950 shadow-md' 
-                      : 'bg-zinc-800 border border-zinc-700 text-cyan-400'
-                  }`}>
-                    <User className="h-4 w-4" />
-                  </div>
+                  {isMe ? (
+                    <div className="h-8 w-8 rounded-xl flex items-center justify-center text-xs font-bold shrink-0 bg-gradient-to-tr from-cyan-500 to-blue-600 text-zinc-950 shadow-md">
+                      <User className="h-4 w-4" />
+                    </div>
+                  ) : (
+                    <img 
+                      src={getSpecialistRealAvatar(m.senderName || otherPartyName)} 
+                      alt={otherPartyName} 
+                      className="h-8 w-8 rounded-xl object-cover border border-zinc-700 bg-zinc-800 shrink-0 shadow-sm" 
+                    />
+                  )}
 
                   <div className={`space-y-1 max-w-[75%]`}>
-                    <div className="flex items-center gap-2 text-[10px] text-zinc-500">
+                    <div className="flex items-center gap-1.5 text-[10px] text-zinc-500 flex-wrap">
                       <span className="font-bold text-zinc-300">{m.senderName}</span>
+                      {m.isAiAutoReply && (
+                        <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-purple-500/20 text-purple-300 border border-purple-500/30 font-bold flex items-center gap-1">
+                          <Bot className="h-2.5 w-2.5 text-purple-400" />
+                          AI Receptionist
+                        </span>
+                      )}
                       <span>•</span>
-                      <span>{new Date(m.timestamp || (m as any).createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      <span suppressHydrationWarning>{new Date(m.timestamp || (m as any).createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      {isMe && (
+                        m.isSeen ? (
+                          <span title="Seen by other party" className="ml-1 inline-flex">
+                            <CheckCheck className="h-3 w-3 text-cyan-400 font-bold" />
+                          </span>
+                        ) : (
+                          <span title="Delivered (Unread)" className="ml-1 inline-flex">
+                            <Check className="h-3 w-3 text-zinc-500" />
+                          </span>
+                        )
+                      )}
                     </div>
 
                     <div className={`p-3.5 rounded-2xl text-xs leading-relaxed ${
@@ -243,7 +332,7 @@ export default function DirectChatModal({
               );
             })
           )}
-          <div ref={messagesEndRef} />
+          <div className="h-6 shrink-0" ref={messagesEndRef} />
         </div>
 
         {/* Input Bar */}

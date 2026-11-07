@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { recordPayPalWebhookEvent } from '@/lib/paypal-webhooks';
 
 export async function POST(req: NextRequest) {
   try {
@@ -37,6 +38,22 @@ export async function POST(req: NextRequest) {
       status: newStatus,
       updatedAt: new Date().toISOString()
     });
+
+    // Telemetry: Record real-time ESCROW.MILESTONE.DISBURSED Webhook
+    const releasedTranche = milestones[milestoneIndex];
+    recordPayPalWebhookEvent({
+      eventType: 'ESCROW.MILESTONE.DISBURSED',
+      summary: `Escrow Milestone Disbursed: $${Number(releasedTranche?.amount || 0).toFixed(2)} USD released to ${orderData.providerName || 'Specialist'} for Tranche #${milestoneIndex + 1} (${releasedTranche?.title || 'Milestone'}).`,
+      resourceType: 'disbursement',
+      orderId: orderData.id,
+      amount: releasedTranche?.amount,
+      buyerName: orderData.buyerName,
+      buyerEmail: orderData.buyerEmail,
+      providerName: orderData.providerName,
+      providerEmail: orderData.providerEmail,
+      paypalOrderId: orderData.paypalOrderId,
+      paypalCaptureId: orderData.paypalCaptureId
+    }).catch(whErr => console.warn('[Webhook Milestone Disbursed Error]:', whErr));
 
     return NextResponse.json({
       success: true,

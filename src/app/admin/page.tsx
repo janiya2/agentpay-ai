@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc, collection, getDocs } from 'firebase/firestore';
 import { 
@@ -39,17 +40,24 @@ import {
   Check,
   FlaskConical,
   CheckCircle,
-  XCircle
+  XCircle,
+  FileText,
+  Receipt
 } from 'lucide-react';
-import type { PlatformSettings, ServiceProvider, AgentPayOrder, ChatSession, BuyerUser } from '@/types';
+import type { PlatformSettings, ServiceProvider, AgentPayOrder, ChatSession, BuyerUser, PayPalPayoutRecord } from '@/types';
+import InvoiceModal from '@/components/InvoiceModal';
+import AdminTransactionsLedger from '@/components/AdminTransactionsLedger';
 
-type AdminTab = 'overview' | 'providers' | 'users' | 'chats' | 'orders' | 'settings';
+type AdminTab = 'overview' | 'transactions' | 'providers' | 'users' | 'chats' | 'orders' | 'settings';
 
-export default function AdminPage() {
+function AdminPageContent() {
+  const searchParams = useSearchParams();
+  const urlTab = searchParams?.get('tab') as AdminTab | null;
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [passcode, setPasscode] = useState('innoxpert2026');
   const [authError, setAuthError] = useState(false);
   const [activeTab, setActiveTab] = useState<AdminTab>('settings');
+  const [payouts, setPayouts] = useState<PayPalPayoutRecord[]>([]);
 
   // Key visibility toggles
   const [showGeminiKeys, setShowGeminiKeys] = useState<Record<number, boolean>>({});
@@ -202,13 +210,16 @@ export default function AdminPage() {
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [users, setUsers] = useState<BuyerUser[]>([]);
   const [loadingData, setLoadingData] = useState(false);
+  const [activeInvoiceOrder, setActiveInvoiceOrder] = useState<AgentPayOrder | null>(null);
 
   // Filters & Search
   const [providerSearch, setProviderSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [userSearch, setUserSearch] = useState('');
+  const [orderSearch, setOrderSearch] = useState('');
+  const [orderFilter, setOrderFilter] = useState<'all' | 'in-escrow' | 'completed' | 'pending'>('all');
 
-  // Check saved session on mount
+  // Check saved session on mount and urlTab
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const saved = sessionStorage.getItem('agentpay_admin_auth');
@@ -216,7 +227,10 @@ export default function AdminPage() {
         setIsAuthenticated(true);
       }
     }
-  }, []);
+    if (urlTab && ['overview', 'transactions', 'providers', 'users', 'chats', 'orders', 'settings'].includes(urlTab)) {
+      setActiveTab(urlTab);
+    }
+  }, [urlTab]);
 
   // Authenticate Admin
   const handleAuth = (e?: React.FormEvent) => {
@@ -304,6 +318,16 @@ export default function AdminPage() {
         setUsers(usersSnap.docs.map(d => d.data() as BuyerUser));
       } else {
         setUsers([]);
+      }
+
+      // 6. Real Payouts from Firestore (agentpay_payouts)
+      const payoutsSnap = await getDocs(collection(db, 'agentpay_payouts'));
+      if (!payoutsSnap.empty) {
+        const pList = payoutsSnap.docs.map(d => d.data() as PayPalPayoutRecord);
+        pList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setPayouts(pList);
+      } else {
+        setPayouts([]);
       }
 
     } catch (err) {
@@ -491,7 +515,7 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-80px)] flex flex-col md:flex-row w-full bg-zinc-950">
+    <div className="min-h-[calc(100vh-64px)] flex flex-col md:flex-row w-full bg-zinc-950">
       {/* 1. Sleek Admin Sidebar */}
       <aside className="w-full md:w-64 border-r border-zinc-800/80 bg-zinc-950/90 p-4 md:p-5 flex flex-col justify-between shrink-0">
         <div className="space-y-6">
@@ -595,6 +619,23 @@ export default function AdminPage() {
             </button>
 
             <button
+              onClick={() => setActiveTab('transactions')}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                activeTab === 'transactions'
+                  ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/40 shadow-sm'
+                  : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <Receipt className="h-4 w-4 text-emerald-400" />
+                <span>Transactions & Ledger</span>
+              </div>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 font-bold">
+                {orders.length + payouts.length}
+              </span>
+            </button>
+
+            <button
               onClick={() => setActiveTab('settings')}
               className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                 activeTab === 'settings'
@@ -645,6 +686,7 @@ export default function AdminPage() {
                 {activeTab === 'providers' && '100+ Verified Service Providers'}
                 {activeTab === 'users' && 'Client & Buyer Accounts'}
                 {activeTab === 'orders' && 'PayPal Milestone Escrow Vault'}
+                {activeTab === 'transactions' && 'Platform Financial Transactions & Master PayPal Ledger'}
                 {activeTab === 'settings' && 'Platform Settings & API Failover'}
               </h1>
               <span className="px-2.5 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-xs font-mono font-bold text-cyan-400">
@@ -1187,87 +1229,221 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* ---------------- TAB 5: PAYPAL ESCROW ORDERS ---------------- */}
+        {/* ---------------- TAB 5: PAYPAL FINANCIAL TRANSACTIONS & ESCROW CLEARING ---------------- */}
         {activeTab === 'orders' && (
           <div className="space-y-6">
-            <div className="p-4 rounded-3xl bg-zinc-900/40 border border-zinc-800/80 flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-bold text-white">PayPal Milestone Escrow Vault</h3>
-                <p className="text-xs text-zinc-400 mt-0.5">Authorizations, captures, and milestone fund releases</p>
+            {/* Header & Quick Stats */}
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3.5">
+              <div className="p-4 rounded-2xl bg-zinc-900/60 border border-zinc-800 space-y-1">
+                <span className="text-[10px] uppercase font-mono text-zinc-400 font-bold block">Total PayPal Volume</span>
+                <p className="text-xl font-black font-mono text-emerald-400">${totalVolume.toFixed(2)} USD</p>
+                <span className="text-[10px] text-zinc-500 font-mono">Gross authorized escrow</span>
               </div>
-              <span className="font-mono text-emerald-400 font-bold text-sm">
-                Total Locked: ${totalVolume.toFixed(2)} USD
-              </span>
+
+              <div className="p-4 rounded-2xl bg-zinc-900/60 border border-zinc-800 space-y-1">
+                <span className="text-[10px] uppercase font-mono text-cyan-400 font-bold block">Platform Fee Revenue (5%)</span>
+                <p className="text-xl font-black font-mono text-cyan-300">${totalAdminRevenue.toFixed(2)} USD</p>
+                <span className="text-[10px] text-zinc-500 font-mono">Platform retained fees</span>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-zinc-900/60 border border-zinc-800 space-y-1">
+                <span className="text-[10px] uppercase font-mono text-amber-400 font-bold block">Provider Disbursements</span>
+                <p className="text-xl font-black font-mono text-amber-300">${totalProviderDisbursements.toFixed(2)} USD</p>
+                <span className="text-[10px] text-zinc-500 font-mono">Net specialist settlements</span>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-zinc-900/60 border border-zinc-800 space-y-1">
+                <span className="text-[10px] uppercase font-mono text-zinc-400 font-bold block">Active Escrows</span>
+                <p className="text-xl font-black font-mono text-white">{activeEscrowsCount} <span className="text-xs text-zinc-500 font-normal">/ {orders.length} total</span></p>
+                <span className="text-[10px] text-emerald-400 font-mono">PayPal Orders v2 Protected</span>
+              </div>
             </div>
 
-            {orders.length === 0 ? (
-              <div className="p-12 rounded-3xl bg-zinc-900/40 border border-zinc-800/80 text-center space-y-3">
-                <CreditCard className="h-10 w-10 text-zinc-600 mx-auto" />
-                <p className="text-xs text-zinc-400">No active escrow transactions recorded yet. Escrows are initiated directly through PayPal Smart Buttons inside the chat room.</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {orders.map(order => (
-                  <div key={order.id} className="p-5 rounded-3xl bg-zinc-900/40 border border-zinc-800/80 hover:border-cyan-500/30 transition-all space-y-4">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-zinc-800/80 pb-3">
-                      <div>
-                        <h4 className="text-sm font-bold text-white">{order.serviceTitle}</h4>
-                        <p className="text-[11px] text-zinc-400 font-mono mt-0.5">
-                          Buyer: {order.buyerName} • Provider: {order.providerName}
-                        </p>
-                      </div>
-
-                      <div className="flex items-center gap-4">
-                        <div className="text-right">
-                          <span className="text-base font-black font-mono text-emerald-400 block">
-                            ${order.amount} USD
-                          </span>
-                          <div className="flex items-center gap-1.5 text-[10px] font-mono text-zinc-400 justify-end">
-                            <span className="text-emerald-400 font-bold">
-                              Fee: +${order.platformFeeAmount || Number((order.amount * (platformFeePercentage / 100)).toFixed(2))}
-                            </span>
-                            <span className="text-zinc-600">•</span>
-                            <span className="text-amber-300">
-                              Net: ${order.providerPayoutAmount || Number((order.amount * (1 - platformFeePercentage / 100)).toFixed(2))}
-                            </span>
-                          </div>
-                        </div>
-                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-mono font-bold uppercase ${
-                          order.status === 'completed'
-                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
-                            : 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
-                        }`}>
-                          {order.status}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Milestones */}
-                    <div className="space-y-2">
-                      <span className="text-[11px] font-semibold text-zinc-400">Milestone Tranches:</span>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {order.milestones?.map((ms, idx) => (
-                          <div key={idx} className="p-3 rounded-xl bg-zinc-950 border border-zinc-800 flex items-center justify-between text-xs">
-                            <div>
-                              <p className="text-zinc-200 font-medium">{ms.title}</p>
-                              <span className="text-[10px] font-mono text-zinc-500 uppercase">{ms.status}</span>
-                            </div>
-                            <span className="font-mono font-bold text-cyan-300">${ms.amount}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 text-[11px] text-zinc-500 font-mono border-t border-zinc-800/60">
-                      <span>PayPal Ref: {order.paypalOrderId}</span>
-                      <span>Disbursable to: <strong className="text-amber-300">{order.providerPaypalEmail || order.providerEmail}</strong></span>
-                      <span>Created: {new Date(order.createdAt).toLocaleDateString()}</span>
-                    </div>
+            {/* Gateway Status Banner */}
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-cyan-950/30 via-zinc-900/60 to-emerald-950/30 border border-cyan-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-3">
+                <div className="h-9 w-9 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 font-bold shrink-0">
+                  <CreditCard className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-bold text-white">PayPal Developer Sandbox Gateway</h4>
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-mono bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-bold">
+                      ● Active & Live
+                    </span>
                   </div>
+                  <p className="text-zinc-400 text-[11px] mt-0.5">
+                    Mode: <strong className="text-cyan-300 font-mono uppercase">{paypalMode}</strong> • Merchant Settlement Account Connected
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setActiveTab('settings')}
+                className="px-3 py-1.5 rounded-xl bg-zinc-850 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-700 text-xs font-semibold transition-colors cursor-pointer"
+              >
+                Configure API Keys
+              </button>
+            </div>
+
+            {/* Filters & Search Toolbar */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+                {(['all', 'in-escrow', 'completed', 'pending-payment'] as const).map(tabKey => (
+                  <button
+                    key={tabKey}
+                    onClick={() => setOrderFilter(tabKey as any)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold capitalize whitespace-nowrap transition-all cursor-pointer ${
+                      orderFilter === tabKey
+                        ? 'bg-zinc-800 text-cyan-300 border border-zinc-700 shadow-sm'
+                        : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900'
+                    }`}
+                  >
+                    {tabKey === 'all' ? `All Transactions (${orders.length})` : tabKey.replace('-', ' ')}
+                  </button>
                 ))}
               </div>
-            )}
+
+              <div className="relative min-w-[240px]">
+                <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-zinc-500" />
+                <input
+                  type="text"
+                  value={orderSearch}
+                  onChange={(e) => setOrderSearch(e.target.value)}
+                  placeholder="Search by buyer, provider, ID..."
+                  className="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-9 pr-3.5 py-1.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-500"
+                />
+              </div>
+            </div>
+
+            {/* Orders Transaction List */}
+            {(() => {
+              const filteredOrders = orders.filter(o => {
+                const matchesFilter = orderFilter === 'all' || o.status === orderFilter;
+                const matchesSearch = !orderSearch.trim() || 
+                  (o.serviceTitle && o.serviceTitle.toLowerCase().includes(orderSearch.toLowerCase())) ||
+                  (o.buyerName && o.buyerName.toLowerCase().includes(orderSearch.toLowerCase())) ||
+                  (o.providerName && o.providerName.toLowerCase().includes(orderSearch.toLowerCase())) ||
+                  (o.paypalOrderId && o.paypalOrderId.toLowerCase().includes(orderSearch.toLowerCase())) ||
+                  (o.id && o.id.toLowerCase().includes(orderSearch.toLowerCase()));
+                return matchesFilter && matchesSearch;
+              });
+
+              if (filteredOrders.length === 0) {
+                return (
+                  <div className="p-12 rounded-3xl bg-zinc-900/40 border border-zinc-800/80 text-center space-y-3">
+                    <CreditCard className="h-10 w-10 text-zinc-600 mx-auto" />
+                    <p className="text-xs text-zinc-400">No transactions match your current search or filter criteria.</p>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="space-y-4">
+                  {filteredOrders.map(order => (
+                    <div key={order.id} className="p-5 rounded-3xl bg-zinc-900/40 border border-zinc-800/80 hover:border-cyan-500/30 transition-all space-y-4 shadow-lg">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-zinc-800/80 pb-3">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-sm font-bold text-white">{order.serviceTitle}</h4>
+                            {order.auditCertificate && (
+                              <span className="px-2 py-0.5 rounded-full text-[9px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-bold">
+                                🛡️ AI Audited ({order.auditCertificate.overallScore}/100)
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-zinc-400 font-mono">
+                            Buyer: <strong className="text-zinc-200">{order.buyerName}</strong> ({order.buyerEmail}) • Specialist: <strong className="text-cyan-300">{order.providerName}</strong>
+                          </p>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <div className="text-right">
+                            <span className="text-base font-black font-mono text-emerald-400 block">
+                              ${order.amount.toFixed(2)} USD
+                            </span>
+                            <div className="flex items-center gap-1.5 text-[10px] font-mono text-zinc-400 justify-end">
+                              <span className="text-cyan-400 font-bold">
+                                5% Fee: +${order.platformFeeAmount || Number((order.amount * (platformFeePercentage / 100)).toFixed(2))}
+                              </span>
+                              <span className="text-zinc-600">•</span>
+                              <span className="text-amber-300">
+                                Net: ${order.providerPayoutAmount || Number((order.amount * (1 - platformFeePercentage / 100)).toFixed(2))}
+                              </span>
+                            </div>
+                          </div>
+
+                          <span className={`px-2.5 py-1 rounded-full text-[10px] font-mono font-bold uppercase ${
+                            order.status === 'completed'
+                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                              : order.status === 'in-escrow'
+                              ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
+                              : 'bg-zinc-800 text-zinc-400 border border-zinc-700'
+                          }`}>
+                            {order.status === 'completed' ? '✓ Completed' : order.status === 'in-escrow' ? '🛡️ In Escrow' : order.status}
+                          </span>
+
+                          <button
+                            onClick={() => setActiveInvoiceOrder(order)}
+                            className="px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-750 text-cyan-300 hover:text-white border border-cyan-500/30 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                            title="View Official B2B Tax Invoice & Settlement Ledger"
+                          >
+                            <FileText className="h-3.5 w-3.5" />
+                            <span>Invoice</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Milestones Breakdown */}
+                      <div className="space-y-2">
+                        <span className="text-[11px] font-semibold text-zinc-400">Milestone Tranches:</span>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {order.milestones?.map((ms, idx) => (
+                            <div key={idx} className="p-3 rounded-xl bg-zinc-950 border border-zinc-800 flex items-center justify-between text-xs">
+                              <div>
+                                <p className="text-zinc-200 font-medium">{ms.title}</p>
+                                <span className={`text-[10px] font-mono uppercase font-bold ${
+                                  ms.status === 'released' ? 'text-emerald-400' : ms.status === 'verified' ? 'text-cyan-400' : 'text-zinc-500'
+                                }`}>
+                                  {ms.status}
+                                </span>
+                              </div>
+                              <span className="font-mono font-bold text-cyan-300">${ms.amount}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Financial Ledger Identifiers Strip */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 text-[11px] text-zinc-400 font-mono border-t border-zinc-800/60 bg-zinc-950/40 p-2.5 rounded-xl">
+                        <div className="flex flex-wrap items-center gap-3">
+                          <span>PayPal Order: <strong className="text-amber-300">{order.paypalOrderId}</strong></span>
+                          {order.paypalCaptureId && (
+                            <span>• Capture: <strong className="text-emerald-400">{order.paypalCaptureId}</strong></span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 text-zinc-500">
+                          <span>Payout Email: <strong className="text-zinc-300">{order.providerPaypalEmail || order.providerEmail}</strong></span>
+                          <span>•</span>
+                          <span>{new Date(order.createdAt).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
           </div>
+        )}
+
+        {/* ---------------- TAB: COMPLETE FINANCIAL TRANSACTIONS HISTORY & MASTER PAYPAL AUDIT LEDGER ---------------- */}
+        {activeTab === 'transactions' && (
+          <AdminTransactionsLedger
+            orders={orders}
+            providers={providers}
+            payouts={payouts}
+            onOpenInvoice={(order) => setActiveInvoiceOrder(order)}
+          />
         )}
 
         {/* ---------------- TAB 6: SETTINGS & API CONFIG ---------------- */}
@@ -1695,6 +1871,28 @@ export default function AdminPage() {
           </div>
         )}
       </main>
+
+      {/* Enterprise B2B Smart Tax Invoice Modal */}
+      {activeInvoiceOrder && (
+        <InvoiceModal
+          isOpen={!!activeInvoiceOrder}
+          onClose={() => setActiveInvoiceOrder(null)}
+          order={activeInvoiceOrder}
+        />
+      )}
     </div>
+  );
+}
+
+export default function AdminPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#090A0F] text-zinc-400 p-8 flex flex-col items-center justify-center gap-3">
+        <div className="h-8 w-8 rounded-full border-2 border-amber-500 border-t-transparent animate-spin" />
+        <span className="text-xs font-mono">Loading Treasury Dashboard...</span>
+      </div>
+    }>
+      <AdminPageContent />
+    </Suspense>
   );
 }

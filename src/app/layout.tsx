@@ -1,11 +1,23 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import Navbar from '@/components/Navbar';
 import Providers from '@/components/Providers';
+import AppLayout from '@/components/AppLayout';
 
 export const metadata: Metadata = {
   title: 'AgentPay AI — Autonomous Agentic Commerce & Milestone Escrow on PayPal',
   description: 'The world\'s first autonomous AI agentic procurement & safe spending protocol powered by Google Gemini and PayPal Orders v2.',
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/images/agentpay-logo.svg', type: 'image/svg+xml' },
+      { url: '/images/agentpay-logo.png', type: 'image/png' },
+      { url: '/favicon.svg', type: 'image/svg+xml' }
+    ],
+    apple: [
+      { url: '/images/agentpay-logo.png', sizes: '180x180', type: 'image/png' },
+      { url: '/images/agentpay-logo.svg', type: 'image/svg+xml' }
+    ]
+  }
 };
 
 export default function RootLayout({
@@ -15,24 +27,16 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark">
-      <body className="min-h-screen bg-[#090A0F] text-zinc-100 antialiased flex flex-col selection:bg-cyan-500/30 selection:text-cyan-200">
+      <head>
+        <link rel="shortcut icon" href="/favicon.ico" />
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="icon" type="image/svg+xml" href="/images/agentpay-logo.svg" />
+        <link rel="icon" type="image/png" href="/images/agentpay-logo.png" />
+        <link rel="apple-touch-icon" href="/images/agentpay-logo.png" />
+      </head>
+      <body className="min-h-screen bg-[#090A0F] text-zinc-100 antialiased selection:bg-cyan-500/30 selection:text-cyan-200">
         <Providers>
-          <Navbar />
-          <main className="flex-1 flex flex-col">
-            {children}
-          </main>
-          <footer className="border-t border-zinc-800/80 bg-zinc-950/80 py-6 text-center text-xs text-zinc-500">
-            <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
-                <span className="font-semibold text-zinc-400">AgentPay AI Protocol</span>
-                <span>• Official Submission for PayPal AI Hackathon 2026</span>
-              </div>
-              <div className="text-zinc-600">
-                Architected & Engineered by <span className="text-cyan-400 font-medium">Janitha Dilshan</span> (InnoXpert Studio)
-              </div>
-            </div>
-          </footer>
+          <AppLayout>{children}</AppLayout>
         </Providers>
       </body>
     </html>

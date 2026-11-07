@@ -90,9 +90,11 @@ export async function POST(req: NextRequest) {
       timestamp: newBid.submittedAt
     };
 
-    // Also update last message's actionPayload if present
-    const updatedMessages = (sessionData.messages || []).map((m: any, idx: number) => {
-      if (idx === (sessionData.messages?.length || 1) - 1 && m.actionPayload) {
+    // Ensure messages array actionPayload has the latest updatedBids
+    let payloadUpdated = false;
+    const updatedMessages = (sessionData.messages || []).map((m: any) => {
+      if (m.actionPayload) {
+        payloadUpdated = true;
         return {
           ...m,
           actionPayload: {
@@ -105,11 +107,24 @@ export async function POST(req: NextRequest) {
       return m;
     });
 
+    if (!payloadUpdated && updatedMessages.length > 0) {
+      const last = updatedMessages[updatedMessages.length - 1];
+      last.actionPayload = {
+        type: 'negotiation_proposal',
+        tenderStatus: 'tender_open',
+        bids: updatedBids,
+        targetProviders: updatedTargetProviders
+      };
+    }
+
     await updateDoc(sessionRef, {
       bids: updatedBids,
       targetProviders: updatedTargetProviders,
       messages: updatedMessages,
       negotiationDialog: [...currentDialog, providerDialogEntry],
+      hasUnreadBid: true,
+      latestBidPrice: price,
+      latestBidProvider: providerName,
       updatedAt: new Date().toISOString()
     });
 

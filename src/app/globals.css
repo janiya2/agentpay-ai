@@ -51,3 +51,27 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+/* PayPal Payment Gateway High-Contrast Styling */
+.paypal-gateway-container {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+.paypal-gateway-container iframe {
+  background-color: #ffffff !important;
+  border-radius: 0.5rem;
+}
+
+.paypal-gateway-container label,
+.paypal-gateway-container p,
+.paypal-gateway-container span,
+.paypal-gateway-container div {
+  color: #0f172a;
+}
+
+.paypal-gateway-container a {
+  color: #0070ba !important;
+  text-decoration: underline;
+}
+
+
