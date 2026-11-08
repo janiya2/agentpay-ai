@@ -96,7 +96,8 @@ class GeminiKeyRotator {
 
   public async executeWithRotation<T>(
     operation: (genAI: GoogleGenerativeAI, activeKey: string) => Promise<T>,
-    maxRetries = 2
+    maxRetries = 3,
+    timeoutMs = 15000
   ): Promise<T> {
     let attempts = 0;
     const totalKeys = Math.max(1, this.keys.length);
@@ -107,7 +108,7 @@ class GeminiKeyRotator {
       try {
         const genAI = new GoogleGenerativeAI(currentKey);
         const timeoutPromise = new Promise<never>((_, reject) => 
-          setTimeout(() => reject(new Error('Gemini API call timed out after 4000ms')), 4000)
+          setTimeout(() => reject(new Error(`Gemini API call timed out after ${timeoutMs}ms`)), timeoutMs)
         );
         const result = await Promise.race([operation(genAI, currentKey), timeoutPromise]);
         return result;

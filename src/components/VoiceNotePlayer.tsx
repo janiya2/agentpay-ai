@@ -7,7 +7,7 @@ interface VoiceNotePlayerProps {
   audioUrl: string;
   duration?: number;
   transcript?: string;
-  role?: 'user' | 'assistant' | 'client' | 'provider';
+  role?: 'user' | 'assistant' | 'client' | 'provider' | 'system';
   compact?: boolean;
 }
 

@@ -280,10 +280,12 @@ export async function POST(req: NextRequest) {
     await recordPayPalWebhookEvent({
       eventType: 'CHECKOUT.ORDER.APPROVED',
       summary: 'PayPal Sandbox: Escrow authorization approved by Janitha Dilshan ($150.00 USD)',
-      resourceId: '8X391047291847120',
-      resourceType: 'checkout-order',
-      status: 'APPROVED',
-      rawResource: {
+      paypalOrderId: '8X391047291847120',
+      resourceType: 'order',
+      amount: 150.00,
+      buyerName: 'Janitha Dilshan',
+      buyerEmail: 'janitha@innoxpert.com',
+      customPayload: {
         id: '8X391047291847120',
         intent: 'CAPTURE',
         status: 'APPROVED',
@@ -294,10 +296,12 @@ export async function POST(req: NextRequest) {
     await recordPayPalWebhookEvent({
       eventType: 'PAYMENT.CAPTURE.COMPLETED',
       summary: 'PayPal Orders v2: Milestone escrow funds ($150.00 USD) vaulted in secure clearinghouse',
-      resourceId: '4CP2918471928471A',
+      paypalCaptureId: '4CP2918471928471A',
       resourceType: 'capture',
-      status: 'COMPLETED',
-      rawResource: {
+      amount: 150.00,
+      buyerName: 'Janitha Dilshan',
+      buyerEmail: 'janitha@innoxpert.com',
+      customPayload: {
         id: '4CP2918471928471A',
         status: 'COMPLETED',
         amount: { currency_code: 'USD', value: '150.00' },
