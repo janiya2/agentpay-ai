@@ -46,7 +46,13 @@ export async function POST(req: NextRequest) {
     }
 
     const orderData = snap.data();
-    const orderAmount = orderData.amount || 160;
+    const orderAmount = Number(orderData.amount) || 160;
+
+    // Audit already released milestone tranches to prevent double-refund or over-disbursal
+    const alreadyReleased = (orderData.milestones || [])
+      .filter((m: any) => m.status === 'released')
+      .reduce((sum: number, m: any) => sum + (Number(m.amount) || 0), 0);
+    const disputableAmount = Math.max(1, orderAmount - alreadyReleased);
 
     // ==========================================
     // ACTION 1: EXECUTE SETTLEMENT
@@ -60,13 +66,18 @@ export async function POST(req: NextRequest) {
 
       const settlementTxId = `TX_ARB_${Date.now().toString(36).toUpperCase()}_${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
 
-      // Update Milestones to reflect dispute settlement disbursement
-      const updatedMilestones = (orderData.milestones || []).map((m: any) => ({
-        ...m,
-        status: 'released',
-        settledViaDispute: true,
-        settlementNote: 'Settled & disbursed via Binding AI Arbitration Ruling'
-      }));
+      // Update Milestones: Keep already released milestones intact, mark remaining as settled
+      const updatedMilestones = (orderData.milestones || []).map((m: any) => {
+        if (m.status === 'released') {
+          return m;
+        }
+        return {
+          ...m,
+          status: 'released',
+          settledViaDispute: true,
+          settlementNote: 'Settled & disbursed via Binding AI Arbitration Ruling'
+        };
+      });
 
       // Update Order Status
       await updateDoc(orderRef, {
@@ -79,7 +90,7 @@ export async function POST(req: NextRequest) {
           executedAt: new Date().toISOString()
         },
         milestones: updatedMilestones,
-        providerPayoutAmount: activeRuling.specialistPayoutAmount,
+        providerPayoutAmount: alreadyReleased + activeRuling.specialistPayoutAmount,
         clientRefundAmount: activeRuling.clientRefundAmount,
         updatedAt: new Date().toISOString()
       });
@@ -256,6 +267,8 @@ Jurisdiction: PayPal Agentic Commerce Rules v2.1 & UNCITRAL Model Law on Interna
 Contract ID: ${orderId}
 Project Title: "${orderData.serviceTitle || 'Production Next.js Analytics & Automation Dashboard'}"
 Agreed Total Escrow Custody: $${orderAmount} USD
+Already Disbursed to Specialist: $${alreadyReleased} USD
+Active Disputable Escrow Balance: $${disputableAmount} USD
 Buyer / Claimant: ${orderData.buyerName} (${orderData.buyerEmail})
 Specialist / Respondent: ${orderData.providerName} (${orderData.providerEmail})
 
@@ -289,11 +302,12 @@ CRITICAL FORENSIC RULES:
      * DO NOT hallucinate, invent, or assume arguments that they never typed! (For example, if Respondent typed "SDFSADFADFDF", DO NOT state that they argued missing webhook credentials!).
      * In the "findings" array, EXPLICITLY state that the party submitted unintelligible gibberish ('${userSpecialistClaim}' or '${userClientClaim}') offering zero factual defense or substantiation.
 2. FAIR QUANTUM MERUIT SPLIT DETERMINATION:
+   - The dispute court partitions ONLY the remaining active disputable balance ($${disputableAmount} USD).
    - If the Respondent (Specialist) provided unintelligible gibberish or zero defense while the Automated AI Code Audit score is failing (${auditCert.overallScore ?? 5}/100 with 'CHANGES_REQUESTED' verdict):
-     The Specialist has failed to defend their deliverable against objective audit failures. Allocate an 80%-90% refund ($${Math.round(orderAmount * 0.85)} USD) to the Client and only 10%-20% ($${Math.round(orderAmount * 0.15)} USD) to the Specialist for nominal scaffolding.
+     The Specialist has failed to defend their deliverable against objective audit failures. Allocate an 80%-90% refund ($${Math.round(disputableAmount * 0.85)} USD) to the Client and only 10%-20% ($${Math.round(disputableAmount * 0.15)} USD) to the Specialist for nominal scaffolding.
    - If the Respondent articulated a genuine technical defense (e.g., delivered UI, external credential delays), and demonstrated substantial performance, award a proportionate split (e.g. 70%-75% Specialist / 25%-30% Client).
    - If the Claimant provided gibberish while the Specialist submitted verifiable work, allocate majority to the Specialist.
-3. Compute exact percentages (must sum to 100%) and dollar amounts (must sum to $${orderAmount} USD).
+3. Compute exact percentages (must sum to 100%) and dollar amounts (must sum to exactly $${disputableAmount} USD, the active in-escrow disputable balance).
 4. Provide 3 to 4 clear, objective factual findings based strictly on verifiable audit artifacts and submitted text.
 5. Cite UNCITRAL Model Law (Art. 28) and PayPal Safe Escrow standards in the legal rationale.
 
@@ -302,9 +316,9 @@ Return ONLY a valid JSON object with EXACTLY this structure:
   "rulingId": "ARB-2026-X${Math.floor(100 + Math.random() * 900)}",
   "verdictSummary": "String",
   "specialistPayoutPercentage": 15,
-  "specialistPayoutAmount": ${Math.round(orderAmount * 0.15)},
+  "specialistPayoutAmount": ${Math.round(disputableAmount * 0.15)},
   "clientRefundPercentage": 85,
-  "clientRefundAmount": ${Math.round(orderAmount * 0.85)},
+  "clientRefundAmount": ${disputableAmount - Math.round(disputableAmount * 0.15)},
   "findings": [
     "Factual finding 1...",
     "Factual finding 2...",
@@ -355,32 +369,36 @@ Return ONLY a valid JSON object with EXACTLY this structure:
         fallbackFindings.push(`Claimant and Respondent both submitted unintelligible gibberish ('${userClientClaim}' / '${userSpecialistClaim}'), providing zero evidentiary testimony.`);
         fallbackFindings.push(`Tribunal adjudicated strictly upon objective code artifacts: deliverable scored ${auditScore}/100 with 'CHANGES_REQUESTED' verdict.`);
         fallbackFindings.push(`In the absence of a coherent specialist defense, the non-functional AI automation constitutes a primary milestone breach.`);
-        fallbackFindings.push(`Quantum Meruit allocates $${Math.round(orderAmount * 0.15)} USD to Specialist for scaffolding and refunds $${orderAmount - Math.round(orderAmount * 0.15)} USD to Claimant.`);
+        fallbackFindings.push(`Quantum Meruit allocates $${Math.round(disputableAmount * 0.15)} USD to Specialist for scaffolding and refunds $${disputableAmount - Math.round(disputableAmount * 0.15)} USD to Claimant.`);
       } else if (specialistIsGibberish) {
         specPct = 15;
         clientPct = 85;
         fallbackFindings.push(`Respondent (Specialist) submitted unintelligible gibberish ('${userSpecialistClaim}') and failed to state a coherent technical defense.`);
         fallbackFindings.push(`Automated AI Code Audit verified major deficiencies (Score: ${auditScore}/100) including non-functional automation.`);
         fallbackFindings.push(`Tribunal upholds Claimant's grievance due to uncontroverted technical omissions in Milestone 2.`);
-        fallbackFindings.push(`Quantum Meruit awards 85% refund to Client ($${orderAmount - Math.round(orderAmount * 0.15)} USD) and 15% to Specialist ($${Math.round(orderAmount * 0.15)} USD).`);
+        fallbackFindings.push(`Quantum Meruit awards 85% refund to Client ($${disputableAmount - Math.round(disputableAmount * 0.15)} USD) and 15% to Specialist ($${Math.round(disputableAmount * 0.15)} USD).`);
       } else if (clientIsGibberish) {
         specPct = 80;
         clientPct = 20;
         fallbackFindings.push(`Claimant submitted non-evidentiary gibberish ('${userClientClaim}'), failing to substantiate specific milestone omissions.`);
         fallbackFindings.push(`Specialist articulated a coherent technical submission and demonstrated delivery of functional frontend assets.`);
         fallbackFindings.push(`Tribunal protects performing specialist against unsubstantiated buyer claims.`);
-        fallbackFindings.push(`Quantum Meruit awards 80% to Specialist ($${Math.round(orderAmount * 0.8)} USD) and 20% restitution to Client ($${orderAmount - Math.round(orderAmount * 0.8)} USD).`);
+        fallbackFindings.push(`Quantum Meruit awards 80% to Specialist ($${Math.round(disputableAmount * 0.8)} USD) and 20% restitution to Client ($${disputableAmount - Math.round(disputableAmount * 0.8)} USD).`);
       } else {
         specPct = 70;
         clientPct = 30;
         fallbackFindings.push(`Specialist delivered responsive UI architecture and client-side PayPal checkout components.`);
         fallbackFindings.push(`Automated code audit score (${auditScore}/100) confirmed omission of backend webhook pipeline.`);
         fallbackFindings.push(`Specialist's defense established good-faith delivery hindered by external credential delays.`);
-        fallbackFindings.push(`Quantum Meruit allocates 70% to Specialist ($${Math.round(orderAmount * 0.70)} USD) and 30% restitution to Client ($${Math.round(orderAmount * 0.30)} USD).`);
+        fallbackFindings.push(`Quantum Meruit allocates 70% to Specialist ($${Math.round(disputableAmount * 0.70)} USD) and 30% restitution to Client ($${Math.round(disputableAmount * 0.30)} USD).`);
       }
 
-      const specAmt = Math.round(orderAmount * (specPct / 100));
-      const clientAmt = orderAmount - specAmt;
+      if (alreadyReleased > 0) {
+        fallbackFindings.push(`Escrow Ledger Note: $${alreadyReleased} USD was previously released for verified completed milestones; dispute settlement is partitioned strictly across the remaining $${disputableAmount} USD active balance.`);
+      }
+
+      const specAmt = Math.round(disputableAmount * (specPct / 100));
+      const clientAmt = disputableAmount - specAmt;
 
       generatedRuling = {
         rulingId: `ARB-2026-X${Math.floor(100 + Math.random() * 900)}`,
