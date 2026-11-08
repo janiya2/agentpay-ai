@@ -1594,12 +1594,19 @@ function ProviderPortalPageContent() {
   // TAB 3: DELIVERABLE & ORDER FILTER COUNTS
   // =========================================================================
   const revisionsOrdersCount = useMemo(() => {
-    return orders.filter(o => 
-      o.deliverableStatus === 'changes_requested' || 
-      o.status === 'disputed' || 
-      o.auditCertificate?.verdict === 'CHANGES_REQUESTED' || 
-      Boolean(o.revisionNotes)
-    ).length;
+    return orders.filter(o => {
+      // Exclude orders that are already completed, cancelled, refunded, settled via dispute, or all milestones released
+      const isSettled = o.status === 'completed' || o.status === 'cancelled' || o.status === 'refunded' || o.deliverableStatus === 'dispute_resolved';
+      const isAllReleased = Array.isArray(o.milestones) && o.milestones.length > 0 && o.milestones.every(m => m.status === 'released');
+      if (isSettled || isAllReleased || o.payoutStatus === 'disbursed') return false;
+
+      return (
+        o.deliverableStatus === 'changes_requested' || 
+        o.status === 'disputed' || 
+        o.auditCertificate?.verdict === 'CHANGES_REQUESTED' || 
+        Boolean(o.revisionNotes)
+      );
+    }).length;
   }, [orders]);
 
   const toSubmitOrdersCount = useMemo(() => {
@@ -1626,31 +1633,43 @@ function ProviderPortalPageContent() {
   }, [orders]);
 
   const filteredProviderOrders = useMemo(() => {
-    return orders.filter(order => {
-      // 1. Status Filter
-      if (providerOrderFilter === 'to_submit') {
-        if (order.deliverable || order.status === 'completed' || order.status === 'cancelled' || order.status === 'refunded' || order.deliverableStatus === 'changes_requested') return false;
-      } else if (providerOrderFilter === 'submitted') {
-        if (!order.deliverable || order.status === 'completed' || order.deliverableStatus === 'changes_requested' || Boolean(order.revisionNotes)) return false;
-      } else if (providerOrderFilter === 'revisions') {
-        const isRevision = order.deliverableStatus === 'changes_requested' || order.status === 'disputed' || order.auditCertificate?.verdict === 'CHANGES_REQUESTED' || Boolean(order.revisionNotes);
-        if (!isRevision) return false;
-      } else if (providerOrderFilter === 'released') {
-        const isReleased = order.status === 'completed' || order.payoutStatus === 'disbursed' || (Array.isArray(order.milestones) && order.milestones.some(m => m.status === 'released'));
-        if (!isReleased) return false;
-      }
+    return orders
+      .filter(order => {
+        // Exclude completed or settled orders from revisions filter
+        const isSettled = order.status === 'completed' || order.status === 'cancelled' || order.status === 'refunded' || order.deliverableStatus === 'dispute_resolved';
+        const isAllReleased = Array.isArray(order.milestones) && order.milestones.length > 0 && order.milestones.every(m => m.status === 'released');
 
-      // 2. Search Query Filter
-      if (orderSearchQuery.trim()) {
-        const q = orderSearchQuery.toLowerCase().trim();
-        const titleMatch = (order.serviceTitle || '').toLowerCase().includes(q);
-        const buyerMatch = (order.buyerName || '').toLowerCase().includes(q) || (order.buyerEmail || '').toLowerCase().includes(q);
-        const idMatch = (order.id || '').toLowerCase().includes(q) || (order.paypalOrderId || '').toLowerCase().includes(q);
-        if (!titleMatch && !buyerMatch && !idMatch) return false;
-      }
+        // 1. Status Filter
+        if (providerOrderFilter === 'to_submit') {
+          if (order.deliverable || order.status === 'completed' || order.status === 'cancelled' || order.status === 'refunded' || order.deliverableStatus === 'changes_requested') return false;
+        } else if (providerOrderFilter === 'submitted') {
+          if (!order.deliverable || order.status === 'completed' || order.deliverableStatus === 'changes_requested' || Boolean(order.revisionNotes)) return false;
+        } else if (providerOrderFilter === 'revisions') {
+          if (isSettled || isAllReleased || order.payoutStatus === 'disbursed') return false;
+          const isRevision = order.deliverableStatus === 'changes_requested' || order.status === 'disputed' || order.auditCertificate?.verdict === 'CHANGES_REQUESTED' || Boolean(order.revisionNotes);
+          if (!isRevision) return false;
+        } else if (providerOrderFilter === 'released') {
+          const isReleased = order.status === 'completed' || order.payoutStatus === 'disbursed' || (Array.isArray(order.milestones) && order.milestones.some(m => m.status === 'released'));
+          if (!isReleased) return false;
+        }
 
-      return true;
-    });
+        // 2. Search Query Filter
+        if (orderSearchQuery.trim()) {
+          const q = orderSearchQuery.toLowerCase().trim();
+          const titleMatch = (order.serviceTitle || '').toLowerCase().includes(q);
+          const buyerMatch = (order.buyerName || '').toLowerCase().includes(q) || (order.buyerEmail || '').toLowerCase().includes(q);
+          const idMatch = (order.id || '').toLowerCase().includes(q) || (order.paypalOrderId || '').toLowerCase().includes(q);
+          if (!titleMatch && !buyerMatch && !idMatch) return false;
+        }
+
+        return true;
+      })
+      .sort((a, b) => {
+        // Sort newest / latest activity first so latest revision or action is at the very top!
+        const timeA = new Date(a.updatedAt || a.deliverable?.submittedAt || a.createdAt || 0).getTime();
+        const timeB = new Date(b.updatedAt || b.deliverable?.submittedAt || b.createdAt || 0).getTime();
+        return timeB - timeA;
+      });
   }, [orders, providerOrderFilter, orderSearchQuery]);
 
   const providerReceivedPayments = orders.reduce((sum, o) => {
@@ -3876,10 +3895,12 @@ function ProviderPortalPageContent() {
             <div className="grid grid-cols-1 gap-3.5">
               {filteredProviderOrders.map(order => {
                 const hasDeliverable = Boolean(order.deliverable);
-                const isCompleted = order.status === 'completed';
-                const isReleased = isCompleted || order.payoutStatus === 'disbursed' || (Array.isArray(order.milestones) && order.milestones.some(m => m.status === 'released'));
+                const isSettledOrRefunded = order.status === 'completed' || order.status === 'cancelled' || order.status === 'refunded' || order.deliverableStatus === 'dispute_resolved';
+                const isAllMilestonesReleased = Array.isArray(order.milestones) && order.milestones.length > 0 && order.milestones.every(m => m.status === 'released');
+                const isCompleted = order.status === 'completed' || isSettledOrRefunded;
+                const isReleased = isCompleted || isAllMilestonesReleased || order.payoutStatus === 'disbursed';
                 const isSubmittedPendingAudit = order.deliverableStatus === 'submitted_pending_audit';
-                const isRevisionRequested = !isSubmittedPendingAudit && (
+                const isRevisionRequested = !isCompleted && !isReleased && !isSubmittedPendingAudit && (
                   order.deliverableStatus === 'changes_requested' || 
                   order.status === 'disputed' || 
                   (order.auditCertificate?.verdict === 'CHANGES_REQUESTED' && (!order.deliverable?.version || order.deliverable.version <= (order.auditCertificate.version || 1))) || 

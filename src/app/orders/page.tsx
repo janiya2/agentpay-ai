@@ -87,7 +87,11 @@ function OrdersPageContent() {
       const snap = await getDocs(collection(db, 'agentpay_orders'));
       if (!snap.empty) {
         const list = snap.docs.map(d => ({ id: d.id, ...d.data() } as AgentPayOrder));
-        list.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+        list.sort((a, b) => {
+          const timeA = new Date(a.updatedAt || a.deliverable?.submittedAt || a.createdAt || 0).getTime();
+          const timeB = new Date(b.updatedAt || b.deliverable?.submittedAt || b.createdAt || 0).getTime();
+          return timeB - timeA;
+        });
         setOrders(list);
       }
     } catch (err) {
@@ -1258,8 +1262,8 @@ function OrdersPageContent() {
                           </div>
                         )}
 
-                        {/* Row 4: Active Revision Notice (if revisions were requested) */}
-                        {order.deliverableStatus === 'changes_requested' && order.revisionNotes && (
+                        {/* Row 4: Active Revision Notice (if revisions were requested and order is not completed/released) */}
+                        {order.deliverableStatus === 'changes_requested' && order.revisionNotes && order.status !== 'completed' && !(Array.isArray(order.milestones) && order.milestones.length > 0 && order.milestones.every((m: any) => m.status === 'released')) && (
                           <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-xs space-y-1.5 animate-fadeIn">
                             <div className="flex items-center justify-between">
                               <span className="text-amber-300 font-bold flex items-center gap-1.5">
