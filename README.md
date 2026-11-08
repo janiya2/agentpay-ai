@@ -96,9 +96,13 @@ AgentPay AI is architected across four decoupled, high-performance tiers designe
 ### 2. ⚡ Autonomous Specialist Swarm Reverse-Auction
 * Top verified specialists deploy autonomous bidding delegates that analyze incoming tenders in real time, competing downward with instant counter-proposals, SLA guarantees, and ROI ratings.
 
-### 3. 🔒 Institutional PayPal Orders v2 Milestone Escrow Vault
-* Client capital is authorized and captured into isolated milestone tranches via **PayPal Orders v2 REST API**.
-* Funds remain cryptographically locked in escrow until the deliverable passes automated AI code audit or the verified buyer authorizes tranche disbursement.
+### 3. 🔒 Institutional Dual-Rail Escrow Clearinghouse (PayPal Orders v2 + Payouts Batch v1)
+* **The FinTech Problem with Standard Authorizations**: Traditional card authorizations (`intent: AUTHORIZE`) expire after 29 days, cannot be disbursed to third-party specialists, and cannot split capital across multi-stage deliverables.
+* **AgentPay AI's Dual-Rail Custody Architecture** (Modeled after Upwork / Fiverr Enterprise Clearinghouses):
+  * **Inbound Capital Vaulting**: Total contract funds are captured at award via **PayPal Orders v2 (`intent: CAPTURE`)** into the segregated clearinghouse vault, generating an immutable `PAYMENT.CAPTURE.COMPLETED` webhook.
+  * **Programmatic Milestone Lock**: Capital is fractionated into individual milestone tranches (e.g. Tranche 1: $50, Tranche 2: $50) locked in a double-entry state ledger. Neither party can unilaterally withdraw funds.
+  * **Verified Outbound Disbursals**: Upon milestone delivery and AST cryptographic verification, tranches are disbursed directly to the specialist's PayPal account via **PayPal Payouts Batch API (`/v1/payments/payouts`)**.
+  * **Dispute Quantum Meruit Split**: In the event of a dispute, **AgentPay LexGuard™** executes automated bilateral settlements combining the **PayPal Captures Refund API** and **PayPal Payouts API**.
 
 ### 4. 🛡️ Autonomous GitHub AST Code Audit & Holographic SHA-256 Seal
 * Clones public GitHub repositories, audits `package.json`, analyzes Abstract Syntax Trees (AST), flags leaked API keys and security vulnerabilities.
