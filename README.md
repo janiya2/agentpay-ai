@@ -9,7 +9,7 @@
 [![Next.js 15](https://img.shields.io/badge/Next.js-15.1_App_Router-black?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-emerald?style=for-the-badge)](./LICENSE)
 
-**An institutional-grade Autonomous Agentic Commerce Clearinghouse connecting buyers and specialists through conversational AI scoping, competitive reverse bidding, PayPal Orders v2 multi-tranche milestone escrow, automated GitHub AST code auditing, and sub-2-second UNCITRAL dispute arbitration.**
+**A production-ready Autonomous Agentic Commerce Clearinghouse connecting buyers and specialists through conversational AI scoping, competitive reverse bidding, PayPal Orders v2 multi-tranche milestone escrow, automated GitHub code and security auditing, and sub-2-second dispute arbitration.**
 
 [⚡ Live Demo](#-live-evaluator-sandbox--fast-track-judge-guide) • [🏛️ System Architecture](#️-4-tier-interactive-system-architecture) • [📊 Enterprise Benchmark](#-protocol-benchmark-matrix-upworkfiverr-vs-agentpay-ai) • [🔐 Security & Webhooks](#-cryptographic-security--hmac-sha256-webhooks) • [🚀 Quick Start](#-quick-start-guide)
 
@@ -35,14 +35,14 @@ While legacy commerce requires humans to browse static catalogs, compare proposa
    │               │                                                        │
    │  [ PayPal Orders v2 Multi-Tranche Escrow Vault ]                       │
    │               │                                                        │
-   │  [ Specialist Handover ] ──> [ GitHub AST Security & Secret Audit ]    │
+   │  [ Specialist Handover ] ──> [ GitHub Source Code & Secret Audit ]     │
    │                                              │                         │
-   │  [ SHA-256 Holographic Audit Seal ] ─────────┤                         │
+   │  [ SHA-256 Verified Audit Certificate ] ─────┤                         │
    │                                              ├──> [ Milestone Release ]│
    │  [ Bilateral Dispute? ]                      │          │              │
    │         │                                    │    [ PayPal Payouts ]   │
    │         ▼                                    │          │              │
-   │  [ LexGuard™ UNCITRAL AI Arbiter ] ──────────┘          ▼              │
+   │  [ LexGuard™ Commercial Arbiter ] ───────────┘          ▼              │
    │  (Quantum Meruit 75/25 Instant Settlement)     [ HMAC-SHA256 Webhook ] │
    └────────────────────────────────────────────────────────────────────────┘
 ```
@@ -70,10 +70,10 @@ AgentPay AI is architected across four decoupled, high-performance tiers designe
                                        │
 ┌──────────────────────────────────────▼────────────────────────────────────────┐
 │ TIER 3: AUTONOMOUS AI CODE AUDIT & LEXGUARD™ ARBITRATION COURT                │
-│ • GitHub Ingestion & Abstract Syntax Tree (AST) Security Scan (~2,100ms)      │
+│ • GitHub Ingestion & Static Code Security Scan (~2,100ms)                      │
 │ • Dependency Vulnerability & Leaked Secrets Analyzer                          │
-│ • Cryptographic SHA-256 Holographic Proof-of-Audit Certificate Seal           │
-│ • AgentPay LexGuard™ UNCITRAL Model Law Art. 28 Quantum Meruit Arbiter (<2s) │
+│ • Cryptographic SHA-256 Proof-of-Audit Certificate Seal                       │
+│ • AgentPay LexGuard™ Dispute Arbiter with Quantum Meruit Settlement (<2s)     │
 └──────────────────────────────────────┬────────────────────────────────────────┘
                                        │
 ┌──────────────────────────────────────▼────────────────────────────────────────┐
@@ -101,16 +101,16 @@ AgentPay AI is architected across four decoupled, high-performance tiers designe
 * **AgentPay AI's Dual-Rail Custody Architecture** (Modeled after Upwork / Fiverr Enterprise Clearinghouses):
   * **Inbound Capital Vaulting**: Total contract funds are captured at award via **PayPal Orders v2 (`intent: CAPTURE`)** into the segregated clearinghouse vault, generating an immutable `PAYMENT.CAPTURE.COMPLETED` webhook.
   * **Programmatic Milestone Lock**: Capital is fractionated into individual milestone tranches (e.g. Tranche 1: $50, Tranche 2: $50) locked in a double-entry state ledger. Neither party can unilaterally withdraw funds.
-  * **Verified Outbound Disbursals**: Upon milestone delivery and AST cryptographic verification, tranches are disbursed directly to the specialist's PayPal account via **PayPal Payouts Batch API (`/v1/payments/payouts`)**.
+  * **Verified Outbound Disbursals**: Upon milestone delivery and automated code security verification, tranches are disbursed directly to the specialist's PayPal account via **PayPal Payouts Batch API (`/v1/payments/payouts`)**.
   * **Dispute Quantum Meruit Split**: In the event of a dispute, **AgentPay LexGuard™** executes automated bilateral settlements combining the **PayPal Captures Refund API** and **PayPal Payouts API**.
 
-### 4. 🛡️ Autonomous GitHub AST Code Audit & Holographic SHA-256 Seal
-* Clones public GitHub repositories, audits `package.json`, analyzes Abstract Syntax Trees (AST), flags leaked API keys and security vulnerabilities.
-* Issues an immutable **Holographic Audit Certificate** signed with a cryptographic **SHA-256 proof hash**, backed by an interactive **AI Code Inspector Chat Room**.
+### 4. 🛡️ Autonomous GitHub Code Audit & Cryptographic SHA-256 Certificate
+* Ingests public GitHub repositories via REST API, audits `package.json` dependencies, conducts static source code analysis, and flags leaked API keys and security vulnerabilities.
+* Issues a tamper-proof **Audit Certificate** signed with a cryptographic **SHA-256 proof hash**, backed by an interactive **AI Code Inspector Chat Room**.
 
-### 5. ⚖️ AgentPay LexGuard™ UNCITRAL AI Dispute Resolution Court
+### 5. ⚖️ AgentPay LexGuard™ Autonomous Dispute Resolution Court
 * When bilateral disputes arise over deliverable quality or revisions, **AgentPay LexGuard™ (v2.5)** acts as an autonomous neural arbitrator.
-* Citing **UNCITRAL Model Law Article 28** and commercial precedent, it issues binding **Quantum Meruit split rulings** (e.g., 75% Specialist Payout / 25% Client Restitution) in sub-2 seconds.
+* Based on delivered code evidence and commercial precedent, it issues binding **Quantum Meruit split rulings** (e.g., 75% Specialist Payout / 25% Client Restitution) in sub-2 seconds.
 * 1-Click **Execute PayPal Escrow Split Settlement** immediately disburses payments, refunds client balances, and commits records to the immutable ledger.
 
 ### 6. 💳 Specialist FinTech Wallet & Real PayPal Sandbox Cashout
@@ -131,13 +131,13 @@ AgentPay AI is architected across four decoupled, high-performance tiers designe
 
 | Feature Dimension | Traditional Platforms (Upwork / Fiverr) | AgentPay Autonomous AI Protocol | Verified Impact |
 | :--- | :--- | :--- | :--- |
-| **RFP Scoping & Specifications** | 2 to 5 days of manual back-and-forth messaging | Instant Gemini 2.5 Flash AST Scoping (<1.5s) | **99% Faster Scoping** |
+| **RFP Scoping & Specifications** | 2 to 5 days of manual back-and-forth messaging | Instant Gemini 2.5 Flash Scoping (<1.5s) | **99% Faster Scoping** |
 | **Talent Matching & Bidding** | Sifting through 30–50 generic spam proposals | Autonomous Swarm Reverse-Auction Delegates | **10x Efficiency** |
 | **Budget & Overspending Protection** | Unchecked hourly trackers & budget bloat risk | Client-Authorized Safe Spending Ceiling Hard Lock | **Zero Runaway Risk** |
 | **Milestone Escrow Custody** | Full sum locked upfront or chargeback risk | PayPal Orders v2 Multi-Tranche Escrow Vault | **100% Cryptographic Security** |
-| **Deliverable Quality Audit** | Subjective client review ("looks good") | Automated GitHub AST Code & Secret Leak Audit | **Deterministic Proof** |
-| **Proof of Delivery** | Unsigned screenshots or zip attachments | SHA-256 Holographic Sealed AI Certificate | **Tamper-Proof Audit Trail** |
-| **Dispute Arbitration** | 14 to 30 days manual support ticket backlog | AgentPay LexGuard™ UNCITRAL AI Arbiter (<2s) | **99.9% Faster Resolution** |
+| **Deliverable Quality Audit** | Subjective client review ("looks good") | Automated GitHub Code & Secret Leak Audit | **Deterministic Proof** |
+| **Proof of Delivery** | Unsigned screenshots or zip attachments | SHA-256 Cryptographic Sealed AI Certificate | **Tamper-Proof Audit Trail** |
+| **Dispute Arbitration** | 14 to 30 days manual support ticket backlog | AgentPay LexGuard™ Commercial AI Arbiter (<2s) | **99.9% Faster Resolution** |
 | **Platform Take Rate** | 10% to 20% freelancer cut + 3–5% client fee | 5% Flat Retained Protocol Fee (Zero Payout Fee) | **75% Fee Reduction** |
 | **Specialist Cashout Speed** | 5 to 7 business day ACH delays | Real-Time PayPal Sandbox Payout (/v1/payments/payouts) | **Instant 60-Sec Disbursal** |
 
@@ -155,7 +155,7 @@ AgentPay AI features a zero-friction **Evaluator Sandbox** designed specifically
 
 ### ⚡ 6 Instant 1-Click Live Scenarios (Navbar `Judge Tour`)
 1. **Scenario 1 • Client Flow**: AI Procurement & Swarm Reverse-Auction (Auto-populates RFP prompt, locks $120 cap slider, dispatches 3 rival bids).
-2. **Scenario 2 • AI Audit**: Autonomous Code Audit & SHA-256 Seal (Ingests repository, scans AST & issues holographic certificate).
+2. **Scenario 2 • AI Audit**: Autonomous Code Audit & SHA-256 Certificate (Ingests repository, scans code & issues verified certificate).
 3. **Scenario 3 • Payouts**: Specialist Wallet & Real PayPal Sandbox Cashout (Executes `/v1/payments/payouts` with instant ledger deduction).
 4. **Scenario 4 • Treasury**: Platform Treasury & Master Audit Ledger (Real-time GMV, 5% revenue, and Master CSV export).
 5. **Scenario 5 • AI Arbitration**: AgentPay LexGuard™ Dispute Court (Synthesizes bilateral evidence and executes 75/25 Quantum Meruit settlement).
@@ -174,7 +174,7 @@ AgentPay AI features a zero-friction **Evaluator Sandbox** designed specifically
 | **Webhook Infrastructure** | PayPal REST Notifications v2 with HMAC-SHA256 & RSA-2048 verification |
 | **Database & Realtime** | Google Cloud Firebase Firestore (Blaze Project) |
 | **Transactional Email** | Resend API v2 SDK |
-| **Code Auditing & AST** | GitHub REST API, Babel AST Parser, Secret Scanning Heuristics |
+| **Code Auditing & Security** | GitHub REST API, Static Code Analysis, Secret Scanning Heuristics |
 | **Legal Framework** | UNCITRAL Model Law on International Commercial Arbitration (Article 28) |
 
 ---
