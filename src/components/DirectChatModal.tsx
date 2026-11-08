@@ -4,11 +4,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { 
   X, Send, Bot, User, MessageSquare, ShieldCheck, Clock, 
-  CreditCard, Sparkles, CheckCircle2, AlertCircle, ExternalLink, CheckCheck, Check
+  CreditCard, Sparkles, CheckCircle2, AlertCircle, ExternalLink, CheckCheck, Check, Mic
 } from 'lucide-react';
 import type { DirectMessage } from '@/types';
 import { getSpecialistRealAvatar } from '@/lib/specialistAvatars';
 import { formatLastSeen, isUserOnline } from '@/lib/lastSeen';
+import VoiceNotePlayer from '@/components/VoiceNotePlayer';
+import VoiceNoteRecorder, { VoiceNoteResult } from '@/components/VoiceNoteRecorder';
 
 export interface DirectChatModalProps {
   isOpen: boolean;
@@ -51,9 +53,57 @@ export default function DirectChatModal({
 }: DirectChatModalProps) {
   const [messages, setMessages] = useState<DirectMessage[]>([]);
   const [input, setInput] = useState('');
+  const [isVoiceRecorderOpen, setIsVoiceRecorderOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const sendVoiceNote = async (result: VoiceNoteResult) => {
+    setSending(true);
+    const tempId = `temp_${Date.now()}`;
+    const optimisticMsg: DirectMessage = {
+      id: tempId,
+      orderId: channelId,
+      channelId: channelId,
+      providerId: providerId,
+      providerName: otherPartyName,
+      sessionId: sessionId,
+      senderRole: currentUserRole,
+      senderName: currentUserName,
+      message: result.transcript,
+      audioUrl: result.audioUrl,
+      audioDuration: result.duration,
+      timestamp: new Date().toISOString()
+    };
+    setMessages(prev => [...prev, optimisticMsg]);
+
+    try {
+      const res = await fetch('/api/direct-messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId: channelId,
+          channelId: channelId,
+          providerId: providerId || '',
+          providerName: currentUserRole === 'provider' ? currentUserName : otherPartyName,
+          sessionId: sessionId || '',
+          senderRole: currentUserRole,
+          senderName: currentUserName,
+          message: result.transcript,
+          audioUrl: result.audioUrl,
+          audioDuration: result.duration
+        })
+      });
+
+      if (res.ok) {
+        await fetchMessages();
+      }
+    } catch (err) {
+      console.error('Send voice note failed:', err);
+    } finally {
+      setSending(false);
+    }
+  };
 
   const fetchMessages = async () => {
     if (!channelId) return;
@@ -325,6 +375,17 @@ export default function DirectChatModal({
                         ? 'bg-cyan-600/25 text-cyan-50 border border-cyan-500/30 rounded-tr-none'
                         : 'bg-zinc-900 text-zinc-200 border border-zinc-800 rounded-tl-none'
                     }`}>
+                      {m.audioUrl && (
+                        <div className="mb-2">
+                          <VoiceNotePlayer
+                            audioUrl={m.audioUrl}
+                            duration={m.audioDuration}
+                            transcript={m.message}
+                            role={isMe ? 'client' : 'provider'}
+                            compact
+                          />
+                        </div>
+                      )}
                       <p className="whitespace-pre-wrap">{m.message}</p>
                     </div>
                   </div>
@@ -335,8 +396,35 @@ export default function DirectChatModal({
           <div className="h-6 shrink-0" ref={messagesEndRef} />
         </div>
 
+        {/* CyberVoice™ AI Dictation & Audio Recorder Bar */}
+        {isVoiceRecorderOpen && (
+          <div className="p-3 border-t border-zinc-800 bg-zinc-950">
+            <VoiceNoteRecorder
+              onSend={(result) => {
+                sendVoiceNote(result);
+                setIsVoiceRecorderOpen(false);
+              }}
+              onCancel={() => setIsVoiceRecorderOpen(false)}
+              placeholderPrompt={`Speak voice note for ${otherPartyName}...`}
+            />
+          </div>
+        )}
+
         {/* Input Bar */}
         <form onSubmit={handleSendMessage} className="p-3 sm:p-4 border-t border-zinc-800 bg-zinc-900/60 flex items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => setIsVoiceRecorderOpen(prev => !prev)}
+            className={`h-10 w-10 rounded-xl flex items-center justify-center transition-all cursor-pointer shrink-0 ${
+              isVoiceRecorderOpen
+                ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40 animate-pulse'
+                : 'bg-zinc-800 hover:bg-zinc-700 text-cyan-400 border border-zinc-700 hover:border-cyan-500/40'
+            }`}
+            title="Record voice note"
+          >
+            <Mic className="h-4 w-4" />
+          </button>
+
           <input
             type="text"
             value={input}

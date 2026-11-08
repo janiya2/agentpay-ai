@@ -165,7 +165,7 @@ export default function JudgeGuidedTourModal() {
                       AI Procurement &amp; Swarm Reverse-Auction
                     </h4>
                     <p className="text-zinc-400 text-[11px] leading-relaxed">
-                      Gemini parses natural language RFP, auto-adjusts budget slider to $120, and triggers 3 autonomous specialist reverse-bids with ROI comparison matrix.
+                      Gemini parses natural language or CyberVoice™ speech dictation, auto-adjusts budget slider to $120, and triggers 3 autonomous specialist reverse-bids with ROI comparison matrix.
                     </p>
                   </div>
 

@@ -42,7 +42,8 @@ import {
   CheckCircle,
   XCircle,
   FileText,
-  Receipt
+  Receipt,
+  RotateCcw
 } from 'lucide-react';
 import type { PlatformSettings, ServiceProvider, AgentPayOrder, ChatSession, BuyerUser, PayPalPayoutRecord } from '@/types';
 import InvoiceModal from '@/components/InvoiceModal';
@@ -78,6 +79,38 @@ function AdminPageContent() {
 
   const [testingResend, setTestingResend] = useState(false);
   const [resendTestResult, setResendTestResult] = useState<{ success: boolean; message?: string; error?: string } | null>(null);
+
+  // Demo Data Reset & Factory Re-Seed States
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetSuccessMessage, setResetSuccessMessage] = useState<string | null>(null);
+
+  const handleResetDemoData = async () => {
+    setIsResetting(true);
+    setResetSuccessMessage(null);
+    try {
+      const res = await fetch('/api/admin/reset-demo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ passcode })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setResetSuccessMessage(data.message || 'Demo dataset successfully restored to pristine factory state.');
+        await loadPlatformData();
+        setTimeout(() => {
+          setIsResetModalOpen(false);
+          setResetSuccessMessage(null);
+        }, 2200);
+      } else {
+        alert(data.error || 'Failed to reset demo dataset');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Network error occurred while resetting demo data');
+    } finally {
+      setIsResetting(false);
+    }
+  };
 
   const toggleShowGeminiKey = (index: number) => {
     setShowGeminiKeys(prev => ({ ...prev, [index]: !prev[index] }));
@@ -706,6 +739,16 @@ function AdminPageContent() {
             >
               <RefreshCw className={`h-3.5 w-3.5 ${loadingData ? 'animate-spin' : ''}`} />
               <span>Refresh Real Data</span>
+            </button>
+
+            {/* 1-Click Demo Data Reset & Factory Re-Seed Button */}
+            <button
+              onClick={() => setIsResetModalOpen(true)}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-purple-500/15 border border-purple-500/40 hover:bg-purple-500/25 text-purple-300 hover:text-white text-xs font-bold transition-all shadow-md shadow-purple-950/30 cursor-pointer"
+              title="Reset platform demo data to factory benchmark state"
+            >
+              <RotateCcw className="h-3.5 w-3.5 text-purple-400" />
+              <span>Reset & Re-Seed Demo</span>
             </button>
 
             {activeTab === 'settings' && (
@@ -1879,6 +1922,109 @@ function AdminPageContent() {
           onClose={() => setActiveInvoiceOrder(null)}
           order={activeInvoiceOrder}
         />
+      )}
+
+      {/* 🔄 1-Click Demo Data Reset & Factory Re-Seed Modal */}
+      {isResetModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
+          <div 
+            className="relative w-full max-w-lg p-6 sm:p-8 rounded-3xl bg-zinc-950 border border-purple-500/40 shadow-2xl shadow-purple-950/50 text-left space-y-5 overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Ambient Purple Glow */}
+            <div className="absolute -top-20 -right-20 w-44 h-44 bg-purple-500/15 rounded-full blur-3xl pointer-events-none" />
+
+            {/* Header */}
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-11 w-11 rounded-2xl bg-purple-500/15 border border-purple-500/30 text-purple-400 flex items-center justify-center shrink-0 shadow-lg shadow-purple-950/40">
+                  <RotateCcw className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-black text-white">
+                    Factory Reset & Re-Seed Demo Data
+                  </h3>
+                  <p className="text-[11px] text-zinc-400 font-mono">
+                    PayPal AI Hackathon 2026 • Official Evaluator Quick-State
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => !isResetting && setIsResetModalOpen(false)}
+                disabled={isResetting}
+                className="p-1.5 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Success Alert Banner */}
+            {resetSuccessMessage ? (
+              <div className="p-4 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs sm:text-sm font-semibold flex items-center gap-3 animate-fadeIn">
+                <CheckCircle className="h-5 w-5 text-emerald-400 shrink-0" />
+                <span>{resetSuccessMessage}</span>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed font-sans">
+                  This action will restore the platform dataset to its pristine benchmark state for hackathon evaluation:
+                </p>
+
+                <div className="space-y-2 p-3.5 rounded-2xl bg-zinc-900/80 border border-zinc-800/80 text-xs text-zinc-200">
+                  <div className="flex items-center gap-2 font-mono text-[11px]">
+                    <span className="h-1.5 w-1.5 rounded-full bg-cyan-400" />
+                    <span><strong>5 Benchmark Specialists</strong> (Alex Rivera, Marcus Chen, Elena Vance, etc.)</span>
+                  </div>
+                  <div className="flex items-center gap-2 font-mono text-[11px]">
+                    <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                    <span><strong>Pristine Escrow Orders</strong> with active milestones & holographic certificates</span>
+                  </div>
+                  <div className="flex items-center gap-2 font-mono text-[11px]">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                    <span><strong>PayPal REST v2 HMAC Webhooks</strong> re-injected into terminal stream</span>
+                  </div>
+                </div>
+
+                <p className="text-[11px] text-zinc-500 italic">
+                  Note: Existing custom settings (API keys) are safely preserved.
+                </p>
+              </div>
+            )}
+
+            {/* Modal Actions */}
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-zinc-800">
+              <button
+                type="button"
+                onClick={() => setIsResetModalOpen(false)}
+                disabled={isResetting}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer"
+              >
+                Close
+              </button>
+
+              {!resetSuccessMessage && (
+                <button
+                  type="button"
+                  onClick={handleResetDemoData}
+                  disabled={isResetting}
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-600 hover:opacity-95 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-purple-950/50 transition-all cursor-pointer"
+                >
+                  {isResetting ? (
+                    <>
+                      <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                      <span>Re-Seeding Platform...</span>
+                    </>
+                  ) : (
+                    <>
+                      <RotateCcw className="h-3.5 w-3.5" />
+                      <span>Execute Factory Reset</span>
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

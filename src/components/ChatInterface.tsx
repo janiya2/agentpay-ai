@@ -7,7 +7,7 @@ import {
   Bot, User, Send, Shield, Sparkles, CheckCircle2, DollarSign, Clock, 
   ArrowRight, ExternalLink, History, X, ChevronRight, Lock, MessageSquare, AlertCircle,
   Check, Plus, Users, ShieldCheck, PanelLeft, PanelLeftClose, CreditCard, Briefcase,
-  Layers, Settings, LogOut, ArrowUp, Zap, Pencil, FileText, CheckCheck, Copy, Award
+  Layers, Settings, LogOut, ArrowUp, Zap, Pencil, FileText, CheckCheck, Copy, Award, Mic
 } from 'lucide-react';
 import { PayPalButtons } from '@paypal/react-paypal-js';
 import type { ChatMessage, ServiceProvider } from '@/types';
@@ -20,6 +20,8 @@ import ProviderProfileModal from '@/components/ProviderProfileModal';
 import SpecialistDirectChatView, { SpecialistChatTarget } from '@/components/SpecialistDirectChatView';
 import { getSpecialistRealAvatar } from '@/lib/specialistAvatars';
 import ClientProfileModal from '@/components/ClientProfileModal';
+import VoiceNotePlayer from '@/components/VoiceNotePlayer';
+import VoiceNoteRecorder from '@/components/VoiceNoteRecorder';
 
 function formatMessageTime(dateStr?: string) {
   if (!dateStr) return '';
@@ -72,6 +74,7 @@ export default function ChatInterface() {
     }
   ]);
   const [input, setInput] = useState('');
+  const [isVoiceRecorderOpen, setIsVoiceRecorderOpen] = useState(false);
   const [spendingLimit, setSpendingLimit] = useState(200);
   const [isLoading, setIsLoading] = useState(false);
   const [activePayPalOrder, setActivePayPalOrder] = useState<{
@@ -1662,7 +1665,7 @@ export default function ChatInterface() {
     return null;
   };
 
-  const handleSend = async (customPrompt?: string) => {
+  const handleSend = async (customPrompt?: string, voiceData?: { audioUrl: string; duration: number; transcript: string }) => {
     const textToSend = customPrompt || input.trim();
     if (!textToSend || isLoading) return;
 
@@ -1695,7 +1698,10 @@ export default function ChatInterface() {
       id: `usr_${Date.now()}`,
       role: 'user',
       content: textToSend,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      audioUrl: voiceData?.audioUrl,
+      audioDuration: voiceData?.duration,
+      voiceTranscript: voiceData?.transcript
     };
 
     setMessages((prev) => [...prev, userMsg]);
@@ -2807,6 +2813,18 @@ export default function ChatInterface() {
                         : 'bg-zinc-900/90 text-zinc-200 border border-zinc-800/80 rounded-tl-none shadow-md'
                     }`}
                   >
+                    {/* Embedded Voice Note Audio Player (CyberVoice™ Engine) */}
+                    {msg.audioUrl && (
+                      <div className="mb-3">
+                        <VoiceNotePlayer
+                          audioUrl={msg.audioUrl}
+                          duration={msg.audioDuration}
+                          transcript={msg.voiceTranscript || msg.content}
+                          role={msg.role}
+                        />
+                      </div>
+                    )}
+
                     {renderFormattedMessage(msg.content)}
 
                     {/* Awarded Specialist Identity & Profile Card */}
@@ -4166,6 +4184,20 @@ export default function ChatInterface() {
         <div className="w-full shrink-0 z-20 pb-3 pt-1 px-4 bg-gradient-to-t from-[#090A0F] via-[#090A0F]/90 to-transparent">
           <div className="max-w-3xl mx-auto space-y-2">
             
+            {/* CyberVoice™ AI Dictation & Audio Recorder Bar */}
+            {isVoiceRecorderOpen && (
+              <div className="mb-2">
+                <VoiceNoteRecorder
+                  onSend={(result) => {
+                    handleSend(result.transcript, result);
+                    setIsVoiceRecorderOpen(false);
+                  }}
+                  onCancel={() => setIsVoiceRecorderOpen(false)}
+                  placeholderPrompt="Speak your RFP requirements (e.g. 'I need a full-stack Next.js developer for $120')..."
+                />
+              </div>
+            )}
+
             {/* Input Container */}
             <div className="relative flex items-center bg-zinc-900/90 border border-zinc-700/80 rounded-2xl sm:rounded-3xl shadow-2xl focus-within:border-cyan-500/60 focus-within:ring-2 focus-within:ring-cyan-500/20 transition-all p-1.5 sm:p-2 backdrop-blur-xl">
               <input
@@ -4177,6 +4209,20 @@ export default function ChatInterface() {
                 disabled={isLoading}
                 className="flex-1 bg-transparent px-3 sm:px-4 py-2.5 text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none"
               />
+
+              {/* Mic Dictation Trigger Button */}
+              <button
+                type="button"
+                onClick={() => setIsVoiceRecorderOpen(prev => !prev)}
+                className={`h-9 w-9 sm:h-10 sm:w-10 rounded-full flex items-center justify-center transition-all cursor-pointer shrink-0 mr-1.5 ${
+                  isVoiceRecorderOpen
+                    ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40 animate-pulse'
+                    : 'bg-zinc-800 hover:bg-zinc-700 text-cyan-400 border border-zinc-700/80 hover:border-cyan-500/40 shadow-sm'
+                }`}
+                title="Speak RFP hands-free with CyberVoice™ AI Dictation"
+              >
+                <Mic className="h-4 w-4" />
+              </button>
 
               <button
                 onClick={() => handleSend()}

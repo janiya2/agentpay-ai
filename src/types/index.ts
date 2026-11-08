@@ -45,6 +45,9 @@ export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
   content: string;
   timestamp: string;
+  audioUrl?: string;
+  audioDuration?: number;
+  voiceTranscript?: string;
   actionPayload?: {
     type: 'search_results' | 'negotiation_proposal' | 'paypal_checkout' | 'escrow_release' | 'inquiry_dispatched' | 'tender_dispatched' | 'escrow_success';
     matchedProviders?: ServiceProvider[];
@@ -250,6 +253,8 @@ export interface DirectMessage {
   seenAt?: string;
   status?: 'sent' | 'delivered' | 'seen';
   isAiAutoReply?: boolean;
+  audioUrl?: string;
+  audioDuration?: number;
 }
 
 export interface ChatLogEntry {

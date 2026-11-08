@@ -122,7 +122,9 @@ export async function POST(req: NextRequest) {
       createdAt: new Date().toISOString(),
       isSeen: false,
       seenAt: null,
-      status: 'sent'
+      status: 'sent',
+      audioUrl: body.audioUrl || null,
+      audioDuration: typeof body.audioDuration === 'number' ? body.audioDuration : null
     };
 
     if (providerId) docData.providerId = providerId;

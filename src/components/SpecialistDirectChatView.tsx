@@ -5,13 +5,15 @@ import Link from 'next/link';
 import { 
   ArrowLeft, Send, MessageSquare, Bot, User, CheckCircle2, 
   ShieldCheck, Clock, ExternalLink, Sparkles, RefreshCw, 
-  Paperclip, CheckCheck, Check, Layers, Settings, Smile, HelpCircle, Award, DollarSign
+  Paperclip, CheckCheck, Check, Layers, Settings, Smile, HelpCircle, Award, DollarSign, Mic
 } from 'lucide-react';
 import type { DirectMessage } from '@/types';
 import { getSpecialistRealAvatar } from '@/lib/specialistAvatars';
 import { formatLastSeen, isUserOnline } from '@/lib/lastSeen';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
+import VoiceNotePlayer from '@/components/VoiceNotePlayer';
+import VoiceNoteRecorder, { VoiceNoteResult } from '@/components/VoiceNoteRecorder';
 
 export interface SpecialistChatTarget {
   channelId: string;
@@ -62,12 +64,62 @@ export default function SpecialistDirectChatView({
 }: SpecialistDirectChatViewProps) {
   const [messages, setMessages] = useState<DirectMessage[]>([]);
   const [input, setInput] = useState('');
+  const [isVoiceRecorderOpen, setIsVoiceRecorderOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [isSimulatingReply, setIsSimulatingReply] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const sendVoiceNote = async (result: VoiceNoteResult) => {
+    setSending(true);
+    const primaryId = specialist.orderId || specialist.channelId;
+    const tempId = `temp_${Date.now()}`;
+    const optimisticMsg: DirectMessage = {
+      id: tempId,
+      orderId: primaryId,
+      channelId: specialist.channelId,
+      providerId: specialist.providerId,
+      providerName: specialist.providerName,
+      sessionId: specialist.sessionId,
+      senderRole: 'client',
+      senderName: currentUser.name || 'Janitha Dilshan',
+      message: result.transcript,
+      audioUrl: result.audioUrl,
+      audioDuration: result.duration,
+      timestamp: new Date().toISOString()
+    };
+    setMessages(prev => [...prev, optimisticMsg]);
+
+    try {
+      const res = await fetch('/api/direct-messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId: primaryId,
+          channelId: specialist.channelId,
+          providerId: specialist.providerId,
+          providerName: specialist.providerName,
+          sessionId: specialist.sessionId || '',
+          senderRole: 'client',
+          senderName: currentUser.name || 'Janitha Dilshan',
+          senderAvatar: currentUser.avatarUrl || '',
+          message: result.transcript,
+          audioUrl: result.audioUrl,
+          audioDuration: result.duration
+        })
+      });
+
+      if (res.ok) {
+        await fetchMessages();
+      }
+    } catch (err) {
+      console.error('Send voice note failed:', err);
+    } finally {
+      setSending(false);
+    }
+  };
 
   // Generate automated intelligent summary greeting draft for the client
   useEffect(() => {
@@ -639,6 +691,17 @@ export default function SpecialistDirectChatView({
                         )}
                       </div>
                     )}
+                    {m.audioUrl && (
+                      <div className="mb-2">
+                        <VoiceNotePlayer
+                          audioUrl={m.audioUrl}
+                          duration={m.audioDuration}
+                          transcript={m.message}
+                          role={isMe ? 'client' : 'provider'}
+                          compact
+                        />
+                      </div>
+                    )}
                     <p className="whitespace-pre-wrap">{m.message}</p>
                     
                     <div className={`flex items-center gap-1.5 mt-1.5 text-[10px] ${isMe ? 'text-cyan-300/80 justify-end' : 'text-zinc-500 justify-start'}`}>
@@ -741,8 +804,36 @@ export default function SpecialistDirectChatView({
           </button>
         </div>
 
+        {/* CyberVoice™ AI Dictation & Audio Recorder Bar */}
+        {isVoiceRecorderOpen && (
+          <div className="mb-2">
+            <VoiceNoteRecorder
+              onSend={(result) => {
+                sendVoiceNote(result);
+                setIsVoiceRecorderOpen(false);
+              }}
+              onCancel={() => setIsVoiceRecorderOpen(false)}
+              placeholderPrompt={`Speak voice note for ${specialist.providerName}...`}
+            />
+          </div>
+        )}
+
         {/* Input Form */}
         <form onSubmit={handleSendMessage} className="flex items-center gap-2">
+          {/* Mic Button */}
+          <button
+            type="button"
+            onClick={() => setIsVoiceRecorderOpen(prev => !prev)}
+            className={`h-11 w-11 rounded-2xl flex items-center justify-center transition-all cursor-pointer shrink-0 ${
+              isVoiceRecorderOpen
+                ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40 animate-pulse'
+                : 'bg-zinc-900 hover:bg-zinc-850 text-cyan-400 border border-zinc-700/80 hover:border-cyan-500/40'
+            }`}
+            title="Record voice note"
+          >
+            <Mic className="h-4 w-4" />
+          </button>
+
           <div className="relative flex-1">
             <input
               ref={inputRef}
