@@ -414,15 +414,16 @@
     <div class="header-stats">
       <div class="stat-badge">
         <span>Clips Ready:</span>
-        <span class="stat-val" id="completed-count">0 / 13 Ready</span>
+        <span class="stat-val" id="completed-count">0 / 21 Ready</span>
       </div>
       <div class="stat-badge">
         <span>Est. Duration:</span>
-        <span class="stat-val" id="total-duration">~3m 30s</span>
+        <span class="stat-val" id="total-duration">~4m 15s</span>
       </div>
-      <button class="btn-header" onclick="copyAllClips()">📋 Copy All (1-13)</button>
+      <button class="btn-header" onclick="copyAllClips()">📋 Copy All (1-21)</button>
       <button class="btn-header" onclick="copyPhase(1)" style="background: rgba(6, 182, 212, 0.15); border-color: rgba(6, 182, 212, 0.4);">📋 Phase 1 (1-8)</button>
       <button class="btn-header" onclick="copyPhase(2)" style="background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.4);">📋 Phase 2 (9-13)</button>
+      <button class="btn-header" onclick="copyPhase(3)" style="background: rgba(245, 158, 11, 0.15); border-color: rgba(245, 158, 11, 0.4);">📋 Phase 3 (14-21)</button>
     </div>
   </header>
 
@@ -796,6 +797,213 @@ Cinematic photorealistic 4K video of autonomous futuristic AI digital agents tra
       </div>
     </div>
 
+    <!-- ========================================== -->
+    <!-- PHASE 3 CLIPS                              -->
+    <!-- ========================================== -->
+    <div class="section-title" style="color: var(--accent-amber); margin-top: 45px;">
+      <span>⚖️ Phase 3 Audio Clips (AI Code Audit ➔ Partial Milestone Release ➔ LexGuard Dispute Court ➔ Webhooks &amp; Admin Finale)</span>
+    </div>
+
+    <!-- CLIP 14 -->
+    <div class="clip-card" id="card-14">
+      <div class="clip-top">
+        <div class="clip-badge-group">
+          <span class="clip-num" style="background: linear-gradient(135deg, var(--accent-amber), #ea580c);">CLIP 14</span>
+          <span class="clip-title">AI Code Inspector Audit Flags Defective Deliverable</span>
+        </div>
+        <div class="clip-actions">
+          <span class="clip-duration">⏱️ ~20 sec</span>
+          <button class="btn-clip" onclick="speakText(14)">🔊 Listen Preview</button>
+          <button class="btn-clip copy-btn" onclick="copyClip(14)">📋 Copy Text</button>
+          <label class="checkbox-wrap">
+            <input type="checkbox" onchange="toggleDone(14, this.checked)"> Done
+          </label>
+        </div>
+      </div>
+      <div class="screen-guide">
+        <span class="screen-icon">🖥️</span>
+        <div><strong>Screen Action:</strong> In Client Orders (<code>/orders</code>), locate the submitted order. Open the deliverable inspection card. Show the AI Code Inspection report with the low score (e.g. 5/100) and the amber <code>⚠️ CHANGES_REQUESTED</code> badge with flagged structural deficiencies.</div>
+      </div>
+      <div class="voice-script-box" id="text-14">
+"Immediately, the AgentPay AI Code Inspector triggers an automated repository audit. Instead of subjective human arguments, Google Gemini scans the commit history, directory structure, and functional requirements. Detecting an incomplete placeholder, it automatically flags the deliverable with changes requested and an audit score of 5 out of 100!"
+      </div>
+    </div>
+
+    <!-- CLIP 15 -->
+    <div class="clip-card" id="card-15">
+      <div class="clip-top">
+        <div class="clip-badge-group">
+          <span class="clip-num" style="background: linear-gradient(135deg, var(--accent-emerald), #059669);">CLIP 15</span>
+          <span class="clip-title">Client Approves &amp; Releases Milestone 1 Tranche</span>
+        </div>
+        <div class="clip-actions">
+          <span class="clip-duration">⏱️ ~18 sec</span>
+          <button class="btn-clip" onclick="speakText(15)">🔊 Listen Preview</button>
+          <button class="btn-clip copy-btn" onclick="copyClip(15)">📋 Copy Text</button>
+          <label class="checkbox-wrap">
+            <input type="checkbox" onchange="toggleDone(15, this.checked)"> Done
+          </label>
+        </div>
+      </div>
+      <div class="screen-guide">
+        <span class="screen-icon">🖥️</span>
+        <div><strong>Screen Action:</strong> In the milestone breakdown, point out Milestone 1: Core Architecture &amp; Setup ($70). Click <code>Approve &amp; Release $70</code>. Confirm the release modal. Show Milestone 1 turning green with <code>✓ Funds Released</code>.</div>
+      </div>
+      <div class="voice-script-box" id="text-15">
+"Because the specialist did complete the initial core repository setup, the client acts in good faith. They click 'Approve &amp; Release' on Milestone 1, programmatically unlocking seventy dollars from escrow while keeping the disputed remainder strictly protected."
+      </div>
+    </div>
+
+    <!-- CLIP 16 -->
+    <div class="clip-card" id="card-16">
+      <div class="clip-top">
+        <div class="clip-badge-group">
+          <span class="clip-num" style="background: linear-gradient(135deg, var(--accent-emerald), #059669);">CLIP 16</span>
+          <span class="clip-title">Provider Workspace Reflects Instant PayPal Payout</span>
+        </div>
+        <div class="clip-actions">
+          <span class="clip-duration">⏱️ ~16 sec</span>
+          <button class="btn-clip" onclick="speakText(16)">🔊 Listen Preview</button>
+          <button class="btn-clip copy-btn" onclick="copyClip(16)">📋 Copy Text</button>
+          <label class="checkbox-wrap">
+            <input type="checkbox" onchange="toggleDone(16, this.checked)"> Done
+          </label>
+        </div>
+      </div>
+      <div class="screen-guide">
+        <span class="screen-icon">🖥️</span>
+        <div><strong>Screen Action:</strong> Switch to Provider Workspace (<code>/providers</code>). Show the Provider balance and earnings ledger updating instantly. Point out the PayPal Payout record with the green <code>Paid to PayPal</code> status and transaction reference.</div>
+      </div>
+      <div class="voice-script-box" id="text-16">
+"Switching over to the Provider Workspace, the specialist doesn't wait days for bank clearing. The seventy dollars is disbursed instantly via PayPal Payouts API directly to their verified PayPal account, logged in real time on our double-entry ledger!"
+      </div>
+    </div>
+
+    <!-- CLIP 17 -->
+    <div class="clip-card" id="card-17">
+      <div class="clip-top">
+        <div class="clip-badge-group">
+          <span class="clip-num" style="background: linear-gradient(135deg, var(--accent-amber), #ea580c);">CLIP 17</span>
+          <span class="clip-title">Convene LexGuard™ Autonomous AI Arbitrator</span>
+        </div>
+        <div class="clip-actions">
+          <span class="clip-duration">⏱️ ~22 sec</span>
+          <button class="btn-clip" onclick="speakText(17)">🔊 Listen Preview</button>
+          <button class="btn-clip copy-btn" onclick="copyClip(17)">📋 Copy Text</button>
+          <label class="checkbox-wrap">
+            <input type="checkbox" onchange="toggleDone(17, this.checked)"> Done
+          </label>
+        </div>
+      </div>
+      <div class="screen-guide">
+        <span class="screen-icon">🖥️</span>
+        <div><strong>Screen Action:</strong> Back on Client Orders (<code>/orders</code>), click <code>⚖️ View Dispute Ruling</code> / <code>AI Dispute Court</code>. The LexGuard modal opens. Click <code>Convene Binding AI Arbitrator (AgentPay LexGuard™)</code>. Watch the AI analyze contract clauses, commit evidence, and quantum meruit allocation in sub-3 seconds.</div>
+      </div>
+      <div class="voice-script-box" id="text-17">
+"Now, how do we resolve the remaining disputed milestone without 14-day customer support back-and-forth? The client clicks 'AI Dispute Court'. In under three seconds, our LexGuard autonomous arbitrator evaluates the code audit evidence under international quantum meruit legal precedent!"
+      </div>
+    </div>
+
+    <!-- CLIP 18 -->
+    <div class="clip-card" id="card-18">
+      <div class="clip-top">
+        <div class="clip-badge-group">
+          <span class="clip-num" style="background: linear-gradient(135deg, var(--accent-emerald), #059669);">CLIP 18</span>
+          <span class="clip-title">Execute Binding PayPal Settlement &amp; Multi-Party Split</span>
+        </div>
+        <div class="clip-actions">
+          <span class="clip-duration">⏱️ ~20 sec</span>
+          <button class="btn-clip" onclick="speakText(18)">🔊 Listen Preview</button>
+          <button class="btn-clip copy-btn" onclick="copyClip(18)">📋 Copy Text</button>
+          <label class="checkbox-wrap">
+            <input type="checkbox" onchange="toggleDone(18, this.checked)"> Done
+          </label>
+        </div>
+      </div>
+      <div class="screen-guide">
+        <span class="screen-icon">🖥️</span>
+        <div><strong>Screen Action:</strong> In the dispute ruling window, inspect the calculated settlement breakdown (e.g. $40 to specialist, $30 refund to client). Click <code>Execute Binding PayPal Settlement</code>. Show the instant green confirmation and the contract marked <code>⚖️ Settled via Arbitration Ruling</code>.</div>
+      </div>
+      <div class="voice-script-box" id="text-18">
+"With a single click on 'Execute Binding PayPal Settlement', the smart escrow contract enforces the ruling. The remaining funds are programmatically split on PayPal: the client receives an instant refund for incomplete work, and the specialist is fairly compensated for verified contributions."
+      </div>
+    </div>
+
+    <!-- CLIP 19 -->
+    <div class="clip-card" id="card-19">
+      <div class="clip-top">
+        <div class="clip-badge-group">
+          <span class="clip-num" style="background: linear-gradient(135deg, var(--accent-cyan), #3b82f6);">CLIP 19</span>
+          <span class="clip-title">Real-Time PayPal Webhook Telemetry Stream (HMAC-SHA256)</span>
+        </div>
+        <div class="clip-actions">
+          <span class="clip-duration">⏱️ ~20 sec</span>
+          <button class="btn-clip" onclick="speakText(19)">🔊 Listen Preview</button>
+          <button class="btn-clip copy-btn" onclick="copyClip(19)">📋 Copy Text</button>
+          <label class="checkbox-wrap">
+            <input type="checkbox" onchange="toggleDone(19, this.checked)"> Done
+          </label>
+        </div>
+      </div>
+      <div class="screen-guide">
+        <span class="screen-icon">🖥️</span>
+        <div><strong>Screen Action:</strong> Click the <code>● PayPal v2 Live [HMAC]</code> button in the top navigation. The Webhook Telemetry modal opens. Point out the live stream buffer, cryptographic request headers (SHA256withRSA, transmission ID, cert URL), and decoded JSON payload showing real PayPal sandbox events.</div>
+      </div>
+      <div class="voice-script-box" id="text-19">
+"For total cryptographic transparency, our live Webhook Telemetry Stream processes every PayPal sandbox event in real time. Each packet is cryptographically validated with HMAC SHA-256 with RSA signatures, proving zero-mock, enterprise-grade PayPal integration."
+      </div>
+    </div>
+
+    <!-- CLIP 20 -->
+    <div class="clip-card" id="card-20">
+      <div class="clip-top">
+        <div class="clip-badge-group">
+          <span class="clip-num" style="background: linear-gradient(135deg, #a855f7, #6366f1);">CLIP 20</span>
+          <span class="clip-title">Admin Clearinghouse &amp; Double-Entry Financial Ledger</span>
+        </div>
+        <div class="clip-actions">
+          <span class="clip-duration">⏱️ ~18 sec</span>
+          <button class="btn-clip" onclick="speakText(20)">🔊 Listen Preview</button>
+          <button class="btn-clip copy-btn" onclick="copyClip(20)">📋 Copy Text</button>
+          <label class="checkbox-wrap">
+            <input type="checkbox" onchange="toggleDone(20, this.checked)"> Done
+          </label>
+        </div>
+      </div>
+      <div class="screen-guide">
+        <span class="screen-icon">🖥️</span>
+        <div><strong>Screen Action:</strong> Navigate to Admin (<code>/admin</code>). Pan smoothly across the macro metrics: Total Escrow Volume, Platform Payouts, Ledger Health (100% balanced assets and liabilities), and real-time dispute resolution speed.</div>
+      </div>
+      <div class="voice-script-box" id="text-20">
+"Finally, the Admin Clearinghouse gives platform operators full macro oversight: monitoring real-time escrow reserves, automated dispute resolution times under 3 seconds, and a mathematically balanced double-entry financial ledger that eliminates reconciliation errors."
+      </div>
+    </div>
+
+    <!-- CLIP 21 -->
+    <div class="clip-card" id="card-21">
+      <div class="clip-top">
+        <div class="clip-badge-group">
+          <span class="clip-num" style="background: linear-gradient(135deg, var(--accent-cyan), var(--accent-emerald)); color: #000;">CLIP 21</span>
+          <span class="clip-title">Grand Finale — The Future of Autonomous Agentic Commerce</span>
+        </div>
+        <div class="clip-actions">
+          <span class="clip-duration">⏱️ ~22 sec</span>
+          <button class="btn-clip" onclick="speakText(21)">🔊 Listen Preview</button>
+          <button class="btn-clip copy-btn" onclick="copyClip(21)">📋 Copy Text</button>
+          <label class="checkbox-wrap">
+            <input type="checkbox" onchange="toggleDone(21, this.checked)"> Done
+          </label>
+        </div>
+      </div>
+      <div class="screen-guide">
+        <span class="screen-icon">🖥️</span>
+        <div><strong>Screen Action:</strong> Navigate back to the sleek home/chat interface (<code>/</code>). Show the dynamic prompt, talent directory, and 1-Click Judge Access. End with a confident, polished camera view or system architecture screen.</div>
+      </div>
+      <div class="voice-script-box" id="text-21">
+"AgentPay AI proves that the future of digital work isn't manual contracts and sluggish disputes—it's autonomous agents transacting securely on PayPal Orders v2 and Payouts. Built with Next.js, Google Gemini, and PayPal, this is the future of agentic commerce. Thank you!"
+      </div>
+    </div>
+
   </main>
 
   <div class="toast" id="toast">
@@ -817,7 +1025,15 @@ Cinematic photorealistic 4K video of autonomous futuristic AI digital agents tra
       10: `"Back on the client side, the specialist's counter-bid arrives in real time. The client reviews the terms and clicks 'Accept & Secure Escrow'. The PayPal Orders v2 checkout modal opens. Upon client approval, the 140 dollars is captured into our segregated platform vault!"`,
       11: `"Under Client Orders, the project is safely vaulted 'In Escrow'. Capital is programmatically fractionated into milestone tranches in our Firestore double-entry ledger. Neither party can unilaterally touch the funds until deliverables are cryptographically verified."`,
       12: `"Returning to the Provider Workspace, the specialist sees the active contract under 'To Submit'. Because escrow is already vaulted with PayPal, the specialist has 100% mathematical guarantee that verified work will be paid immediately."`,
-      13: `"Now, what happens if a specialist submits placeholder code or an unfinished repository? Let’s test it: the specialist enters a placeholder repository with minimal architectural notes and clicks 'Submit'. This sets up the ultimate test for our autonomous AI code auditor!"`
+      13: `"Now, what happens if a specialist submits placeholder code or an unfinished repository? Let’s test it: the specialist enters a placeholder repository with minimal architectural notes and clicks 'Submit'. This sets up the ultimate test for our autonomous AI code auditor!"`,
+      14: `"Immediately, the AgentPay AI Code Inspector triggers an automated repository audit. Instead of subjective human arguments, Google Gemini scans the commit history, directory structure, and functional requirements. Detecting an incomplete placeholder, it automatically flags the deliverable with changes requested and an audit score of 5 out of 100!"`,
+      15: `"Because the specialist did complete the initial core repository setup, the client acts in good faith. They click 'Approve & Release' on Milestone 1, programmatically unlocking seventy dollars from escrow while keeping the disputed remainder strictly protected."`,
+      16: `"Switching over to the Provider Workspace, the specialist doesn't wait days for bank clearing. The seventy dollars is disbursed instantly via PayPal Payouts API directly to their verified PayPal account, logged in real time on our double-entry ledger!"`,
+      17: `"Now, how do we resolve the remaining disputed milestone without 14-day customer support back-and-forth? The client clicks 'AI Dispute Court'. In under three seconds, our LexGuard autonomous arbitrator evaluates the code audit evidence under international quantum meruit legal precedent!"`,
+      18: `"With a single click on 'Execute Binding PayPal Settlement', the smart escrow contract enforces the ruling. The remaining funds are programmatically split on PayPal: the client receives an instant refund for incomplete work, and the specialist is fairly compensated for verified contributions."`,
+      19: `"For total cryptographic transparency, our live Webhook Telemetry Stream processes every PayPal sandbox event in real time. Each packet is cryptographically validated with HMAC SHA-256 with RSA signatures, proving zero-mock, enterprise-grade PayPal integration."`,
+      20: `"Finally, the Admin Clearinghouse gives platform operators full macro oversight: monitoring real-time escrow reserves, automated dispute resolution times under 3 seconds, and a mathematically balanced double-entry financial ledger that eliminates reconciliation errors."`,
+      21: `"AgentPay AI proves that the future of digital work isn't manual contracts and sluggish disputes—it's autonomous agents transacting securely on PayPal Orders v2 and Payouts. Built with Next.js, Google Gemini, and PayPal, this is the future of agentic commerce. Thank you!"`
     };
 
     function showToast(msg) {
@@ -843,11 +1059,15 @@ Cinematic photorealistic 4K video of autonomous futuristic AI digital agents tra
     function copyAllClips() {
       const allText = Object.keys(clips).map(k => `[CLIP ${String(k).padStart(2, '0')}]\n${clips[k].replace(/^"|"$/g, '')}`).join('\n\n');
       navigator.clipboard.writeText(allText);
-      showToast('All 13 clips copied to clipboard!');
+      showToast('All 21 clips copied to clipboard!');
     }
 
     function copyPhase(phase) {
-      const range = phase === 1 ? [1, 2, 3, 4, 5, 6, 7, 8] : [9, 10, 11, 12, 13];
+      let range = [];
+      if (phase === 1) range = [1, 2, 3, 4, 5, 6, 7, 8];
+      else if (phase === 2) range = [9, 10, 11, 12, 13];
+      else if (phase === 3) range = [14, 15, 16, 17, 18, 19, 20, 21];
+      
       const phaseText = range.map(k => `[CLIP ${String(k).padStart(2, '0')}]\n${clips[k].replace(/^"|"$/g, '')}`).join('\n\n');
       navigator.clipboard.writeText(phaseText);
       showToast(`Phase ${phase} clips copied to clipboard!`);
