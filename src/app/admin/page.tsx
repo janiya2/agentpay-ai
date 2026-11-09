@@ -312,7 +312,7 @@ function AdminPageContent() {
         setResendFromEmail(data.resendFromEmail || 'onboarding@resend.dev');
         setPlatformFeePercentage(data.platformFeePercentage !== undefined ? data.platformFeePercentage : 5);
       } else {
-        setGeminiKeys([process.env.NEXT_PUBLIC_GEMINI_API_KEY || 'AIzaSyD_5frWyGBMZ4BXECEeLHB9qKneoJWUC-s']);
+        setGeminiKeys([process.env.NEXT_PUBLIC_GEMINI_API_KEY || '']);
       }
 
       // 2. Real Providers from Firestore
