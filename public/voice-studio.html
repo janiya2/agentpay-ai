@@ -446,50 +446,49 @@
       </div>
     </div>
 
-    <!-- AI Video Generation Prompts Box (Upgraded for 20s Cinematic Intro) -->
-    <div class="ai-video-box" style="border-color: rgba(168, 85, 247, 0.4); background: linear-gradient(135deg, rgba(88, 28, 135, 0.25), rgba(15, 23, 42, 0.9));">
+    <!-- Master Intro Voiceover Script Box (For Problem & Solution Slide) -->
+    <div class="ai-video-box" style="border-color: rgba(56, 189, 248, 0.4); background: linear-gradient(135deg, rgba(0, 112, 186, 0.25), rgba(15, 23, 42, 0.95)); padding: 22px;">
       <div class="ai-video-header">
-        <div class="ai-video-title">
-          <span>🎬 Cinematic 20-Second AI Video Prompt Studio (Runway Gen-3 / Kling 1.5 / Luma / Sora)</span>
+        <div class="ai-video-title" style="color: #38bdf8; font-size: 16px; font-weight: 900;">
+          <span>🎙️ Master Intro Voiceover Script (For Problem &amp; Solution Presentation Slide)</span>
         </div>
         <div style="display: flex; gap: 8px;">
-          <button class="btn-clip copy-btn" onclick="copyText('ai-video-prompt-master', 'Master 20s Prompt')">📋 Copy Master 20s Prompt</button>
-          <button class="btn-clip" onclick="copyText('ai-video-prompt-shots', 'Shot-by-Shot Director Script')" style="background: rgba(168, 85, 247, 0.2); border-color: rgba(168, 85, 247, 0.4);">📋 Copy 4-Shot Director Script</button>
-        </div>
-      </div>
-      <p style="font-size: 12.5px; color: #e2e8f0; margin-bottom: 12px; line-height: 1.5;">
-        Use these hyper-detailed prompts in <strong>Runway Gen-3, Kling 1.5 (Pro), Luma Dream Machine (Ray 2), or Sora</strong> to generate a jaw-dropping ~20-second cinematic intro B-roll for the demo video:
-      </p>
-
-      <!-- PROMPT 1: MASTER 20s SEAMLESS ONE-SHOT -->
-      <div style="margin-bottom: 14px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-          <span style="font-size: 11px; font-weight: 800; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.5px;">🔥 Option A: Master 20s Continuous Cinematic Camera Shot</span>
-          <button class="btn-clip copy-btn" style="padding: 3px 8px; font-size: 10.5px;" onclick="copyText('ai-video-prompt-master', 'Master 20s Prompt')">Copy</button>
-        </div>
-        <div class="prompt-content" id="ai-video-prompt-master" style="background: rgba(10, 15, 30, 0.85); border-color: rgba(56, 189, 248, 0.3); font-size: 12px; color: #f8fafc;">
-Cinematic 8K 24fps motion picture shot on ARRI Alexa 65 anamorphic lens. Continuous fluid camera glide beginning with a dramatic low-angle aerial push-in through misty neon twilight toward a towering glass fintech skyscraper. The camera glides seamlessly through the exterior glass wall into an ultra-modern autonomous clearinghouse floor. Inside, two ethereal humanoid AI cybernetic avatars hover over a circular holographic table, exchanging dense fiber-optic data beams and smart contract schemas. Camera slowly orbits down into an extreme macro close-up as an electric PayPal blue and cyan holographic shield materializes in mid-air, with quantum laser particles snapping shut around a glowing geometric escrow vault, laser-inscribed 'PAYPAL ORDERS v2 • ESCROW VAULT SECURED'. Dramatic pull-back as the vault pulses, sending radiant shockwaves across a sprawling global financial network map in deep blues and amber golds. Volumetric atmospheric haze, anamorphic lens flares, shallow depth of field, photorealistic ray-traced reflections, Unreal Engine 5.5 aesthetic, film grain, hyper-realistic fintech future.
+          <button class="btn-clip" onclick="speakIntroSlideVoice()" style="background: rgba(16, 185, 129, 0.2); border-color: rgba(16, 185, 129, 0.5); color: #34d399;">🔊 Listen Preview</button>
+          <button class="btn-clip copy-btn" onclick="copyText('intro-slide-voice-clean', 'Clean Voice Script')">📋 Copy Voice Script</button>
+          <button class="btn-clip" onclick="copyText('intro-slide-voice-prompt', 'ElevenLabs Master Prompt')" style="background: rgba(56, 189, 248, 0.2); border-color: rgba(56, 189, 248, 0.5); color: #38bdf8;">📋 Copy ElevenLabs Prompt</button>
         </div>
       </div>
 
-      <!-- PROMPT 2: 4-STAGE SHOT BY SHOT (5s EACH) -->
-      <div>
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-          <span style="font-size: 11px; font-weight: 800; color: #c084fc; text-transform: uppercase; letter-spacing: 0.5px;">🎬 Option B: 4-Stage Shot-by-Shot Director Prompts (5 Seconds Each)</span>
-          <button class="btn-clip copy-btn" style="padding: 3px 8px; font-size: 10.5px;" onclick="copyText('ai-video-prompt-shots', 'Shot-by-Shot Director Script')">Copy All 4</button>
-        </div>
-        <div class="prompt-content" id="ai-video-prompt-shots" style="background: rgba(10, 15, 30, 0.85); border-color: rgba(192, 132, 252, 0.3); font-size: 11.5px; color: #cbd5e1; line-height: 1.6;">
-[SHOT 1: 00:00 - 00:05 | THE DIGITAL CITY]
-Cinematic drone shot descending slowly toward a futuristic financial tech skyscraper at dusk, glowing cybernetic blue and amber light streams flowing through city streets like fiber-optic cables, dramatic atmospheric fog, photorealistic 8K, ARRI Alexa.
+      <div style="display: flex; gap: 10px; margin-bottom: 12px; font-size: 11.5px; font-weight: 700; color: #94a3b8; flex-wrap: wrap;">
+        <span style="background: rgba(0,0,0,0.4); padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08);">⏱️ Duration: <strong>~28–30 Seconds</strong></span>
+        <span style="background: rgba(0,0,0,0.4); padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08);">🎙️ Recommended Voice: <strong>Adam / Brian / George (ElevenLabs)</strong></span>
+        <span style="background: rgba(0,0,0,0.4); padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08);">⚡ Tone: <strong>Authoritative, Visionary, Keynote Cinematic</strong></span>
+      </div>
 
-[SHOT 2: 00:05 - 00:10 | AUTONOMOUS AGENTS TRADING]
-Smooth camera push into a high-tech glass clearinghouse. Two translucent AI humanoid digital agents stand across a floating holographic console, negotiating glowing streams of code and reverse-auction bids at blinding speed, subtle depth of field.
+      <!-- SCRIPT CONTENT -->
+      <div class="prompt-content" id="intro-slide-voice-clean" style="background: rgba(10, 16, 32, 0.9); border-color: rgba(56, 189, 248, 0.35); font-size: 14px; color: #f8fafc; line-height: 1.6; font-family: 'Plus Jakarta Sans', sans-serif;">
+"Every single day, the 67-billion-dollar freelance economy bleeds capital. On platforms like Upwork and Fiverr, manual bidding takes days, and subjective deliverable disputes take over two weeks—costing PayPal millions annually in chargebacks and frozen merchant funds.
 
-[SHOT 3: 00:10 - 00:15 | PAYPAL ESCROW VAULT LOCKS]
-Macro cinematic close-up: A glowing PayPal blue and electric cyan holographic shield locks securely in mid-air with laser sparks snapping into place. A digital quantum escrow vault seals shut, etched with 'PAYPAL ORDERS v2 ESCROW ACTIVE', golden particle dust.
+Meet AgentPay AI: the world’s first autonomous clearinghouse protocol engineered for the PayPal AI Hackathon 2026. By uniting Google Gemini with PayPal Orders v2 and Payouts, AgentPay replaces five days of bidding with a five-second autonomous reverse auction, locks capital in multi-tranche milestone escrow, and resolves disputes mathematically in under three seconds.
 
-[SHOT 4: 00:15 - 00:20 | GLOBAL CLEARINGHOUSE REVEAL]
-Epic wide orbital camera pull back revealing thousands of interconnected autonomous agents and glowing transaction lines spanning across a dark globe, vibrant neon trails, anamorphic lens flare, inspiring cinematic finale.
+Now, let’s dive in and see AgentPay AI in action!"
+      </div>
+
+      <!-- ELEVENLABS PROMPT FORMAT (WITH VOICE ACTING DIRECTIONS) -->
+      <div style="margin-top: 10px;">
+        <span style="font-size: 11px; font-weight: 800; color: #cbd5e1; text-transform: uppercase;">ElevenLabs Voice Acting Instructions &amp; Pacing:</span>
+        <div class="prompt-content" id="intro-slide-voice-prompt" style="background: rgba(5, 10, 20, 0.85); border-color: rgba(255, 255, 255, 0.1); font-size: 12px; color: #cbd5e1; margin-top: 4px;">
+[VOICE DIRECTION: Deliver in a deep, confident, visionary Apple-keynote tone. Crisp pacing with gravity during the problem, building up to an inspiring technological breakthrough.]
+
+Every single day, the 67-billion-dollar freelance economy bleeds capital.
+
+On platforms like Upwork and Fiverr, manual bidding takes days, and subjective deliverable disputes take over two weeks... costing PayPal millions annually in chargebacks and frozen merchant funds.
+
+Meet AgentPay AI: the world’s first autonomous clearinghouse protocol engineered for the PayPal AI Hackathon 2026.
+
+By uniting Google Gemini with PayPal Orders v2 and Payouts, AgentPay replaces five days of bidding with a five-second autonomous reverse auction, locks capital in multi-tranche milestone escrow, and resolves disputes mathematically in under three seconds.
+
+Now, let’s dive in and see AgentPay AI in action!
         </div>
       </div>
     </div>
@@ -1186,6 +1185,23 @@ Epic wide orbital camera pull back revealing thousands of interconnected autonom
     }
 
     // Built-in speech synthesis preview
+    function speakIntroSlideVoice() {
+      if (!('speechSynthesis' in window)) {
+        alert('Web Speech API is not supported in this browser.');
+        return;
+      }
+      window.speechSynthesis.cancel();
+      const cleanText = document.getElementById('intro-slide-voice-clean').innerText.replace(/^"|"$/g, '').trim();
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+      utterance.rate = 1.05;
+      utterance.pitch = 1.0;
+      const voices = window.speechSynthesis.getVoices();
+      const preferred = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Neural')));
+      if (preferred) utterance.voice = preferred;
+      window.speechSynthesis.speak(utterance);
+      showToast('Playing Intro Slide Voiceover preview...');
+    }
+
     function speakText(num) {
       if (!('speechSynthesis' in window)) {
         alert('Web Speech API is not supported in this browser.');
