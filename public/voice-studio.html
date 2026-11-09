@@ -445,19 +445,51 @@
       </div>
     </div>
 
-    <!-- AI Video Generation Prompts Box -->
-    <div class="ai-video-box">
+    <!-- AI Video Generation Prompts Box (Upgraded for 20s Cinematic Intro) -->
+    <div class="ai-video-box" style="border-color: rgba(168, 85, 247, 0.4); background: linear-gradient(135deg, rgba(88, 28, 135, 0.25), rgba(15, 23, 42, 0.9));">
       <div class="ai-video-header">
         <div class="ai-video-title">
-          <span>🎬 Optional: AI Video Generation Prompt (For Cinematic 5s Intro B-Roll)</span>
+          <span>🎬 Cinematic 20-Second AI Video Prompt Studio (Runway Gen-3 / Kling 1.5 / Luma / Sora)</span>
         </div>
-        <button class="btn-clip copy-btn" onclick="copyText('ai-video-prompt-1', 'AI Video Prompt')">📋 Copy Prompt</button>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn-clip copy-btn" onclick="copyText('ai-video-prompt-master', 'Master 20s Prompt')">📋 Copy Master 20s Prompt</button>
+          <button class="btn-clip" onclick="copyText('ai-video-prompt-shots', 'Shot-by-Shot Director Script')" style="background: rgba(168, 85, 247, 0.2); border-color: rgba(168, 85, 247, 0.4);">📋 Copy 4-Shot Director Script</button>
+        </div>
       </div>
-      <p style="font-size: 12px; color: #cbd5e1; margin-bottom: 8px;">
-        If you want to generate a cinematic 4K video clip using <strong>Runway Gen-3, Kling AI, Luma Dream Machine, or Sora</strong> for the opening 5-10 seconds, paste this prompt:
+      <p style="font-size: 12.5px; color: #e2e8f0; margin-bottom: 12px; line-height: 1.5;">
+        Use these hyper-detailed prompts in <strong>Runway Gen-3, Kling 1.5 (Pro), Luma Dream Machine (Ray 2), or Sora</strong> to generate a jaw-dropping ~20-second cinematic intro B-roll for the demo video:
       </p>
-      <div class="prompt-content" id="ai-video-prompt-1">
-Cinematic photorealistic 4K video of autonomous futuristic AI digital agents transacting in a cyberpunk financial clearinghouse, glowing holographic PayPal transaction lines, fiber-optic data streams pulsing between high-tech developer terminals, hyper-detailed architectural neon lighting, depth of field, dramatic cinematic lighting, 8k resolution, Unreal Engine 5 aesthetic, photorealistic fintech future.
+
+      <!-- PROMPT 1: MASTER 20s SEAMLESS ONE-SHOT -->
+      <div style="margin-bottom: 14px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span style="font-size: 11px; font-weight: 800; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.5px;">🔥 Option A: Master 20s Continuous Cinematic Camera Shot</span>
+          <button class="btn-clip copy-btn" style="padding: 3px 8px; font-size: 10.5px;" onclick="copyText('ai-video-prompt-master', 'Master 20s Prompt')">Copy</button>
+        </div>
+        <div class="prompt-content" id="ai-video-prompt-master" style="background: rgba(10, 15, 30, 0.85); border-color: rgba(56, 189, 248, 0.3); font-size: 12px; color: #f8fafc;">
+Cinematic 8K 24fps motion picture shot on ARRI Alexa 65 anamorphic lens. Continuous fluid camera glide beginning with a dramatic low-angle aerial push-in through misty neon twilight toward a towering glass fintech skyscraper. The camera glides seamlessly through the exterior glass wall into an ultra-modern autonomous clearinghouse floor. Inside, two ethereal humanoid AI cybernetic avatars hover over a circular holographic table, exchanging dense fiber-optic data beams and smart contract schemas. Camera slowly orbits down into an extreme macro close-up as an electric PayPal blue and cyan holographic shield materializes in mid-air, with quantum laser particles snapping shut around a glowing geometric escrow vault, laser-inscribed 'PAYPAL ORDERS v2 • ESCROW VAULT SECURED'. Dramatic pull-back as the vault pulses, sending radiant shockwaves across a sprawling global financial network map in deep blues and amber golds. Volumetric atmospheric haze, anamorphic lens flares, shallow depth of field, photorealistic ray-traced reflections, Unreal Engine 5.5 aesthetic, film grain, hyper-realistic fintech future.
+        </div>
+      </div>
+
+      <!-- PROMPT 2: 4-STAGE SHOT BY SHOT (5s EACH) -->
+      <div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span style="font-size: 11px; font-weight: 800; color: #c084fc; text-transform: uppercase; letter-spacing: 0.5px;">🎬 Option B: 4-Stage Shot-by-Shot Director Prompts (5 Seconds Each)</span>
+          <button class="btn-clip copy-btn" style="padding: 3px 8px; font-size: 10.5px;" onclick="copyText('ai-video-prompt-shots', 'Shot-by-Shot Director Script')">Copy All 4</button>
+        </div>
+        <div class="prompt-content" id="ai-video-prompt-shots" style="background: rgba(10, 15, 30, 0.85); border-color: rgba(192, 132, 252, 0.3); font-size: 11.5px; color: #cbd5e1; line-height: 1.6;">
+[SHOT 1: 00:00 - 00:05 | THE DIGITAL CITY]
+Cinematic drone shot descending slowly toward a futuristic financial tech skyscraper at dusk, glowing cybernetic blue and amber light streams flowing through city streets like fiber-optic cables, dramatic atmospheric fog, photorealistic 8K, ARRI Alexa.
+
+[SHOT 2: 00:05 - 00:10 | AUTONOMOUS AGENTS TRADING]
+Smooth camera push into a high-tech glass clearinghouse. Two translucent AI humanoid digital agents stand across a floating holographic console, negotiating glowing streams of code and reverse-auction bids at blinding speed, subtle depth of field.
+
+[SHOT 3: 00:10 - 00:15 | PAYPAL ESCROW VAULT LOCKS]
+Macro cinematic close-up: A glowing PayPal blue and electric cyan holographic shield locks securely in mid-air with laser sparks snapping into place. A digital quantum escrow vault seals shut, etched with 'PAYPAL ORDERS v2 ESCROW ACTIVE', golden particle dust.
+
+[SHOT 4: 00:15 - 00:20 | GLOBAL CLEARINGHOUSE REVEAL]
+Epic wide orbital camera pull back revealing thousands of interconnected autonomous agents and glowing transaction lines spanning across a dark globe, vibrant neon trails, anamorphic lens flare, inspiring cinematic finale.
+        </div>
       </div>
     </div>
 
