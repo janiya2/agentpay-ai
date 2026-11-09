@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { geminiRotator } from '@/lib/gemini-rotator';
 import { db } from '@/lib/firebase';

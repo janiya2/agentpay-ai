@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { executePayPalPayout, getPayPalConfig } from '@/lib/paypal';
 import { db } from '@/lib/firebase';

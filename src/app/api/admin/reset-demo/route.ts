@@ -3,6 +3,8 @@ import { db } from '@/lib/firebase';
 import { doc, setDoc, collection, getDocs, deleteDoc, writeBatch } from 'firebase/firestore';
 import { recordPayPalWebhookEvent } from '@/lib/paypal-webhooks';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
