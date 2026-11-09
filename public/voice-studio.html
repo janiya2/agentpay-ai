@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AgentPay AI — Video Voice Studio & Screen Recording Action Prompter</title>
+  <style>
+    :root {
+      --bg: #090a0f;
+      --card-bg: rgba(18, 24, 38, 0.95);
+      --card-border: rgba(30, 41, 59, 0.8);
+      --accent-cyan: #06b6d4;
+      --accent-emerald: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-purple: #a855f7;
+      --accent-rose: #f43f5e;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      line-height: 1.6;
+      padding-top: 85px;
+      padding-bottom: 120px;
+    }
+
+    /* Fixed Control Header */
+    .top-header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: rgba(10, 14, 23, 0.96);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(6, 182, 212, 0.25);
+      padding: 12px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 1000;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+    }
+
+    .header-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-title {
+      font-size: 17px;
+      font-weight: 900;
+      letter-spacing: -0.3px;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-pill {
+      font-size: 10px;
+      font-weight: 800;
+      background: rgba(6, 182, 212, 0.15);
+      border: 1px solid rgba(6, 182, 212, 0.4);
+      color: var(--accent-cyan);
+      padding: 3px 8px;
+      border-radius: 6px;
+      text-transform: uppercase;
+      font-family: monospace;
+    }
+
+    .header-stats {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+    }
+
+    .stat-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 6px 14px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-family: monospace;
+    }
+
+    .stat-val {
+      font-weight: 900;
+      color: var(--accent-emerald);
+    }
+
+    .btn-header {
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.2), rgba(16, 185, 129, 0.2));
+      border: 1px solid rgba(6, 182, 212, 0.4);
+      color: #fff;
+      padding: 7px 16px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-header:hover {
+      background: var(--accent-cyan);
+      color: #000;
+      transform: translateY(-1px);
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    /* Hero Banner */
+    .hero-banner {
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.12), rgba(168, 85, 247, 0.12));
+      border: 1px solid rgba(6, 182, 212, 0.3);
+      padding: 22px 28px;
+      border-radius: 18px;
+      margin-bottom: 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+    }
+
+    .hero-title {
+      font-size: 20px;
+      font-weight: 900;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .hero-desc {
+      font-size: 13.5px;
+      color: var(--text-muted);
+      line-height: 1.55;
+    }
+
+    .hero-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .pill {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #cbd5e1;
+    }
+
+    /* Section Header */
+    .section-title {
+      font-size: 16px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--accent-cyan);
+      margin: 32px 0 16px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Video Generation Prompt Box */
+    .ai-video-box {
+      background: rgba(168, 85, 247, 0.08);
+      border: 1px solid rgba(168, 85, 247, 0.3);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 28px;
+    }
+
+    .ai-video-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .ai-video-title {
+      font-size: 14px;
+      font-weight: 800;
+      color: #d8b4fe;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .prompt-content {
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(168, 85, 247, 0.2);
+      border-radius: 10px;
+      padding: 14px;
+      font-family: monospace;
+      font-size: 12.5px;
+      color: #f1f5f9;
+      line-height: 1.5;
+      position: relative;
+    }
+
+    /* Clip Card */
+    .clip-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 18px;
+      padding: 22px;
+      margin-bottom: 20px;
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+
+    .clip-card:hover {
+      border-color: rgba(6, 182, 212, 0.5);
+      transform: translateY(-2px);
+    }
+
+    .clip-card.recorded {
+      border-color: rgba(16, 185, 129, 0.5);
+      background: rgba(16, 185, 129, 0.04);
+    }
+
+    .clip-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .clip-badge-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .clip-num {
+      background: linear-gradient(135deg, var(--accent-cyan), #3b82f6);
+      color: #000;
+      font-weight: 900;
+      font-size: 11px;
+      padding: 3px 9px;
+      border-radius: 6px;
+      letter-spacing: 0.5px;
+    }
+
+    .clip-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .clip-duration {
+      font-size: 11px;
+      font-family: monospace;
+      color: var(--accent-amber);
+      background: rgba(245, 158, 11, 0.1);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      padding: 3px 8px;
+      border-radius: 6px;
+    }
+
+    .clip-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-clip {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #e2e8f0;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 11.5px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s;
+    }
+
+    .btn-clip:hover {
+      background: rgba(6, 182, 212, 0.2);
+      border-color: var(--accent-cyan);
+      color: #fff;
+    }
+
+    .btn-clip.copy-btn:hover {
+      background: rgba(16, 185, 129, 0.2);
+      border-color: var(--accent-emerald);
+    }
+
+    /* Screen Action Guide (What to Click) */
+    .screen-guide {
+      background: rgba(0, 0, 0, 0.4);
+      border-left: 3px solid var(--accent-amber);
+      padding: 10px 14px;
+      border-radius: 0 10px 10px 0;
+      margin-bottom: 14px;
+      font-size: 12.5px;
+      color: #fde68a;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      line-height: 1.45;
+    }
+
+    .screen-icon {
+      font-size: 14px;
+      shrink: 0;
+      margin-top: 1px;
+    }
+
+    /* Spoken Script Box (For ElevenLabs / Voiceover) */
+    .voice-script-box {
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(6, 182, 212, 0.25);
+      border-radius: 12px;
+      padding: 16px;
+      font-size: 14.5px;
+      color: #f8fafc;
+      line-height: 1.6;
+      font-weight: 500;
+      position: relative;
+    }
+
+    .voice-script-box strong {
+      color: var(--accent-cyan);
+    }
+
+    .checkbox-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      user-select: none;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+
+    .checkbox-wrap input {
+      accent-color: var(--accent-emerald);
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #10b981;
+      color: #000;
+      font-weight: 800;
+      font-size: 13px;
+      padding: 10px 20px;
+      border-radius: 10px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 2000;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header Navigation -->
+  <header class="top-header">
+    <div class="header-brand">
+      <div class="brand-title">
+        <span>🎬 AgentPay AI</span>
+        <span class="brand-pill">Voice Studio v1.0</span>
+      </div>
+    </div>
+
+    <div class="header-stats">
+      <div class="stat-badge">
+        <span>Clips Ready:</span>
+        <span class="stat-val" id="completed-count">0 / 13 Ready</span>
+      </div>
+      <div class="stat-badge">
+        <span>Est. Duration:</span>
+        <span class="stat-val" id="total-duration">~3m 30s</span>
+      </div>
+      <button class="btn-header" onclick="copyAllClips()">📋 Copy All (1-13)</button>
+      <button class="btn-header" onclick="copyPhase(1)" style="background: rgba(6, 182, 212, 0.15); border-color: rgba(6, 182, 212, 0.4);">📋 Phase 1 (1-8)</button>
+      <button class="btn-header" onclick="copyPhase(2)" style="background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.4);">📋 Phase 2 (9-13)</button>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <!-- Hero Banner -->
+    <div class="hero-banner">
+      <div class="hero-title">
+        <span>🎙️ Phase 1 Voice Script & Screen Action Recording Guide</span>
+      </div>
+      <p class="hero-desc">
+        Use this teleprompter to record crystal-clear audio clips for the first half of the demo video (Intro ➔ 1-Click Login ➔ 12-Stage Tour ➔ Client Chat ➔ Reverse Auction ➔ Provider Selection). Click <strong>"🔊 Listen Preview"</strong> to hear the voice pace, or <strong>"📋 Copy Text"</strong> to paste into ElevenLabs or Murf.ai!
+      </p>
+      <div class="hero-pills">
+        <span class="pill">⚡ Target: PayPal AI Hackathon 2026</span>
+        <span class="pill">🏆 $12,000 Grand Prize Track</span>
+        <span class="pill">🤖 Multi-Agent Reverse Auction</span>
+        <span class="pill">🔒 Dual-Rail Escrow Clearinghouse</span>
+      </div>
+    </div>
+
+    <!-- AI Video Generation Prompts Box -->
+    <div class="ai-video-box">
+      <div class="ai-video-header">
+        <div class="ai-video-title">
+          <span>🎬 Optional: AI Video Generation Prompt (For Cinematic 5s Intro B-Roll)</span>
+        </div>
+        <button class="btn-clip copy-btn" onclick="copyText('ai-video-prompt-1', 'AI Video Prompt')">📋 Copy Prompt</button>
+      </div>
+      <p style="font-size: 12px; color: #cbd5e1; margin-bottom: 8px;">
+        If you want to generate a cinematic 4K video clip using <strong>Runway Gen-3, Kling AI, Luma Dream Machine, or Sora</strong> for the opening 5-10 seconds, paste this prompt:
+      </p>
+      <div class="prompt-content" id="ai-video-prompt-1">
+Cinematic photorealistic 4K video of autonomous futuristic AI digital agents transacting in a cyberpunk financial clearinghouse, glowing holographic PayPal transaction lines, fiber-optic data streams pulsing between high-tech developer terminals, hyper-detailed architectural neon lighting, depth of field, dramatic cinematic lighting, 8k resolution, Unreal Engine 5 aesthetic, photorealistic fintech future.
+      </div>
+    </div>
+
+    <div class="section-title">
+      <span>📹 Phase 1 Audio Clips (Intro ➔ Client Procurement ➔ Provider Selection)</span>
+    </div>
+
+    <!-- CLIP 1 -->
+    <div class="clip-card" id="card-1">
+      <div class="clip-top">
+        <div class="clip-badge-group">
+          <span class="clip-num">CLIP 01</span>
+          <span class="clip-title">The Hook & Freelance Economy Breakdown</span>
+        </div>
+        <div class="clip-actions">
+          <span class="clip-duration">⏱️ ~18 sec</span>
+          <button class="btn-clip" onclick="speakText(1)">🔊 Listen Preview</button>
+          <button class="btn-clip copy-btn" onclick="copyClip(1)">📋 Copy Text</button>
+          <label class="checkbox-wrap">
+            <input type="checkbox" onchange="toggleDone(1, this.checked)"> Done
+          </label>
+        </div>
+      </div>
+      <div class="screen-guide">
+        <span class="screen-icon">🖥️</span>
+        <div><strong>Screen Action:</strong> Open <code>http://localhost:3005</code> in fullscreen. Smoothly pan across the homepage and hover over the dynamic budget cap slider.</div>
+      </div>
+      <div class="voice-script-box" id="text-1">
+"In today's 67-billion-dollar freelance economy, traditional platforms like Upwork and Fiverr have two catastrophic flaws: manual bidding takes days, and subjective deliverable disputes take over 14 days, costing PayPal millions annually in chargebacks and frozen capital."
+      </div>
+    </div>
+
+    <!-- CLIP 2 -->
+    <div class="clip-card" id="card-2">
+      <div class="clip-top">
+        <div class="clip-badge-group">
+          <span class="clip-num">CLIP 02</span>
+          <span class="clip-title">The Solution — Introducing AgentPay AI</span>
+        </div>
+        <div class="clip-actions">
+          <span class="clip-duration">⏱️ ~17 sec</span>
+          <button class="btn-clip" onclick="speakText(2)">🔊 Listen Preview</button>
+          <button class="btn-clip copy-btn" onclick="copyClip(2)">📋 Copy Text</button>
+          <label class="checkbox-wrap">
+            <input type="checkbox" onchange="toggleDone(2, this.checked)"> Done
+          </label>
+        </div>
+      </div>
+      <div class="screen-guide">
+        <span class="screen-icon">🖥️</span>
+        <div><strong>Screen Action:</strong> Zoom in slightly to the center greeting text: <em>"How can I help you procure services today?"</em> and the top glowing PayPal Live badge.</div>
+      </div>
+      <div class="voice-script-box" id="text-2">
+"Meet AgentPay AI: the world’s first autonomous clearinghouse protocol engineered for the PayPal AI Hackathon 2026. Here, AI agents discover top talent, negotiate bilateral deliverables, and settle milestone escrow directly on PayPal Orders v2 in sub-second speed."
+      </div>
+    </div>
+
+    <!-- CLIP 3 -->
+    <div class="clip-card" id="card-3">
+      <div class="clip-top">
+        <div class="clip-badge-group">
+          <span class="clip-num">CLIP 03</span>
+          <span class="clip-title">1-Click Zero-Friction Evaluator Login</span>
+        </div>
+        <div class="clip-actions">
+          <span class="clip-duration">⏱️ ~14 sec</span>
+          <button class="btn-clip" onclick="speakText(3)">🔊 Listen Preview</button>
+          <button class="btn-clip copy-btn" onclick="copyClip(3)">📋 Copy Text</button>
+          <label class="checkbox-wrap">
+            <input type="checkbox" onchange="toggleDone(3, this.checked)"> Done
+          </label>
+        </div>
+      </div>
+      <div class="screen-guide">
+        <span class="screen-icon">🖥️</span>
+        <div><strong>Screen Action:</strong> Click the glowing <code>⚡ 1-Click Judge Access</code> button (bottom-left or top). Watch the evaluator persona <em>Janitha Dilshan ($250 Cap)</em> log in instantly.</div>
+      </div>
+      <div class="voice-script-box" id="text-3">
+"To make evaluation completely frictionless for hackathon judges, a single click on our 1-Click Judge Access instantly logs in an authenticated evaluator persona with a pre-authorized 250-dollar spending ceiling—no forms or manual signups required."
+      </div>
+    </div>
+
+    <!-- CLIP 4 -->
+    <div class="clip-card" id="card-4">
+      <div class="clip-top">
+        <div class="clip-badge-group">
+          <span class="clip-num">CLIP 04</span>
+          <span class="clip-title">The 12-Stage Trip Tour Protocol Walkthrough</span>
+        </div>
+        <div class="clip-actions">
+          <span class="clip-duration">⏱️ ~24 sec</span>
+          <button class="btn-clip" onclick="speakText(4)">🔊 Listen Preview</button>
+          <button class="btn-clip copy-btn" onclick="copyClip(4)">📋 Copy Text</button>
+          <label class="checkbox-wrap">
+            <input type="checkbox" onchange="toggleDone(4, this.checked)"> Done
+          </label>
+        </div>
+      </div>
+      <div class="screen-guide">
+        <span class="screen-icon">🖥️</span>
+        <div><strong>Screen Action:</strong> In the bottom right, show the <code>Stage 1 of 12</code> Judge Tour widget. Click <em>Next Stage</em> 2 or 3 times or click <em>Full Matrix</em> to showcase the 12 automated stages.</div>
+      </div>
+      <div class="voice-script-box" id="text-4">
+"Our built-in 12-Stage Guided Tour lets judges inspect every autonomous phase: from natural language RFP scoping and reverse bidding, to PayPal Orders v2 multi-tranche milestone escrow, automated code verification, and sub-3-second AI dispute settlement."
+      </div>
+    </div>
+
+    <!-- CLIP 5 -->
+    <div class="clip-card" id="card-5">
+      <div class="clip-top">
+        <div class="clip-badge-group">
+          <span class="clip-num">CLIP 05</span>
+          <span class="clip-title">Client Opening Greeting & Autonomous Receptionist</span>
+        </div>
+        <div class="clip-actions">
+          <span class="clip-duration">⏱️ ~14 sec</span>
+          <button class="btn-clip" onclick="speakText(5)">🔊 Listen Preview</button>
+          <button class="btn-clip copy-btn" onclick="copyClip(5)">📋 Copy Text</button>
+          <label class="checkbox-wrap">
+            <input type="checkbox" onchange="toggleDone(5, this.checked)"> Done
+          </label>
+        </div>
+      </div>
+      <div class="screen-guide">
+        <span class="screen-icon">🖥️</span>
+        <div><strong>Screen Action:</strong> Focus on the main chat prompt bar. Type <code>Hi</code> and press Enter. Watch the AI Commerce Agent instantly reply with its welcoming multi-category prompt.</div>
+      </div>
+      <div class="voice-script-box" id="text-5">
+"Let's experience the live client flow. Typing a simple 'Hi' immediately awakens our autonomous commerce agent, ready to scope requirements, assemble specialist swarms, and protect client capital."
+      </div>
+    </div>
+
+    <!-- CLIP 6 -->
+    <div class="clip-card" id="card-6">
+      <div class="clip-top">
+        <div class="clip-badge-group">
+          <span class="clip-num">CLIP 06</span>
+          <span class="clip-title">RFP Scoping — "Build an AI SaaS Platform under $160"</span>
+        </div>
+        <div class="clip-actions">
+          <span class="clip-duration">⏱️ ~20 sec</span>
+          <button class="btn-clip" onclick="speakText(6)">🔊 Listen Preview</button>
+          <button class="btn-clip copy-btn" onclick="copyClip(6)">📋 Copy Text</button>
+          <label class="checkbox-wrap">
+            <input type="checkbox" onchange="toggleDone(6, this.checked)"> Done
+          </label>
+        </div>
+      </div>
+      <div class="screen-guide">
+        <span class="screen-icon">🖥️</span>
+        <div><strong>Screen Action:</strong> Type in the prompt: <code>I need to build an AI SaaS platform with Next.js and PayPal integration under $160</code> (or use 🎙️ CyberVoice mic). Hit Send. Notice the spending ceiling auto-adjust to $160!</div>
+      </div>
+      <div class="voice-script-box" id="text-6">
+"The client inputs their brief: 'I need to build an AI SaaS platform under 160 dollars.' Instantly, Google Gemini 2.5 Flash analyzes the RFP, structures milestone deliverables, and locks an unbreachable 160-dollar spending ceiling as a strict mathematical guard rail."
+      </div>
+    </div>
+
+    <!-- CLIP 7 -->
+    <div class="clip-card" id="card-7">
+      <div class="clip-top">
+        <div class="clip-badge-group">
+          <span class="clip-num">CLIP 07</span>
+          <span class="clip-title">Autonomous Reverse-Auction & Domain Specialist Matching</span>
+        </div>
+        <div class="clip-actions">
+          <span class="clip-duration">⏱️ ~22 sec</span>
+          <button class="btn-clip" onclick="speakText(7)">🔊 Listen Preview</button>
+          <button class="btn-clip copy-btn" onclick="copyClip(7)">📋 Copy Text</button>
+          <label class="checkbox-wrap">
+            <input type="checkbox" onchange="toggleDone(7, this.checked)"> Done
+          </label>
+        </div>
+      </div>
+      <div class="screen-guide">
+        <span class="screen-icon">🖥️</span>
+        <div><strong>Screen Action:</strong> Watch the 3 specialist bids stream in live. Hover over the specialist cards (e.g. Adrian Silva - AI Automation & Next.js). Click <code>⚡ Compare Swarm Bids</code> matrix to show ROI ratings.</div>
+      </div>
+      <div class="voice-script-box" id="text-7">
+"Within seconds, an autonomous reverse-auction activates! Verified specialists specializing in AI Automation and Next.js analyze the tender, competing downward with instant counter-proposals, verified SLA guarantees, and transparent milestone payment structures."
+      </div>
+    </div>
+
+    <!-- CLIP 8 -->
+    <div class="clip-card" id="card-8">
+      <div class="clip-top">
+        <div class="clip-badge-group">
+          <span class="clip-num">CLIP 08</span>
+          <span class="clip-title">Awarding the Bid &amp; Transitioning to Provider Workspace</span>
+        </div>
+        <div class="clip-actions">
+          <span class="clip-duration">⏱️ ~16 sec</span>
+          <button class="btn-clip" onclick="speakText(8)">🔊 Listen Preview</button>
+          <button class="btn-clip copy-btn" onclick="copyClip(8)">📋 Copy Text</button>
+          <label class="checkbox-wrap">
+            <input type="checkbox" onchange="toggleDone(8, this.checked)"> Done
+          </label>
+        </div>
+      </div>
+      <div class="screen-guide">
+        <span class="screen-icon">🖥️</span>
+        <div><strong>Screen Action:</strong> Click <code>Accept &amp; Secure Escrow</code> on Adrian Silva's winning bid. Then click the top header link <code>Provider Workspace (RFQs Live)</code> to transition to the specialist's view!</div>
+      </div>
+      <div class="voice-script-box" id="text-8">
+"The client awards the winning bid. With the contract secured in escrow, let’s now switch directly into the Provider Workspace to see how specialists track deliverables, submit code, and get paid via PayPal Payouts!"
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- PHASE 2 CLIPS                              -->
+    <!-- ========================================== -->
+    <div class="section-title" style="color: var(--accent-emerald); margin-top: 45px;">
+      <span>💼 Phase 2 Audio Clips (Provider Bidding ➔ PayPal Escrow Checkout ➔ Placeholder Code Submission)</span>
+    </div>
+
+    <!-- CLIP 9 -->
+    <div class="clip-card" id="card-9">
+      <div class="clip-top">
+        <div class="clip-badge-group">
+          <span class="clip-num" style="background: linear-gradient(135deg, var(--accent-emerald), #059669);">CLIP 09</span>
+          <span class="clip-title">Provider Messages Commerce Bot &amp; Submits Counter-Bid</span>
+        </div>
+        <div class="clip-actions">
+          <span class="clip-duration">⏱️ ~18 sec</span>
+          <button class="btn-clip" onclick="speakText(9)">🔊 Listen Preview</button>
+          <button class="btn-clip copy-btn" onclick="copyClip(9)">📋 Copy Text</button>
+          <label class="checkbox-wrap">
+            <input type="checkbox" onchange="toggleDone(9, this.checked)"> Done
+          </label>
+        </div>
+      </div>
+      <div class="screen-guide">
+        <span class="screen-icon">🖥️</span>
+        <div><strong>Screen Action:</strong> In Provider Workspace (<code>/providers</code>), click the RFQ tender chat. Type <code>Hi</code> to the bot. Then type <code>I can build this Next.js AI platform for $140 within 48 hours</code>. Watch the bot validate and broadcast the bid!</div>
+      </div>
+      <div class="voice-script-box" id="text-9">
+"In the Provider Workspace, specialists don't waste hours writing generic proposals. The specialist simply messages our AI Commerce Bot, offering 140 dollars with a 48-hour delivery guarantee. The bot validates the scope and instantly publishes the bid to the client!"
+      </div>
+    </div>
+
+    <!-- CLIP 10 -->
+    <div class="clip-card" id="card-10">
+      <div class="clip-top">
+        <div class="clip-badge-group">
+          <span class="clip-num" style="background: linear-gradient(135deg, var(--accent-emerald), #059669);">CLIP 10</span>
+          <span class="clip-title">Client Receives Bid &amp; Executes PayPal Orders v2 Escrow Checkout</span>
+        </div>
+        <div class="clip-actions">
+          <span class="clip-duration">⏱️ ~22 sec</span>
+          <button class="btn-clip" onclick="speakText(10)">🔊 Listen Preview</button>
+          <button class="btn-clip copy-btn" onclick="copyClip(10)">📋 Copy Text</button>
+          <label class="checkbox-wrap">
+            <input type="checkbox" onchange="toggleDone(10, this.checked)"> Done
+          </label>
+        </div>
+      </div>
+      <div class="screen-guide">
+        <span class="screen-icon">🖥️</span>
+        <div><strong>Screen Action:</strong> Switch to Client Chat (<code>localhost:3005</code>). Show the specialist's new bid appearing live. Click <code>Accept &amp; Secure Escrow</code>. The PayPal Checkout Modal opens. Click <code>Pay with PayPal</code> (sandbox credentials). Show the green capture checkmark!</div>
+      </div>
+      <div class="voice-script-box" id="text-10">
+"Back on the client side, the specialist's counter-bid arrives in real time. The client reviews the terms and clicks 'Accept &amp; Secure Escrow'. The PayPal Orders v2 checkout modal opens. Upon client approval, the 140 dollars is captured into our segregated platform vault!"
+      </div>
+    </div>
+
+    <!-- CLIP 11 -->
+    <div class="clip-card" id="card-11">
+      <div class="clip-top">
+        <div class="clip-badge-group">
+          <span class="clip-num" style="background: linear-gradient(135deg, var(--accent-emerald), #059669);">CLIP 11</span>
+          <span class="clip-title">Client Orders Ledger — Funds Locked in Multi-Tranche Escrow</span>
+        </div>
+        <div class="clip-actions">
+          <span class="clip-duration">⏱️ ~18 sec</span>
+          <button class="btn-clip" onclick="speakText(11)">🔊 Listen Preview</button>
+          <button class="btn-clip copy-btn" onclick="copyClip(11)">📋 Copy Text</button>
+          <label class="checkbox-wrap">
+            <input type="checkbox" onchange="toggleDone(11, this.checked)"> Done
+          </label>
+        </div>
+      </div>
+      <div class="screen-guide">
+        <span class="screen-icon">🖥️</span>
+        <div><strong>Screen Action:</strong> Navigate to <code>/orders</code>. Show the funded contract sitting under the <code>In Escrow</code> tab with the green shield badge and milestone breakdown ($70 / $70).</div>
+      </div>
+      <div class="voice-script-box" id="text-11">
+"Under Client Orders, the project is safely vaulted 'In Escrow'. Capital is programmatically fractionated into milestone tranches in our Firestore double-entry ledger. Neither party can unilaterally touch the funds until deliverables are cryptographically verified."
+      </div>
+    </div>
+
+    <!-- CLIP 12 -->
+    <div class="clip-card" id="card-12">
+      <div class="clip-top">
+        <div class="clip-badge-group">
+          <span class="clip-num" style="background: linear-gradient(135deg, var(--accent-emerald), #059669);">CLIP 12</span>
+          <span class="clip-title">Provider Workspace — Active Contract in 'To Submit (In Progress)'</span>
+        </div>
+        <div class="clip-actions">
+          <span class="clip-duration">⏱️ ~16 sec</span>
+          <button class="btn-clip" onclick="speakText(12)">🔊 Listen Preview</button>
+          <button class="btn-clip copy-btn" onclick="copyClip(12)">📋 Copy Text</button>
+          <label class="checkbox-wrap">
+            <input type="checkbox" onchange="toggleDone(12, this.checked)"> Done
+          </label>
+        </div>
+      </div>
+      <div class="screen-guide">
+        <span class="screen-icon">🖥️</span>
+        <div><strong>Screen Action:</strong> Switch to <code>/providers</code>. Click the <code>Active Escrow Orders</code> tab and show the order sitting under <code>To Submit (In Progress)</code> with the green <code>🛡️ In Escrow • To Submit</code> badge.</div>
+      </div>
+      <div class="voice-script-box" id="text-12">
+"Returning to the Provider Workspace, the specialist sees the active contract under 'To Submit'. Because escrow is already vaulted with PayPal, the specialist has 100% mathematical guarantee that verified work will be paid immediately."
+      </div>
+    </div>
+
+    <!-- CLIP 13 -->
+    <div class="clip-card" id="card-13">
+      <div class="clip-top">
+        <div class="clip-badge-group">
+          <span class="clip-num" style="background: linear-gradient(135deg, var(--accent-emerald), #059669);">CLIP 13</span>
+          <span class="clip-title">Specialist Submits Defective Deliverable / Placeholder Repository</span>
+        </div>
+        <div class="clip-actions">
+          <span class="clip-duration">⏱️ ~20 sec</span>
+          <button class="btn-clip" onclick="speakText(13)">🔊 Listen Preview</button>
+          <button class="btn-clip copy-btn" onclick="copyClip(13)">📋 Copy Text</button>
+          <label class="checkbox-wrap">
+            <input type="checkbox" onchange="toggleDone(13, this.checked)"> Done
+          </label>
+        </div>
+      </div>
+      <div class="screen-guide">
+        <span class="screen-icon">🖥️</span>
+        <div><strong>Screen Action:</strong> Click <code>Submit Deliverable</code> button on the order card. Paste a placeholder repository link (e.g. <code>https://github.com/specialist/dummy-repo</code> or <code>https://git.com</code>), type brief notes like <em>"Deliverable v1 completed"</em>, and click <code>Submit for AI Code Audit</code>.</div>
+      </div>
+      <div class="voice-script-box" id="text-13">
+"Now, what happens if a specialist submits placeholder code or an unfinished repository? Let’s test it: the specialist enters a placeholder repository with minimal architectural notes and clicks 'Submit'. This sets up the ultimate test for our autonomous AI code auditor!"
+      </div>
+    </div>
+
+  </main>
+
+  <div class="toast" id="toast">
+    <span>✅</span>
+    <span id="toast-msg">Text copied to clipboard!</span>
+  </div>
+
+  <script>
+    const clips = {
+      1: `"In today's 67-billion-dollar freelance economy, traditional platforms like Upwork and Fiverr have two catastrophic flaws: manual bidding takes days, and subjective deliverable disputes take over 14 days, costing PayPal millions annually in chargebacks and frozen capital."`,
+      2: `"Meet AgentPay AI: the world’s first autonomous clearinghouse protocol engineered for the PayPal AI Hackathon 2026. Here, AI agents discover top talent, negotiate bilateral deliverables, and settle milestone escrow directly on PayPal Orders v2 in sub-second speed."`,
+      3: `"To make evaluation completely frictionless for hackathon judges, a single click on our 1-Click Judge Access instantly logs in an authenticated evaluator persona with a pre-authorized 250-dollar spending ceiling—no forms or manual signups required."`,
+      4: `"Our built-in 12-Stage Guided Tour lets judges inspect every autonomous phase: from natural language RFP scoping and reverse bidding, to PayPal Orders v2 multi-tranche milestone escrow, automated code verification, and sub-3-second AI dispute settlement."`,
+      5: `"Let's experience the live client flow. Typing a simple 'Hi' immediately awakens our autonomous commerce agent, ready to scope requirements, assemble specialist swarms, and protect client capital."`,
+      6: `"The client inputs their brief: 'I need to build an AI SaaS platform under 160 dollars.' Instantly, Google Gemini 2.5 Flash analyzes the RFP, structures milestone deliverables, and locks an unbreachable 160-dollar spending ceiling as a strict mathematical guard rail."`,
+      7: `"Within seconds, an autonomous reverse-auction activates! Verified specialists specializing in AI Automation and Next.js analyze the tender, competing downward with instant counter-proposals, verified SLA guarantees, and transparent milestone payment structures."`,
+      8: `"The client awards the winning bid. With the contract secured in escrow, let’s now switch directly into the Provider Workspace to see how specialists track deliverables, submit code, and get paid via PayPal Payouts!"`,
+      9: `"In the Provider Workspace, specialists don't waste hours writing generic proposals. The specialist simply messages our AI Commerce Bot, offering 140 dollars with a 48-hour delivery guarantee. The bot validates the scope and instantly publishes the bid to the client!"`,
+      10: `"Back on the client side, the specialist's counter-bid arrives in real time. The client reviews the terms and clicks 'Accept & Secure Escrow'. The PayPal Orders v2 checkout modal opens. Upon client approval, the 140 dollars is captured into our segregated platform vault!"`,
+      11: `"Under Client Orders, the project is safely vaulted 'In Escrow'. Capital is programmatically fractionated into milestone tranches in our Firestore double-entry ledger. Neither party can unilaterally touch the funds until deliverables are cryptographically verified."`,
+      12: `"Returning to the Provider Workspace, the specialist sees the active contract under 'To Submit'. Because escrow is already vaulted with PayPal, the specialist has 100% mathematical guarantee that verified work will be paid immediately."`,
+      13: `"Now, what happens if a specialist submits placeholder code or an unfinished repository? Let’s test it: the specialist enters a placeholder repository with minimal architectural notes and clicks 'Submit'. This sets up the ultimate test for our autonomous AI code auditor!"`
+    };
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toast-msg');
+      toastMsg.innerText = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2200);
+    }
+
+    function copyClip(num) {
+      const cleanText = clips[num].replace(/^"|"$/g, '');
+      navigator.clipboard.writeText(cleanText);
+      showToast(`Clip #${num} copied to clipboard!`);
+    }
+
+    function copyText(elemId, label) {
+      const text = document.getElementById(elemId).innerText.trim();
+      navigator.clipboard.writeText(text);
+      showToast(`${label} copied!`);
+    }
+
+    function copyAllClips() {
+      const allText = Object.keys(clips).map(k => `[CLIP ${String(k).padStart(2, '0')}]\n${clips[k].replace(/^"|"$/g, '')}`).join('\n\n');
+      navigator.clipboard.writeText(allText);
+      showToast('All 13 clips copied to clipboard!');
+    }
+
+    function copyPhase(phase) {
+      const range = phase === 1 ? [1, 2, 3, 4, 5, 6, 7, 8] : [9, 10, 11, 12, 13];
+      const phaseText = range.map(k => `[CLIP ${String(k).padStart(2, '0')}]\n${clips[k].replace(/^"|"$/g, '')}`).join('\n\n');
+      navigator.clipboard.writeText(phaseText);
+      showToast(`Phase ${phase} clips copied to clipboard!`);
+    }
+
+    function toggleDone(num, isDone) {
+      const card = document.getElementById(`card-${num}`);
+      if (isDone) {
+        card.classList.add('recorded');
+      } else {
+        card.classList.remove('recorded');
+      }
+      updateStats();
+    }
+
+    function updateStats() {
+      const total = Object.keys(clips).length;
+      const checked = document.querySelectorAll('.clip-card.recorded').length;
+      document.getElementById('completed-count').innerText = `${checked} / ${total} Ready`;
+    }
+
+    // Built-in speech synthesis preview
+    function speakText(num) {
+      if (!('speechSynthesis' in window)) {
+        alert('Web Speech API is not supported in this browser.');
+        return;
+      }
+      window.speechSynthesis.cancel();
+      const cleanText = clips[num].replace(/^"|"$/g, '');
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+      utterance.rate = 1.05;
+      utterance.pitch = 1.0;
+      
+      // Try to find natural English voice
+      const voices = window.speechSynthesis.getVoices();
+      const preferred = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Neural')));
+      if (preferred) utterance.voice = preferred;
+
+      window.speechSynthesis.speak(utterance);
+      showToast(`Playing preview for Clip #${num}...`);
+    }
+
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.onvoiceschanged = () => {};
+    }
+  </script>
+</body>
+</html>
+
