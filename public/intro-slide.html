@@ -11,7 +11,7 @@
   <style>
     :root {
       --bg: #030712;
-      --card-bg: rgba(11, 18, 36, 0.88);
+      --card-bg: rgba(11, 18, 36, 0.92);
       --cyan: #06b6d4;
       --cyan-bright: #38bdf8;
       --paypal-blue: #0070ba;
@@ -19,8 +19,6 @@
       --gold: #f59e0b;
       --emerald: #10b981;
       --rose: #f43f5e;
-      --rose-glow: rgba(244, 63, 94, 0.45);
-      --emerald-glow: rgba(16, 185, 129, 0.45);
       --text-main: #ffffff;
       --text-muted: #94a3b8;
     }
@@ -31,21 +29,25 @@
       padding: 0;
     }
 
-    body {
+    html, body {
+      width: 100%;
+      height: 100vh;
+      max-height: 100vh;
+      overflow: hidden; /* ZERO SCROLLING REQUIRED - PERFECT 16:9 FIT */
       background-color: var(--bg);
       color: var(--text-main);
       font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
-      min-height: 100vh;
+      position: relative;
+    }
+
+    body {
       display: flex;
       flex-direction: column;
-      justify-content: flex-start;
-      align-items: center;
-      padding: 16px 36px 36px;
-      position: relative;
-      overflow-x: hidden;
+      justify-content: space-between;
+      padding: 12px 28px 14px;
       background-image: 
-        radial-gradient(circle at 50% 0%, rgba(0, 112, 186, 0.35) 0%, transparent 65%),
-        radial-gradient(circle at 95% 90%, rgba(6, 182, 212, 0.22) 0%, transparent 55%),
+        radial-gradient(circle at 50% 0%, rgba(0, 112, 186, 0.38) 0%, transparent 65%),
+        radial-gradient(circle at 95% 90%, rgba(6, 182, 212, 0.2) 0%, transparent 55%),
         radial-gradient(circle at 5% 90%, rgba(16, 185, 129, 0.2) 0%, transparent 55%);
     }
 
@@ -58,631 +60,520 @@
       height: 100%;
       pointer-events: none;
       z-index: 1;
-      opacity: 0.65;
+      opacity: 0.55;
     }
 
-    /* Floating Ambient Glows */
     .glow-orb {
       position: absolute;
       border-radius: 50%;
       filter: blur(140px);
       pointer-events: none;
       z-index: 0;
-      opacity: 0.4;
-      animation: floatOrb 10s ease-in-out infinite alternate;
+      opacity: 0.35;
     }
 
     .orb-1 {
-      width: 700px;
-      height: 700px;
-      top: -200px;
+      width: 650px;
+      height: 650px;
+      top: -220px;
       left: 50%;
       transform: translateX(-50%);
       background: radial-gradient(circle, var(--paypal-blue), transparent 70%);
     }
 
     .orb-2 {
-      width: 550px;
-      height: 550px;
+      width: 500px;
+      height: 500px;
       bottom: -150px;
       right: 5%;
       background: radial-gradient(circle, var(--cyan), transparent 70%);
     }
 
     .orb-3 {
-      width: 500px;
-      height: 500px;
+      width: 480px;
+      height: 480px;
       bottom: -120px;
       left: 5%;
       background: radial-gradient(circle, var(--emerald), transparent 70%);
     }
 
-    @keyframes floatOrb {
-      0% { transform: translate(-50%, 0) scale(0.95); opacity: 0.35; }
-      100% { transform: translate(-50%, 35px) scale(1.1); opacity: 0.5; }
-    }
-
-    /* Main Slide Container (16:9 Optimized) */
-    .slide-wrapper {
+    /* MASTER CONTAINER */
+    .app-viewport {
       position: relative;
       z-index: 10;
       width: 100%;
-      max-width: 1680px;
+      max-width: 1640px;
+      height: 100%;
+      margin: 0 auto;
       display: flex;
       flex-direction: column;
-      gap: 16px;
-      margin: 0 auto;
-    }
-
-    /* Header Nav */
-    .slide-header {
-      display: flex;
       justify-content: space-between;
-      align-items: center;
-      padding-bottom: 12px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      gap: 8px;
     }
 
-    .brand-wrap {
+    /* 1. TOP HEADER & SYNC CONTROLLER (COMBINED & COMPACT) */
+    .top-bar-strip {
       display: flex;
       align-items: center;
+      justify-content: space-between;
       gap: 16px;
+      padding: 6px 16px;
+      background: rgba(11, 18, 36, 0.85);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      border-radius: 14px;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+      flex-shrink: 0;
     }
 
-    .brand-logo-icon {
-      width: 48px;
-      height: 48px;
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      width: 36px;
+      height: 36px;
       background: linear-gradient(135deg, #0070ba, #003087);
-      border: 1.5px solid rgba(56, 189, 248, 0.6);
-      border-radius: 14px;
+      border: 1px solid rgba(56, 189, 248, 0.6);
+      border-radius: 10px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 24px;
-      box-shadow: 0 0 30px rgba(0, 112, 186, 0.7);
+      font-size: 18px;
+      box-shadow: 0 0 20px rgba(0, 112, 186, 0.6);
     }
 
-    .brand-text h1 {
-      font-size: 28px;
+    .brand-title {
+      font-size: 19px;
       font-weight: 900;
-      letter-spacing: -0.5px;
+      letter-spacing: -0.4px;
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 6px;
     }
 
-    .brand-text h1 span.highlight {
+    .brand-title span.blue {
       background: linear-gradient(135deg, #38bdf8, #0070ba);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
 
-    .brand-text p {
-      font-size: 11.5px;
-      color: #94a3b8;
+    .brand-tag {
+      font-size: 10px;
       font-family: 'JetBrains Mono', monospace;
-      font-weight: 600;
-      letter-spacing: 0.8px;
+      color: #94a3b8;
+      font-weight: 700;
+      letter-spacing: 0.5px;
     }
 
-    .header-controls {
+    /* Audio Sync Controls in Top Bar */
+    .sync-playback-unit {
       display: flex;
       align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
+      gap: 12px;
+      flex: 1;
+      max-width: 680px;
+      justify-content: center;
     }
 
-    .badge-pill {
-      font-size: 11.5px;
-      font-weight: 800;
-      padding: 6px 14px;
-      border-radius: 9999px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      letter-spacing: 0.4px;
-    }
-
-    .badge-paypal {
-      background: rgba(0, 112, 186, 0.2);
-      border: 1px solid rgba(56, 189, 248, 0.5);
-      color: #38bdf8;
-      box-shadow: 0 0 20px rgba(0, 112, 186, 0.3);
-    }
-
-    .badge-hackathon {
-      background: rgba(245, 158, 11, 0.18);
-      border: 1px solid rgba(245, 158, 11, 0.5);
-      color: #fbbf24;
-    }
-
-    .btn-action {
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.25);
+    .btn-main-play {
+      background: linear-gradient(135deg, #0284c7, #0070ba);
+      border: 1.5px solid #38bdf8;
       color: #ffffff;
       font-family: 'Plus Jakarta Sans', sans-serif;
-      font-size: 12px;
-      font-weight: 700;
-      padding: 7px 14px;
+      font-size: 12.5px;
+      font-weight: 800;
+      padding: 6px 18px;
       border-radius: 10px;
       cursor: pointer;
       display: flex;
       align-items: center;
       gap: 8px;
+      box-shadow: 0 0 20px rgba(56, 189, 248, 0.5);
       transition: all 0.2s ease;
+      white-space: nowrap;
     }
 
-    .btn-action:hover {
-      background: rgba(255, 255, 255, 0.18);
-      border-color: #38bdf8;
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(56, 189, 248, 0.3);
-    }
-
-    /* MASTER SYNCHRONIZED PRESENTATION CONTROLLER BAR */
-    .master-sync-bar {
-      background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(8, 14, 30, 0.98));
-      border: 2px solid rgba(56, 189, 248, 0.55);
-      border-radius: 18px;
-      padding: 12px 24px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 20px;
-      box-shadow: 0 10px 40px rgba(0, 112, 186, 0.35);
-      backdrop-filter: blur(25px);
-    }
-
-    .sync-left-controls {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-    }
-
-    .btn-sync-play {
-      background: linear-gradient(135deg, #0284c7, #02509e);
-      border: 1.5px solid #38bdf8;
-      color: #ffffff;
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      font-size: 14px;
-      font-weight: 900;
-      padding: 10px 22px;
-      border-radius: 12px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      box-shadow: 0 0 25px rgba(56, 189, 248, 0.5);
-      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    .btn-sync-play:hover {
-      transform: scale(1.04);
-      box-shadow: 0 0 35px rgba(56, 189, 248, 0.8);
+    .btn-main-play:hover {
+      transform: scale(1.03);
+      box-shadow: 0 0 30px rgba(56, 189, 248, 0.8);
       background: linear-gradient(135deg, #38bdf8, #0284c7);
       color: #000;
     }
 
-    .btn-sync-play.playing {
+    .btn-main-play.is-playing {
       background: linear-gradient(135deg, #f59e0b, #d97706);
       border-color: #fbbf24;
-      box-shadow: 0 0 25px rgba(245, 158, 11, 0.6);
+      box-shadow: 0 0 20px rgba(245, 158, 11, 0.6);
       color: #000;
     }
 
-    .btn-sync-reset {
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      color: #cbd5e1;
-      padding: 9px 14px;
-      border-radius: 10px;
-      font-size: 12.5px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-
-    .btn-sync-reset:hover {
-      background: rgba(255, 255, 255, 0.16);
-      color: #fff;
-    }
-
-    .sync-timeline-wrap {
-      flex: 1;
+    .timeline-scrubber-box {
       display: flex;
       flex-direction: column;
-      gap: 6px;
-      max-width: 650px;
+      gap: 4px;
+      flex: 1;
     }
 
-    .sync-meta-row {
+    .timeline-info-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
       font-family: 'JetBrains Mono', monospace;
-      font-size: 12px;
+      font-size: 10.5px;
       font-weight: 700;
     }
 
-    .sync-live-pill {
-      background: rgba(244, 63, 94, 0.2);
-      border: 1px solid rgba(244, 63, 94, 0.5);
-      color: #fda4af;
-      padding: 3px 10px;
-      border-radius: 6px;
-      font-size: 11px;
+    .live-scene-tag {
+      background: rgba(16, 185, 129, 0.18);
+      border: 1px solid rgba(16, 185, 129, 0.5);
+      color: #6ee7b7;
+      padding: 2px 8px;
+      border-radius: 5px;
       display: flex;
       align-items: center;
-      gap: 6px;
-      letter-spacing: 0.5px;
+      gap: 5px;
+      letter-spacing: 0.4px;
     }
 
-    .sync-live-pill.active {
-      background: rgba(16, 185, 129, 0.2);
-      border-color: rgba(16, 185, 129, 0.6);
-      color: #6ee7b7;
-    }
-
-    .sync-time-counter {
+    .timeline-time-display {
       color: #38bdf8;
-      letter-spacing: 1px;
+      letter-spacing: 0.8px;
     }
 
-    .sync-progress-bar-bg {
+    .progress-track {
       width: 100%;
-      height: 8px;
-      background: rgba(255, 255, 255, 0.1);
+      height: 6px;
+      background: rgba(255, 255, 255, 0.12);
       border-radius: 9999px;
-      position: relative;
       cursor: pointer;
+      position: relative;
       overflow: hidden;
     }
 
-    .sync-progress-fill {
+    .progress-bar-fill {
       height: 100%;
       width: 0%;
       background: linear-gradient(90deg, #38bdf8, #10b981, #f59e0b);
       border-radius: 9999px;
-      box-shadow: 0 0 15px rgba(56, 189, 248, 0.8);
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.8);
       transition: width 0.1s linear;
     }
 
-    .sync-right-controls {
-      display: flex;
-      align-items: center;
-      gap: 14px;
+    .btn-restart {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #cbd5e1;
+      padding: 5px 10px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
     }
 
-    .focus-mode-toggle {
+    .top-actions-group {
       display: flex;
       align-items: center;
       gap: 8px;
-      font-size: 12px;
+    }
+
+    .btn-pill-action {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #ffffff;
+      font-size: 11.5px;
       font-weight: 700;
-      color: #94a3b8;
+      padding: 6px 12px;
+      border-radius: 8px;
       cursor: pointer;
-      user-select: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
     }
 
-    .focus-mode-toggle input {
-      accent-color: #38bdf8;
-      cursor: pointer;
-      width: 15px;
-      height: 15px;
+    .btn-pill-action:hover {
+      background: rgba(255, 255, 255, 0.18);
+      border-color: #38bdf8;
     }
 
-    .focus-mode-toggle:hover {
-      color: #fff;
-    }
-
-    /* Hero Headline */
-    .hero-title-area {
+    /* 2. HERO HEADLINE AREA */
+    .hero-center-unit {
       text-align: center;
-      padding: 4px 0 10px;
-      transition: all 0.4s ease;
-      border-radius: 18px;
+      padding: 2px 0 4px;
+      flex-shrink: 0;
+      transition: all 0.35s ease;
     }
 
-    .hero-eyebrow {
+    .hero-pill-badge {
       display: inline-flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
       background: rgba(6, 182, 212, 0.14);
-      border: 1.5px solid rgba(6, 182, 212, 0.45);
+      border: 1px solid rgba(6, 182, 212, 0.45);
       color: #38bdf8;
-      font-size: 12px;
+      font-size: 10.5px;
       font-weight: 800;
       text-transform: uppercase;
-      letter-spacing: 1.6px;
-      padding: 5px 18px;
+      letter-spacing: 1.5px;
+      padding: 3px 14px;
       border-radius: 9999px;
-      margin-bottom: 8px;
-      box-shadow: 0 0 25px rgba(6, 182, 212, 0.25);
-      transition: all 0.3s ease;
+      margin-bottom: 4px;
     }
 
-    .hero-title-area h2 {
-      font-size: 42px;
+    .hero-title-main {
+      font-size: 30px;
       font-weight: 900;
-      letter-spacing: -1.2px;
+      letter-spacing: -0.8px;
       line-height: 1.15;
       color: #ffffff;
-      transition: all 0.3s ease;
     }
 
-    .hero-title-area h2 span.gradient-text {
+    .hero-title-main span.gradient {
       background: linear-gradient(135deg, #ffffff 20%, #38bdf8 65%, #0070ba 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
 
-    .hero-subtitle {
-      font-size: 16.5px;
+    .hero-desc-clean {
+      font-size: 13.5px;
       color: #cbd5e1;
-      max-width: 1080px;
-      margin: 8px auto 0;
-      line-height: 1.55;
+      max-width: 980px;
+      margin: 4px auto 0;
+      line-height: 1.45;
       font-weight: 500;
-      transition: all 0.3s ease;
     }
 
-    .hero-subtitle strong {
+    .hero-desc-clean strong {
       color: #38bdf8;
       font-weight: 700;
     }
 
-    /* Contrast Grid */
-    .contrast-grid {
+    /* 3. SYMMETRICAL 3-VS-3 DUAL MATRIX (FITS SCREEN EXACTLY) */
+    .matrix-split-grid {
       display: grid;
-      grid-template-columns: 1fr 70px 1.15fr;
-      gap: 20px;
+      grid-template-columns: 1fr 54px 1.08fr;
+      gap: 16px;
       align-items: stretch;
-      margin-top: 4px;
+      flex: 1;
+      min-height: 0; /* Prevents overflow */
     }
 
-    /* Matrix Cards */
-    .matrix-card {
+    .column-card {
       background: var(--card-bg);
-      border-radius: 24px;
-      padding: 28px 32px;
+      border-radius: 18px;
+      padding: 16px 20px;
       backdrop-filter: blur(25px);
-      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
+      box-shadow: 0 15px 45px rgba(0, 0, 0, 0.6);
       display: flex;
       flex-direction: column;
       justify-content: space-between;
       position: relative;
-      overflow: hidden;
       transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      min-height: 0;
     }
 
-    /* Left Card: Problem */
-    .card-problem {
-      border: 2px solid rgba(244, 63, 94, 0.45);
-      background: linear-gradient(165deg, rgba(244, 63, 94, 0.12) 0%, rgba(15, 23, 42, 0.94) 100%);
-      box-shadow: 0 20px 60px rgba(244, 63, 94, 0.15);
+    /* Left: Broken Legacy */
+    .card-legacy {
+      border: 2px solid rgba(244, 63, 94, 0.4);
+      background: linear-gradient(165deg, rgba(244, 63, 94, 0.1) 0%, rgba(15, 23, 42, 0.95) 100%);
     }
 
-    /* Right Card: Solution */
-    .card-solution {
-      border: 2px solid rgba(16, 185, 129, 0.55);
-      background: linear-gradient(165deg, rgba(16, 185, 129, 0.14) 0%, rgba(0, 112, 186, 0.16) 50%, rgba(15, 23, 42, 0.95) 100%);
-      box-shadow: 0 25px 70px rgba(0, 112, 186, 0.35);
+    /* Right: AgentPay Autonomous */
+    .card-agentpay {
+      border: 2px solid rgba(16, 185, 129, 0.5);
+      background: linear-gradient(165deg, rgba(16, 185, 129, 0.12) 0%, rgba(0, 112, 186, 0.15) 50%, rgba(15, 23, 42, 0.95) 100%);
     }
 
-    /* Top Card Header */
-    .card-top {
+    .col-header {
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      margin-bottom: 18px;
-      padding-bottom: 14px;
+      justify-content: space-between;
+      padding-bottom: 10px;
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-      transition: all 0.3s ease;
+      margin-bottom: 10px;
+      flex-shrink: 0;
     }
 
-    .card-tag {
-      font-size: 12.5px;
+    .col-tag {
+      font-size: 11.5px;
       font-weight: 900;
       text-transform: uppercase;
-      letter-spacing: 1.2px;
-      padding: 6px 15px;
-      border-radius: 10px;
+      letter-spacing: 1px;
+      padding: 4px 12px;
+      border-radius: 8px;
       font-family: 'JetBrains Mono', monospace;
       display: flex;
       align-items: center;
-      gap: 8px;
-      transition: all 0.3s ease;
+      gap: 6px;
     }
 
-    .tag-red {
+    .tag-problem {
       background: rgba(244, 63, 94, 0.25);
-      border: 1.5px solid rgba(244, 63, 94, 0.6);
+      border: 1px solid rgba(244, 63, 94, 0.6);
       color: #fda4af;
-      box-shadow: 0 0 20px rgba(244, 63, 94, 0.3);
     }
 
-    .tag-green {
+    .tag-solution {
       background: rgba(16, 185, 129, 0.25);
-      border: 1.5px solid rgba(16, 185, 129, 0.7);
+      border: 1px solid rgba(16, 185, 129, 0.7);
       color: #6ee7b7;
-      box-shadow: 0 0 25px rgba(16, 185, 129, 0.35);
     }
 
-    .card-meta {
-      font-size: 12.5px;
+    .col-subtitle {
+      font-size: 11.5px;
       font-weight: 700;
       font-family: 'JetBrains Mono', monospace;
-      letter-spacing: 0.5px;
-      transition: all 0.3s ease;
     }
 
-    /* Items List */
-    .items-list {
+    /* 3 Clean Items in Each Column */
+    .rows-container {
       display: flex;
       flex-direction: column;
-      gap: 14px;
-      flex-grow: 1;
+      gap: 10px;
+      flex: 1;
+      justify-content: space-around;
+      min-height: 0;
     }
 
-    .item-row {
+    .feature-row {
       display: flex;
-      align-items: flex-start;
-      gap: 16px;
+      align-items: center;
+      gap: 12px;
       background: rgba(0, 0, 0, 0.45);
       border: 1.5px solid rgba(255, 255, 255, 0.08);
-      padding: 15px 18px;
-      border-radius: 16px;
-      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      padding: 10px 14px;
+      border-radius: 12px;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
       cursor: pointer;
-      position: relative;
     }
 
-    .item-row:hover {
+    .feature-row:hover {
       background: rgba(255, 255, 255, 0.06);
-      border-color: rgba(255, 255, 255, 0.3);
+      border-color: rgba(255, 255, 255, 0.25);
       transform: translateX(4px);
     }
 
-    .item-row::after {
-      content: '🎧 Click to jump voice';
-      position: absolute;
-      top: 10px;
-      right: 14px;
-      font-size: 10px;
-      font-weight: 700;
-      color: #94a3b8;
-      opacity: 0;
-      transition: opacity 0.2s ease;
-      font-family: 'JetBrains Mono', monospace;
-    }
-
-    .item-row:hover::after {
-      opacity: 0.8;
-    }
-
-    .item-icon {
-      width: 42px;
-      height: 42px;
-      border-radius: 12px;
+    .row-icon-box {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 20px;
+      font-size: 18px;
       flex-shrink: 0;
-      margin-top: 2px;
-      transition: all 0.3s ease;
     }
 
-    .icon-fail {
-      background: rgba(244, 63, 94, 0.25);
+    .icon-problem {
+      background: rgba(244, 63, 94, 0.2);
+      border: 1px solid rgba(244, 63, 94, 0.5);
       color: #fb7185;
-      border: 1.5px solid rgba(244, 63, 94, 0.5);
-      box-shadow: 0 0 15px rgba(244, 63, 94, 0.3);
     }
 
-    .icon-win {
-      background: rgba(16, 185, 129, 0.25);
+    .icon-solution {
+      background: rgba(16, 185, 129, 0.2);
+      border: 1px solid rgba(16, 185, 129, 0.6);
       color: #34d399;
-      border: 1.5px solid rgba(16, 185, 129, 0.6);
-      box-shadow: 0 0 18px rgba(16, 185, 129, 0.35);
     }
 
-    .item-header-wrap {
+    .row-body {
+      flex: 1;
+    }
+
+    .row-title-wrap {
       display: flex;
       align-items: center;
-      gap: 10px;
-      margin-bottom: 4px;
-      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 2px;
     }
 
-    .stat-badge {
+    .badge-metric {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 11px;
+      font-size: 10px;
       font-weight: 900;
-      padding: 3px 9px;
-      border-radius: 6px;
-      letter-spacing: 0.6px;
+      padding: 2px 7px;
+      border-radius: 5px;
+      letter-spacing: 0.5px;
       text-transform: uppercase;
-      transition: all 0.3s ease;
     }
 
-    .stat-bad {
+    .badge-red {
       background: rgba(244, 63, 94, 0.25);
       color: #ff8597;
       border: 1px solid rgba(244, 63, 94, 0.5);
     }
 
-    .stat-good {
+    .badge-green {
       background: rgba(16, 185, 129, 0.25);
       color: #4ade80;
       border: 1px solid rgba(16, 185, 129, 0.5);
     }
 
-    .item-content h4 {
-      font-size: 17px;
+    .row-body h4 {
+      font-size: 14.5px;
       font-weight: 800;
       color: #ffffff;
-      letter-spacing: -0.3px;
-      transition: all 0.3s ease;
+      letter-spacing: -0.2px;
     }
 
-    .item-content p {
-      font-size: 13.8px;
-      color: #e2e8f0;
-      line-height: 1.5;
+    .row-body p {
+      font-size: 12.2px;
+      color: #cbd5e1;
+      line-height: 1.4;
       font-weight: 500;
-      transition: all 0.3s ease;
     }
 
-    /* Card Footer Key Stats */
-    .card-footer-stats {
-      margin-top: 18px;
-      padding-top: 16px;
+    /* Footer Stats 3-Col */
+    .col-footer-stats {
+      margin-top: 10px;
+      padding-top: 8px;
       border-top: 1px solid rgba(255, 255, 255, 0.1);
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
+      gap: 8px;
       text-align: center;
-      transition: all 0.35s ease;
-      cursor: pointer;
+      flex-shrink: 0;
     }
 
-    .stat-box {
+    .mini-stat-card {
       background: rgba(0, 0, 0, 0.4);
-      padding: 10px 8px;
-      border-radius: 12px;
+      padding: 6px 4px;
+      border-radius: 8px;
       border: 1px solid rgba(255, 255, 255, 0.06);
       transition: all 0.3s ease;
     }
 
-    .stat-box .val-bad {
+    .mini-stat-card .val-red {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 18px;
+      font-size: 15px;
       font-weight: 900;
       color: #f87171;
       display: block;
     }
 
-    .stat-box .val-good {
+    .mini-stat-card .val-green {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 18px;
+      font-size: 15px;
       font-weight: 900;
       color: #34d399;
       display: block;
     }
 
-    .stat-box .lbl {
-      font-size: 11px;
+    .mini-stat-card .lbl {
+      font-size: 9.5px;
       font-weight: 700;
       color: #94a3b8;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-top: 2px;
+      letter-spacing: 0.4px;
+      margin-top: 1px;
       display: block;
     }
 
-    /* Center VS Divider */
-    .divider-center {
+    /* Center VS Pillar */
+    .center-vs-pillar {
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -690,326 +581,225 @@
       position: relative;
     }
 
-    .divider-line {
-      width: 2.5px;
+    .pillar-line {
+      width: 2px;
       height: 100%;
       background: linear-gradient(180deg, transparent, rgba(56, 189, 248, 0.6), transparent);
     }
 
-    .vs-bubble {
+    .vs-disc {
       position: absolute;
-      width: 56px;
-      height: 56px;
+      width: 44px;
+      height: 44px;
       border-radius: 50%;
       background: #090e1a;
-      border: 2.5px solid #38bdf8;
+      border: 2px solid #38bdf8;
       display: flex;
       align-items: center;
       justify-content: center;
       font-weight: 900;
-      font-size: 15px;
+      font-size: 13px;
       color: #38bdf8;
-      box-shadow: 0 0 35px rgba(56, 189, 248, 0.7);
-      letter-spacing: 1.2px;
-      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    /* Bottom Architecture Strip */
-    .bottom-strip {
-      background: rgba(10, 16, 32, 0.88);
-      border: 1.5px solid rgba(56, 189, 248, 0.35);
-      border-radius: 18px;
-      padding: 14px 24px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 20px;
-      backdrop-filter: blur(20px);
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 0 25px rgba(56, 189, 248, 0.7);
+      letter-spacing: 1px;
       transition: all 0.35s ease;
     }
 
-    .pipeline-steps {
+    /* 4. BOTTOM ACTION STRIP */
+    .bottom-action-bar {
       display: flex;
       align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 8px 18px;
+      background: rgba(10, 16, 32, 0.9);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      border-radius: 14px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+      flex-shrink: 0;
     }
 
-    .pipe-step {
+    .pipeline-nodes {
       display: flex;
       align-items: center;
-      gap: 9px;
-      font-size: 13px;
+      gap: 10px;
+    }
+
+    .node-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11.5px;
       font-weight: 800;
       color: #f1f5f9;
       background: rgba(0, 0, 0, 0.5);
-      padding: 7px 14px;
-      border-radius: 10px;
+      padding: 5px 11px;
+      border-radius: 8px;
       border: 1px solid rgba(255, 255, 255, 0.1);
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
       transition: all 0.3s ease;
     }
 
-    .pipe-step span.num {
-      width: 22px;
-      height: 22px;
+    .node-num {
+      width: 18px;
+      height: 18px;
       background: linear-gradient(135deg, #38bdf8, #0070ba);
       color: #000;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 11px;
+      font-size: 10px;
       font-weight: 900;
     }
 
-    .pipe-arrow {
+    .node-arrow {
       color: #38bdf8;
-      font-size: 16px;
+      font-size: 13px;
       font-weight: 900;
     }
 
-    .cta-hook-box {
-      background: linear-gradient(135deg, rgba(6, 182, 212, 0.3), rgba(0, 112, 186, 0.45));
-      border: 1.5px solid rgba(56, 189, 248, 0.7);
-      padding: 10px 20px;
-      border-radius: 12px;
+    .cta-live-button {
+      background: linear-gradient(135deg, #0284c7, #0070ba);
+      border: 1.5px solid #38bdf8;
+      padding: 8px 20px;
+      border-radius: 10px;
       font-weight: 900;
-      font-size: 14px;
+      font-size: 13px;
       color: #ffffff;
       display: flex;
       align-items: center;
-      gap: 10px;
-      box-shadow: 0 0 30px rgba(6, 182, 212, 0.4);
+      gap: 8px;
+      box-shadow: 0 0 25px rgba(6, 182, 212, 0.5);
       white-space: nowrap;
-      animation: pulseCta 3s ease-in-out infinite;
       cursor: pointer;
       transition: all 0.3s ease;
     }
 
-    @keyframes pulseCta {
-      0%, 100% { transform: scale(1); box-shadow: 0 0 30px rgba(6, 182, 212, 0.4); }
-      50% { transform: scale(1.03); box-shadow: 0 0 45px rgba(56, 189, 248, 0.7); }
+    .cta-live-button:hover {
+      transform: scale(1.03);
+      box-shadow: 0 0 35px rgba(56, 189, 248, 0.8);
+      background: linear-gradient(135deg, #38bdf8, #0284c7);
+      color: #000;
     }
 
-    /* Teleprompter Box */
-    .teleprompter-box {
-      background: rgba(2, 6, 23, 0.95);
-      border: 1.5px solid rgba(245, 158, 11, 0.4);
-      border-radius: 14px;
-      padding: 14px 20px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 20px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
-    }
-
-    .teleprompter-text {
-      font-size: 14.5px;
-      color: #cbd5e1;
-      line-height: 1.6;
-      font-weight: 600;
-      flex: 1;
-    }
-
-    .teleprompter-text strong {
-      color: #fbbf24;
-      margin-right: 6px;
-    }
-
-    /* REAL-TIME VOICE SYNCHRONIZATION SPOTLIGHT & GLOW CLASSES */
-    .body-focus-active .sync-dimmed {
-      opacity: 0.28 !important;
-      filter: grayscale(40%) blur(0.2px) !important;
+    /* REAL-TIME HIGHLIGHT & DIMMING STYLES */
+    .body-spotlight-on .target-item {
+      opacity: 0.32 !important;
+      filter: grayscale(35%) !important;
       transform: scale(0.985) !important;
       transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
     }
 
-    /* Red Problem Item Active Glow */
-    .item-row.sync-active-red {
+    /* Active Problem Glow */
+    .feature-row.sync-red {
       opacity: 1 !important;
       filter: none !important;
-      transform: translateX(12px) scale(1.03) !important;
+      transform: translateX(8px) scale(1.025) !important;
       border: 2px solid #f43f5e !important;
-      background: linear-gradient(135deg, rgba(244, 63, 94, 0.3), rgba(15, 23, 42, 0.96)) !important;
-      box-shadow: 0 0 40px rgba(244, 63, 94, 0.75), inset 0 0 15px rgba(244, 63, 94, 0.3) !important;
-      z-index: 25;
-    }
-    .item-row.sync-active-red .stat-badge {
-      background: #f43f5e !important;
-      color: #fff !important;
-      box-shadow: 0 0 15px #f43f5e;
-      transform: scale(1.08);
+      background: linear-gradient(135deg, rgba(244, 63, 94, 0.3), rgba(15, 23, 42, 0.98)) !important;
+      box-shadow: 0 0 35px rgba(244, 63, 94, 0.8), inset 0 0 12px rgba(244, 63, 94, 0.3) !important;
+      z-index: 20;
     }
 
-    /* Green Solution Item Active Glow */
-    .item-row.sync-active-green {
+    /* Active Solution Glow */
+    .feature-row.sync-green {
       opacity: 1 !important;
       filter: none !important;
-      transform: translateX(12px) scale(1.03) !important;
+      transform: translateX(8px) scale(1.025) !important;
       border: 2px solid #10b981 !important;
-      background: linear-gradient(135deg, rgba(16, 185, 129, 0.3), rgba(15, 23, 42, 0.96)) !important;
-      box-shadow: 0 0 45px rgba(16, 185, 129, 0.75), inset 0 0 15px rgba(16, 185, 129, 0.3) !important;
-      z-index: 25;
-    }
-    .item-row.sync-active-green .stat-badge {
-      background: #10b981 !important;
-      color: #000 !important;
-      box-shadow: 0 0 18px #10b981;
-      transform: scale(1.08);
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.3), rgba(15, 23, 42, 0.98)) !important;
+      box-shadow: 0 0 40px rgba(16, 185, 129, 0.8), inset 0 0 12px rgba(16, 185, 129, 0.3) !important;
+      z-index: 20;
     }
 
-    /* Cyan Solution Item Active Glow */
-    .item-row.sync-active-cyan {
-      opacity: 1 !important;
-      filter: none !important;
-      transform: translateX(12px) scale(1.03) !important;
-      border: 2px solid #38bdf8 !important;
-      background: linear-gradient(135deg, rgba(56, 189, 248, 0.3), rgba(0, 112, 186, 0.45)) !important;
-      box-shadow: 0 0 45px rgba(56, 189, 248, 0.8), inset 0 0 18px rgba(0, 112, 186, 0.4) !important;
-      z-index: 25;
-    }
-    .item-row.sync-active-cyan .stat-badge {
-      background: #38bdf8 !important;
-      color: #000 !important;
-      box-shadow: 0 0 18px #38bdf8;
-      transform: scale(1.08);
-    }
-
-    /* Active Footer Stats */
-    .card-footer-stats.sync-active-red {
-      opacity: 1 !important;
-      filter: none !important;
-      transform: scale(1.03) !important;
-      border-top: 2px solid #f43f5e !important;
-    }
-    .card-footer-stats.sync-active-red .stat-box {
-      border-color: #f43f5e !important;
-      background: rgba(244, 63, 94, 0.2) !important;
-      box-shadow: 0 0 25px rgba(244, 63, 94, 0.5) !important;
-      transform: scale(1.05);
-    }
-
-    .card-footer-stats.sync-active-green {
-      opacity: 1 !important;
-      filter: none !important;
-      transform: scale(1.03) !important;
-      border-top: 2px solid #10b981 !important;
-    }
-    .card-footer-stats.sync-active-green .stat-box {
-      border-color: #10b981 !important;
-      background: rgba(16, 185, 129, 0.2) !important;
-      box-shadow: 0 0 25px rgba(16, 185, 129, 0.5) !important;
-      transform: scale(1.05);
-    }
-
-    /* Active Hero Area Glow */
-    .hero-title-area.sync-active-hero {
+    /* Active Hero Glow */
+    .hero-center-unit.sync-hero {
       opacity: 1 !important;
       filter: none !important;
       background: rgba(0, 112, 186, 0.15);
-      box-shadow: 0 0 50px rgba(0, 112, 186, 0.35);
-      border: 1px solid rgba(56, 189, 248, 0.4);
-      transform: scale(1.015);
-    }
-    .hero-title-area.sync-active-hero .hero-eyebrow {
-      background: #0284c7 !important;
-      color: #ffffff !important;
-      box-shadow: 0 0 30px #38bdf8;
+      border-radius: 14px;
+      box-shadow: 0 0 40px rgba(0, 112, 186, 0.4);
+      transform: scale(1.01);
     }
 
-    /* Active VS Divider Glow */
-    .vs-bubble.sync-active-vs {
+    /* Active VS Disc Glow */
+    .vs-disc.sync-vs {
       opacity: 1 !important;
       filter: none !important;
-      transform: scale(1.3) !important;
+      transform: scale(1.25) !important;
       border-color: #38bdf8 !important;
       background: #003087 !important;
       color: #ffffff !important;
-      box-shadow: 0 0 60px rgba(56, 189, 248, 1), inset 0 0 25px rgba(56, 189, 248, 0.8) !important;
+      box-shadow: 0 0 50px rgba(56, 189, 248, 1), inset 0 0 15px rgba(56, 189, 248, 0.8) !important;
     }
 
-    /* Active Solution Card Header */
-    .card-top.sync-active-header {
+    /* Active Stats Glow */
+    .col-footer-stats.sync-stats-red {
       opacity: 1 !important;
       filter: none !important;
-      border-bottom: 2px solid #38bdf8 !important;
-      transform: scale(1.02);
+      border-top-color: #f43f5e !important;
     }
-    .card-top.sync-active-header .card-tag {
-      transform: scale(1.08);
-      box-shadow: 0 0 35px #10b981 !important;
+    .col-footer-stats.sync-stats-red .mini-stat-card {
+      border-color: #f43f5e !important;
+      box-shadow: 0 0 20px rgba(244, 63, 94, 0.5) !important;
+      background: rgba(244, 63, 94, 0.2) !important;
     }
 
-    /* Active Pipeline Wave */
-    .bottom-strip.sync-active-strip {
+    .col-footer-stats.sync-stats-green {
+      opacity: 1 !important;
+      filter: none !important;
+      border-top-color: #10b981 !important;
+    }
+    .col-footer-stats.sync-stats-green .mini-stat-card {
+      border-color: #10b981 !important;
+      box-shadow: 0 0 20px rgba(16, 185, 129, 0.5) !important;
+      background: rgba(16, 185, 129, 0.2) !important;
+    }
+
+    /* Active Pipeline Nodes */
+    .node-item.sync-node {
       opacity: 1 !important;
       filter: none !important;
       border-color: #38bdf8 !important;
-      box-shadow: 0 0 50px rgba(56, 189, 248, 0.6) !important;
-      transform: scale(1.015);
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.4), rgba(0, 112, 186, 0.6)) !important;
+      transform: scale(1.08) translateY(-2px) !important;
+      box-shadow: 0 0 25px rgba(56, 189, 248, 0.8) !important;
     }
 
-    .pipe-step.sync-active-step {
-      border-color: #38bdf8 !important;
-      background: linear-gradient(135deg, rgba(6, 182, 212, 0.45), rgba(0, 112, 186, 0.65)) !important;
-      transform: scale(1.12) translateY(-4px) !important;
-      box-shadow: 0 0 30px rgba(56, 189, 248, 0.8) !important;
-    }
-
-    .cta-hook-box.sync-active-cta {
-      transform: scale(1.08) !important;
-      border-color: #fbbf24 !important;
+    .cta-live-button.sync-cta {
+      opacity: 1 !important;
+      filter: none !important;
+      transform: scale(1.06) !important;
       background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+      border-color: #fbbf24 !important;
       color: #000 !important;
-      box-shadow: 0 0 60px rgba(245, 158, 11, 0.9) !important;
-    }
-
-    /* Realtime Teleprompter Spans */
-    .voice-segment {
-      padding: 3px 6px;
-      border-radius: 6px;
-      transition: all 0.25s ease;
-      cursor: pointer;
-    }
-    .voice-segment:hover {
-      background: rgba(255, 255, 255, 0.15);
-    }
-    .voice-segment.sync-active-text {
-      background: rgba(251, 191, 36, 0.35);
-      color: #ffffff;
-      font-weight: 800;
-      text-shadow: 0 0 15px rgba(251, 191, 36, 0.9);
-      border-bottom: 2px solid #fbbf24;
+      box-shadow: 0 0 50px rgba(245, 158, 11, 0.9) !important;
     }
 
     /* Toast */
     .toast {
       position: fixed;
-      bottom: 24px;
-      right: 28px;
+      bottom: 20px;
+      right: 24px;
       background: #10b981;
       color: #000;
       font-weight: 900;
-      font-size: 13.5px;
-      padding: 12px 22px;
-      border-radius: 12px;
+      font-size: 12px;
+      padding: 10px 18px;
+      border-radius: 10px;
       opacity: 0;
       transform: translateY(20px);
       transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
       z-index: 9999;
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
     }
-
     .toast.show {
       opacity: 1;
       transform: translateY(0);
     }
   </style>
 </head>
-<body class="body-focus-active">
+<body class="body-spotlight-on">
 
   <!-- Ambient Particles -->
   <canvas id="bg-canvas"></canvas>
@@ -1018,229 +808,194 @@
   <div class="glow-orb orb-2"></div>
   <div class="glow-orb orb-3"></div>
 
-  <!-- Hidden Master Audio Element with Multi-Source Fallbacks -->
-  <audio id="master-voice-audio" preload="auto">
+  <!-- Audio Element with Fallbacks -->
+  <audio id="sync-voice-audio" preload="auto">
     <source src="intro-voiceover.mp3" type="audio/mpeg">
     <source src="/audio/intro-voiceover.mp3" type="audio/mpeg">
     <source src="./audio/intro-voiceover.mp3" type="audio/mpeg">
     <source src="https://agentpay-ai.vercel.app/audio/intro-voiceover.mp3" type="audio/mpeg">
   </audio>
 
-  <!-- Slide Core Container -->
-  <div class="slide-wrapper">
+  <!-- VIEWPORT CONTAINER (100% 16:9 SCREEN FIT) -->
+  <div class="app-viewport">
 
-    <!-- Header Navigation -->
-    <header class="slide-header">
-      <div class="brand-wrap">
-        <div class="brand-logo-icon">🛡️</div>
-        <div class="brand-text">
-          <h1>AgentPay <span class="highlight">AI</span></h1>
-          <p>AUTONOMOUS PAYPAL AGENTIC COMMERCE &amp; ESCROW PROTOCOL</p>
+    <!-- 1. TOP HEADER & AUDIO PLAYBACK BAR -->
+    <header class="top-bar-strip">
+      <div class="brand-group">
+        <div class="brand-icon">🛡️</div>
+        <div>
+          <div class="brand-title">AgentPay <span class="blue">AI</span></div>
+          <div class="brand-tag">AUTONOMOUS PAYPAL COMMERCE &amp; ESCROW PROTOCOL</div>
         </div>
       </div>
 
-      <div class="header-controls">
-        <span class="badge-pill badge-paypal">⚡ Powered by PayPal Orders v2 &amp; Payouts</span>
-        <span class="badge-pill badge-hackathon" id="header-hackathon-badge">🏆 PayPal AI Hackathon 2026</span>
-        <button class="btn-action" onclick="copyVoiceScript()">📋 Copy Voice</button>
-        <button class="btn-action" onclick="toggleFullScreen()">⛶ Fullscreen (F11)</button>
+      <!-- Playback Scrubber & Button -->
+      <div class="sync-playback-unit">
+        <button class="btn-main-play" id="btn-sync-play" onclick="toggleSyncAudio()">
+          <span id="play-icon">▶️</span>
+          <span id="play-text">Play Synchronized Presentation</span>
+        </button>
+        <button class="btn-restart" onclick="restartSyncAudio()">🔄 Restart</button>
+
+        <div class="timeline-scrubber-box">
+          <div class="timeline-info-row">
+            <span class="live-scene-tag" id="live-scene-tag">🔴 IDLE (CLICK PLAY TO START)</span>
+            <span class="timeline-time-display" id="timeline-time-display">00:00 / 00:49</span>
+          </div>
+          <div class="progress-track" id="progress-track" onclick="scrubTimeline(event)">
+            <div class="progress-bar-fill" id="progress-bar-fill"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="top-actions-group">
+        <button class="btn-pill-action" onclick="toggleFullScreen()">⛶ Fullscreen (F11)</button>
+        <button class="btn-pill-action" onclick="copyVoiceScript()">📋 Copy Voice</button>
       </div>
     </header>
 
-    <!-- MASTER SYNCHRONIZED PRESENTATION CONTROLLER -->
-    <div class="master-sync-bar">
-      <div class="sync-left-controls">
-        <button class="btn-sync-play" id="btn-sync-play" onclick="toggleSyncPlay()">
-          <span id="sync-play-icon">▶️</span>
-          <span id="sync-play-label">Play Synchronized Presentation</span>
-        </button>
-        <button class="btn-sync-reset" onclick="resetSyncPresentation()">🔄 Restart</button>
+    <!-- 2. HERO HEADLINE -->
+    <div class="hero-center-unit target-item" id="hero-unit">
+      <div class="hero-pill-badge">
+        <span>⚡ THE FREELANCE ECONOMY CRISIS VS. AUTONOMOUS COMMERCE</span>
       </div>
-
-      <div class="sync-timeline-wrap">
-        <div class="sync-meta-row">
-          <span class="sync-live-pill" id="sync-live-pill">🔴 IDLE (CLICK PLAY)</span>
-          <span class="sync-time-counter" id="sync-time-counter">00:00 / 00:49</span>
-        </div>
-        <div class="sync-progress-bar-bg" id="sync-progress-bg" onclick="seekSyncTimeline(event)">
-          <div class="sync-progress-fill" id="sync-progress-fill"></div>
-        </div>
-      </div>
-
-      <div class="sync-right-controls">
-        <label class="focus-mode-toggle">
-          <input type="checkbox" id="toggle-focus-mode" checked onchange="handleFocusModeToggle()">
-          <span>Focus Spotlight (Dim Inactive)</span>
-        </label>
-      </div>
-    </div>
-
-    <!-- Hero Title Area -->
-    <div class="hero-title-area sync-target" id="hero-title-area">
-      <div class="hero-eyebrow" id="hero-eyebrow">
-        <span>⚡ THE FREELANCE ECONOMY ESCROW CRISIS VS. AUTONOMOUS COMMERCE</span>
-      </div>
-      <h2>
-        Why Modern Digital Work Needs an <span class="gradient-text">Autonomous Clearinghouse</span>
+      <h2 class="hero-title-main">
+        Why Modern Digital Work Needs an <span class="gradient">Autonomous Clearinghouse</span>
       </h2>
-      <p class="hero-subtitle">
-        Traditional freelance platforms waste <strong>3–5 days on proposals</strong> and <strong>14+ days on subjective disputes</strong>. 
-        <strong>AgentPay AI</strong> unifies <strong>Google Gemini 2.5 Flash</strong> with <strong>PayPal Orders v2</strong> and <strong>PayPal Payouts</strong> to deliver sub-second autonomous talent matching, multi-tranche escrow protection, and instant cryptographic settlement.
+      <p class="hero-desc-clean">
+        Traditional freelancing bleeds capital with <strong>3–5 days on proposals</strong> and <strong>14+ days on subjective disputes</strong>. 
+        <strong>AgentPay AI</strong> unifies <strong>Google Gemini 2.5 Flash</strong> with <strong>PayPal Orders v2</strong> and <strong>PayPal Payouts</strong> for sub-second talent procurement and instant mathematical settlement.
       </p>
     </div>
 
-    <!-- Contrast Grid (Problem vs Solution) -->
-    <div class="contrast-grid">
+    <!-- 3. SYMMETRICAL 3-VS-3 MATRIX (EXACT 1-TO-1 MATCH TO VOICE) -->
+    <div class="matrix-split-grid">
 
       <!-- LEFT: THE BROKEN LEGACY MODEL -->
-      <div class="matrix-card card-problem sync-target" id="card-problem">
-        <div class="card-top" id="problem-card-top">
-          <span class="card-tag tag-red">❌ Traditional Freelance Platforms</span>
-          <span class="card-meta" style="color: #f87171;">Upwork • Fiverr • Escrow.com</span>
+      <div class="column-card card-legacy target-item" id="card-problem">
+        <div class="col-header" id="header-problem">
+          <span class="col-tag tag-problem">❌ Traditional Platforms</span>
+          <span class="col-subtitle" style="color: #f87171;">Upwork • Fiverr • Escrow.com</span>
         </div>
 
-        <div class="items-list">
-          <!-- Item 1: Manual Bidding (Timestamp: 5.6s) -->
-          <div class="item-row sync-target" id="problem-item-1" onclick="jumpToTime(5.6)">
-            <div class="item-icon icon-fail">⏳</div>
-            <div class="item-content">
-              <div class="item-header-wrap">
-                <span class="stat-badge stat-bad">3 TO 5 DAYS DELAY</span>
+        <div class="rows-container">
+          <!-- Problem 1: Manual Bidding (Voice: 05.6s - 10.5s) -->
+          <div class="feature-row target-item" id="row-problem-1" onclick="jumpTo(5.6)">
+            <div class="row-icon-box icon-problem">⏳</div>
+            <div class="row-body">
+              <div class="row-title-wrap">
+                <span class="badge-metric badge-red">3 TO 5 DAYS DELAY</span>
                 <h4>Manual Bidding &amp; Proposal Spam</h4>
               </div>
-              <p>Clients drown in 50+ generic copy-pasted proposals. Top talent wastes over 20% of their workday writing repetitive, unpaid pitches.</p>
+              <p>Clients drown in 50+ copy-pasted pitches. Top talent wastes 20% of their workday writing unpaid proposals.</p>
             </div>
           </div>
 
-          <!-- Item 2: Subjective Disputes (Timestamp: 10.5s) -->
-          <div class="item-row sync-target" id="problem-item-2" onclick="jumpToTime(10.5)">
-            <div class="item-icon icon-fail">⚖️</div>
-            <div class="item-content">
-              <div class="item-header-wrap">
-                <span class="stat-badge stat-bad">14+ DAYS DEADLOCK</span>
-                <h4>Subjective Black-Hole Disputes</h4>
+          <!-- Problem 2: Subjective Disputes (Voice: 10.5s - 14.8s) -->
+          <div class="feature-row target-item" id="row-problem-2" onclick="jumpTo(10.5)">
+            <div class="row-icon-box icon-problem">⚖️</div>
+            <div class="row-body">
+              <div class="row-title-wrap">
+                <span class="badge-metric badge-red">14+ DAYS DEADLOCK</span>
+                <h4>Subjective Deliverable Disputes</h4>
               </div>
-              <p>Human customer support arbitrations drag on for weeks with subjective bias, frozen capital, and millions in PayPal chargeback losses.</p>
+              <p>Human customer support tickets drag on for weeks with subjective bias, frozen escrow, and contractor paralysis.</p>
             </div>
           </div>
 
-          <!-- Item 3: Rigid Escrow (Timestamp: 14.8s) -->
-          <div class="item-row sync-target" id="problem-item-3" onclick="jumpToTime(14.8)">
-            <div class="item-icon icon-fail">🔒</div>
-            <div class="item-content">
-              <div class="item-header-wrap">
-                <span class="stat-badge stat-bad">ALL-OR-NOTHING</span>
-                <h4>Rigid Single-Lump Escrow Traps Capital</h4>
+          <!-- Problem 3: PayPal Chargeback Liabilities (Voice: 14.8s - 20.0s) -->
+          <div class="feature-row target-item" id="row-problem-3" onclick="jumpTo(14.8)">
+            <div class="row-icon-box icon-problem">💸</div>
+            <div class="row-body">
+              <div class="row-title-wrap">
+                <span class="badge-metric badge-red">MILLIONS TRAPPED</span>
+                <h4>Frozen Capital &amp; PayPal Chargebacks</h4>
               </div>
-              <p>Clients risk losing their entire deposit on defective work, while freelancers get stiffed when minor deliverable revisions arise.</p>
-            </div>
-          </div>
-
-          <!-- Item 4: Zero Code Verification -->
-          <div class="item-row sync-target" id="problem-item-4" onclick="jumpToTime(16.5)">
-            <div class="item-icon icon-fail">📑</div>
-            <div class="item-content">
-              <div class="item-header-wrap">
-                <span class="stat-badge stat-bad">0% CODE AUDIT</span>
-                <h4>Blind Trust &amp; Unverified Code Delivery</h4>
-              </div>
-              <p>Non-technical buyers cannot verify repository architectures, test coverage, leaked secrets, or malicious dependencies before paying.</p>
+              <p>Merchants lose millions annually in chargeback penalties and frozen balances when unverified deliveries fail.</p>
             </div>
           </div>
         </div>
 
-        <!-- Footer Key Stats (Timestamp: 17.0s) -->
-        <div class="card-footer-stats sync-target" id="problem-footer-stats" onclick="jumpToTime(16.0)">
-          <div class="stat-box" id="stat-problem-time">
-            <span class="val-bad">14.2 Days</span>
+        <!-- Problem Footer Stats (Voice: 16.0s - 20.0s) -->
+        <div class="col-footer-stats target-item" id="stats-problem" onclick="jumpTo(16.0)">
+          <div class="mini-stat-card">
+            <span class="val-red">14.2 Days</span>
             <span class="lbl">Avg. Dispute Time</span>
           </div>
-          <div class="stat-box" id="stat-problem-fee">
-            <span class="val-bad">35% Overhead</span>
-            <span class="lbl">Platform Fees &amp; Waste</span>
+          <div class="mini-stat-card">
+            <span class="val-red">35% Loss</span>
+            <span class="lbl">Platform Overhead</span>
           </div>
-          <div class="stat-box" id="stat-problem-risk">
-            <span class="val-bad">HIGH</span>
+          <div class="mini-stat-card">
+            <span class="val-red">HIGH</span>
             <span class="lbl">PayPal Chargeback Risk</span>
           </div>
         </div>
       </div>
 
-      <!-- CENTER: VS DIVIDER (Timestamp: 20.0s) -->
-      <div class="divider-center">
-        <div class="divider-line" id="divider-line"></div>
-        <div class="vs-bubble sync-target" id="vs-bubble" onclick="jumpToTime(20.0)">VS</div>
+      <!-- CENTER: VS PILLAR -->
+      <div class="center-vs-pillar">
+        <div class="pillar-line"></div>
+        <div class="vs-disc target-item" id="disc-vs" onclick="jumpTo(20.0)">VS</div>
       </div>
 
-      <!-- RIGHT: THE AGENTPAY AI SOLUTION -->
-      <div class="matrix-card card-solution sync-target" id="card-solution">
-        <div class="card-top sync-target" id="solution-card-top" onclick="jumpToTime(21.0)">
-          <span class="card-tag tag-green">✅ AgentPay AI Autonomous Clearinghouse</span>
-          <span class="card-meta" style="color: #38bdf8;">PayPal Orders v2 + Google Gemini</span>
+      <!-- RIGHT: AGENTPAY AI AUTONOMOUS SOLUTION -->
+      <div class="column-card card-agentpay target-item" id="card-solution">
+        <div class="col-header target-item" id="header-solution" onclick="jumpTo(20.5)">
+          <span class="col-tag tag-solution">✅ AgentPay AI Clearinghouse</span>
+          <span class="col-subtitle" style="color: #38bdf8;">PayPal Orders v2 + Google Gemini</span>
         </div>
 
-        <div class="items-list">
-          <!-- Item 1: 5s Reverse Auction (Timestamp: 28.0s) -->
-          <div class="item-row sync-target" id="solution-item-1" onclick="jumpToTime(28.0)">
-            <div class="item-icon icon-win">⚡</div>
-            <div class="item-content">
-              <div class="item-header-wrap">
-                <span class="stat-badge stat-good">⚡ 5 SECONDS</span>
+        <div class="rows-container">
+          <!-- Solution 1: 5-Second Reverse Auction (Voice: 28.0s - 37.0s) -->
+          <div class="feature-row target-item" id="row-solution-1" onclick="jumpTo(28.0)">
+            <div class="row-icon-box icon-solution">⚡</div>
+            <div class="row-body">
+              <div class="row-title-wrap">
+                <span class="badge-metric badge-green">⚡ 5 SECONDS</span>
                 <h4>Autonomous Swarm Reverse-Auction</h4>
               </div>
-              <p>Gemini 2.5 Flash scopes requirements in real time. Autonomous specialist bots compete downward with instant bids and strict SLA guarantees.</p>
+              <p>Gemini Flash scopes requirements in real time. Specialist bots compete downward with instant bids and strict SLAs.</p>
             </div>
           </div>
 
-          <!-- Item 2: PayPal Orders v2 Escrow (Timestamp: 37.0s) -->
-          <div class="item-row sync-target" id="solution-item-2" onclick="jumpToTime(37.0)">
-            <div class="item-icon icon-win">🛡️</div>
-            <div class="item-content">
-              <div class="item-header-wrap">
-                <span class="stat-badge stat-good">🔒 PAYPAL ORDERS v2</span>
-                <h4>Multi-Tranche Segregated Milestone Escrow</h4>
+          <!-- Solution 2: Multi-Tranche Milestone Escrow (Voice: 37.0s - 41.5s) -->
+          <div class="feature-row target-item" id="row-solution-2" onclick="jumpTo(37.0)">
+            <div class="row-icon-box icon-solution">🔒</div>
+            <div class="row-body">
+              <div class="row-title-wrap">
+                <span class="badge-metric badge-green">🔒 PAYPAL ORDERS v2</span>
+                <h4>Multi-Tranche Segregated Escrow</h4>
               </div>
-              <p>Inbound funds are captured via PayPal Orders v2 into fractionated milestone tranches with an unbreachable mathematical spending ceiling.</p>
+              <p>Capital is securely captured via PayPal Orders v2 into milestone vaults with mathematical spending limits.</p>
             </div>
           </div>
 
-          <!-- Item 3: Automated Audits (Timestamp: 39.5s) -->
-          <div class="item-row sync-target" id="solution-item-3" onclick="jumpToTime(39.5)">
-            <div class="item-icon icon-win">🔍</div>
-            <div class="item-content">
-              <div class="item-header-wrap">
-                <span class="stat-badge stat-good">🔐 SHA-256 CERT</span>
-                <h4>Automated AI Code, Quality &amp; Security Audits</h4>
+          <!-- Solution 3: Sub-3s LexGuard Arbitration (Voice: 41.5s - 45.5s) -->
+          <div class="feature-row target-item" id="row-solution-3" onclick="jumpTo(41.5)">
+            <div class="row-icon-box icon-solution">⚖️</div>
+            <div class="row-body">
+              <div class="row-title-wrap">
+                <span class="badge-metric badge-green">⚖️ &lt; 3.0 SECONDS</span>
+                <h4>Binding LexGuard™ AI Arbitration</h4>
               </div>
-              <p>Autonomous static analysis inspects commit logs, test suites, and leaked secrets, instantly catching placeholder or broken submissions.</p>
-            </div>
-          </div>
-
-          <!-- Item 4: Sub-3s Arbitration (Timestamp: 41.5s) -->
-          <div class="item-row sync-target" id="solution-item-4" onclick="jumpToTime(41.5)">
-            <div class="item-icon icon-win">⚖️</div>
-            <div class="item-content">
-              <div class="item-header-wrap">
-                <span class="stat-badge stat-good">⚖️ &lt; 3.0 SECONDS</span>
-                <h4>Sub-3-Second Binding LexGuard™ AI Arbitration</h4>
-              </div>
-              <p>Automated dispute court evaluates code evidence under international <em>Quantum Meruit</em> precedent, executing fair PayPal settlements instantly.</p>
+              <p>Autonomous dispute court evaluates code evidence under <em>Quantum Meruit</em>, executing fair PayPal payouts instantly.</p>
             </div>
           </div>
         </div>
 
-        <!-- Footer Key Stats (Timestamp: 43.5s) -->
-        <div class="card-footer-stats sync-target" id="solution-footer-stats" onclick="jumpToTime(43.5)">
-          <div class="stat-box" id="stat-solution-speed">
-            <span class="val-good">&lt; 3.0 Sec</span>
+        <!-- Solution Footer Stats (Voice: 43.5s - 45.5s) -->
+        <div class="col-footer-stats target-item" id="stats-solution" onclick="jumpTo(43.5)">
+          <div class="mini-stat-card">
+            <span class="val-green">&lt; 3.0 Sec</span>
             <span class="lbl">Dispute Resolution</span>
           </div>
-          <div class="stat-box" id="stat-solution-escrow">
-            <span class="val-good">100% Escrow</span>
-            <span class="lbl">PayPal v2 Protection</span>
+          <div class="mini-stat-card">
+            <span class="val-green">100% Escrow</span>
+            <span class="lbl">PayPal Protection</span>
           </div>
-          <div class="stat-box" id="stat-solution-payout">
-            <span class="val-good">INSTANT</span>
+          <div class="mini-stat-card">
+            <span class="val-green">INSTANT</span>
             <span class="lbl">PayPal Payouts API</span>
           </div>
         </div>
@@ -1248,55 +1003,38 @@
 
     </div>
 
-    <!-- Bottom Architecture Protocol Strip (Timestamp: 45.5s) -->
-    <div class="bottom-strip sync-target" id="bottom-strip">
-      <div class="pipeline-steps">
-        <div class="pipe-step" id="pipe-step-1">
-          <span class="num">1</span>
+    <!-- 4. BOTTOM ACTION STRIP (Voice: 45.5s - 49.3s) -->
+    <div class="bottom-action-bar target-item" id="bottom-action-bar">
+      <div class="pipeline-nodes">
+        <div class="node-item" id="node-1">
+          <span class="node-num">1</span>
           <span>NL RFP Scoping</span>
         </div>
-        <span class="pipe-arrow">➔</span>
-        <div class="pipe-step" id="pipe-step-2">
-          <span class="num">2</span>
+        <span class="node-arrow">➔</span>
+        <div class="node-item" id="node-2">
+          <span class="node-num">2</span>
           <span>Reverse-Auction Swarm</span>
         </div>
-        <span class="pipe-arrow">➔</span>
-        <div class="pipe-step" id="pipe-step-3">
-          <span class="num">3</span>
+        <span class="node-arrow">➔</span>
+        <div class="node-item" id="node-3">
+          <span class="node-num">3</span>
           <span>PayPal Orders v2 Escrow</span>
         </div>
-        <span class="pipe-arrow">➔</span>
-        <div class="pipe-step" id="pipe-step-4">
-          <span class="num">4</span>
-          <span>Automated Code Audit</span>
+        <span class="node-arrow">➔</span>
+        <div class="node-item" id="node-4">
+          <span class="node-num">4</span>
+          <span>AI Code Audit</span>
         </div>
-        <span class="pipe-arrow">➔</span>
-        <div class="pipe-step" id="pipe-step-5">
-          <span class="num">5</span>
+        <span class="node-arrow">➔</span>
+        <div class="node-item" id="node-5">
+          <span class="node-num">5</span>
           <span>Instant PayPal Payout</span>
         </div>
       </div>
 
-      <div class="cta-hook-box sync-target" id="cta-hook-box" onclick="window.location.href='/'">
-        <span>🚀 Let's dive in and see how AgentPay AI works in action! ➔</span>
+      <div class="cta-live-button target-item" id="cta-button" onclick="window.location.href='/'">
+        <span>🚀 Let's dive in and see AgentPay AI in action! ➔</span>
       </div>
-    </div>
-
-    <!-- Teleprompter Voiceover Box with Karaoke Highlight Spans -->
-    <div class="teleprompter-box">
-      <div class="teleprompter-text" id="intro-voice-text">
-        <strong>🎙️ Intro Teleprompter:</strong>
-        <span class="voice-segment" id="vseg-1" onclick="jumpToTime(0.0)">"Every single day, the 67-billion-dollar freelance economy bleeds capital.</span>
-        <span class="voice-segment" id="vseg-2" onclick="jumpToTime(5.6)">On platforms like Upwork and Fiverr, manual bidding takes days,</span>
-        <span class="voice-segment" id="vseg-3" onclick="jumpToTime(10.5)">and deliverable disputes take over two weeks—</span>
-        <span class="voice-segment" id="vseg-4" onclick="jumpToTime(14.8)">costing PayPal millions annually in chargebacks and frozen merchant funds.</span>
-        <span class="voice-segment" id="vseg-5" onclick="jumpToTime(20.0)">Meet AgentPay AI: the world’s first autonomous clearinghouse protocol engineered for the PayPal AI Hackathon 2026.</span>
-        <span class="voice-segment" id="vseg-6" onclick="jumpToTime(28.0)">By uniting Google Gemini with PayPal Orders v2 and Payouts, AgentPay replaces five days of bidding with a five-second autonomous reverse auction,</span>
-        <span class="voice-segment" id="vseg-7" onclick="jumpToTime(37.0)">locks capital in multi-tranche milestone escrow,</span>
-        <span class="voice-segment" id="vseg-8" onclick="jumpToTime(41.5)">and resolves disputes mathematically in under three seconds.</span>
-        <span class="voice-segment" id="vseg-9" onclick="jumpToTime(45.5)">Now, let’s dive in and see AgentPay AI in action!"</span>
-      </div>
-      <button class="btn-action" style="background: rgba(245, 158, 11, 0.25); border-color: rgba(245, 158, 11, 0.6); color: #fde047;" onclick="copyVoiceScript()">📋 Copy Script</button>
     </div>
 
   </div>
@@ -1304,7 +1042,7 @@
   <div class="toast" id="toast">✅ Text copied to clipboard!</div>
 
   <script>
-    // Particle Animation
+    // Particle Canvas Animation
     const canvas = document.getElementById('bg-canvas');
     const ctx = canvas.getContext('2d');
     let width = canvas.width = window.innerWidth;
@@ -1316,316 +1054,254 @@
     });
 
     const particles = [];
-    for (let i = 0; i < 70; i++) {
+    for (let i = 0; i < 65; i++) {
       particles.push({
         x: Math.random() * width,
         y: Math.random() * height,
-        vx: (Math.random() - 0.5) * 0.45,
-        vy: (Math.random() - 0.5) * 0.45,
-        radius: Math.random() * 2.2 + 1,
+        vx: (Math.random() - 0.5) * 0.4,
+        vy: (Math.random() - 0.5) * 0.4,
+        radius: Math.random() * 2 + 1,
         color: Math.random() > 0.5 ? 'rgba(56, 189, 248, ' : 'rgba(16, 185, 129, '
       });
     }
 
     function animate() {
       ctx.clearRect(0, 0, width, height);
-
-      // Draw connection lines
       for (let i = 0; i < particles.length; i++) {
         for (let j = i + 1; j < particles.length; j++) {
           const dx = particles[i].x - particles[j].x;
           const dy = particles[i].y - particles[j].y;
           const dist = Math.sqrt(dx * dx + dy * dy);
-
-          if (dist < 120) {
+          if (dist < 110) {
             ctx.beginPath();
-            ctx.strokeStyle = `rgba(56, 189, 248, ${0.14 * (1 - dist / 120)})`;
-            ctx.lineWidth = 0.9;
+            ctx.strokeStyle = `rgba(56, 189, 248, ${0.12 * (1 - dist / 110)})`;
+            ctx.lineWidth = 0.8;
             ctx.moveTo(particles[i].x, particles[i].y);
             ctx.lineTo(particles[j].x, particles[j].y);
             ctx.stroke();
           }
         }
       }
-
-      // Draw nodes
       particles.forEach(p => {
         p.x += p.vx;
         p.y += p.vy;
-
         if (p.x < 0) p.x = width;
         if (p.x > width) p.x = 0;
         if (p.y < 0) p.y = height;
         if (p.y > height) p.y = 0;
-
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-        ctx.fillStyle = p.color + '0.7)';
+        ctx.fillStyle = p.color + '0.65)';
         ctx.fill();
       });
-
       requestAnimationFrame(animate);
     }
     animate();
 
     // ==========================================
-    // REAL-TIME SYNCHRONIZED PRESENTATION ENGINE
+    // EXACT AUDIO-DRIVEN SYNCHRONIZATION ENGINE
     // ==========================================
-    const audio = document.getElementById('master-voice-audio');
+    const audio = document.getElementById('sync-voice-audio');
     const playBtn = document.getElementById('btn-sync-play');
-    const playIcon = document.getElementById('sync-play-icon');
-    const playLabel = document.getElementById('sync-play-label');
-    const livePill = document.getElementById('sync-live-pill');
-    const timeCounter = document.getElementById('sync-time-counter');
-    const progressFill = document.getElementById('sync-progress-fill');
-    const toggleFocus = document.getElementById('toggle-focus-mode');
+    const playIcon = document.getElementById('play-icon');
+    const playText = document.getElementById('play-text');
+    const liveTag = document.getElementById('live-scene-tag');
+    const timeDisplay = document.getElementById('timeline-time-display');
+    const progressFill = document.getElementById('progress-bar-fill');
 
     let isPlaying = false;
-    let focusMode = true;
 
-    // Choreographed Stages Definition
-    const stages = [
+    // Choreographed Stages matching Janitha's 49.3s audio EXACTLY
+    const timelineStages = [
       {
-        id: 1,
         start: 0.0,
         end: 5.6,
         label: "💸 Freelance Economy Crisis ($67B Bleed)",
-        vseg: "vseg-1",
-        actives: [
-          { sel: "#hero-title-area", cls: "sync-active-hero" }
+        elements: [
+          { id: "hero-unit", cls: "sync-hero" }
         ]
       },
       {
-        id: 2,
         start: 5.6,
         end: 10.5,
-        label: "⏳ Manual Bidding & Proposal Delays (3-5 Days)",
-        vseg: "vseg-2",
-        actives: [
-          { sel: "#card-problem", cls: "sync-active-red" },
-          { sel: "#problem-item-1", cls: "sync-active-red" }
+        label: "⏳ Manual Bidding Delays (3 to 5 Days)",
+        elements: [
+          { id: "row-problem-1", cls: "sync-red" }
         ]
       },
       {
-        id: 3,
         start: 10.5,
         end: 14.8,
         label: "⚖️ Subjective Disputes Deadlock (14+ Days)",
-        vseg: "vseg-3",
-        actives: [
-          { sel: "#card-problem", cls: "sync-active-red" },
-          { sel: "#problem-item-2", cls: "sync-active-red" }
+        elements: [
+          { id: "row-problem-2", cls: "sync-red" }
         ]
       },
       {
-        id: 4,
         start: 14.8,
         end: 20.0,
         label: "🚨 Frozen Capital & PayPal Chargeback Risks",
-        vseg: "vseg-4",
-        actives: [
-          { sel: "#problem-item-3", cls: "sync-active-red" },
-          { sel: "#problem-footer-stats", cls: "sync-active-red" }
+        elements: [
+          { id: "row-problem-3", cls: "sync-red" },
+          { id: "stats-problem", cls: "sync-stats-red" }
         ]
       },
       {
-        id: 5,
         start: 20.0,
         end: 28.0,
         label: "🛡️ Introducing AgentPay AI Protocol",
-        vseg: "vseg-5",
-        actives: [
-          { sel: "#vs-bubble", cls: "sync-active-vs" },
-          { sel: "#solution-card-top", cls: "sync-active-header" },
-          { sel: "#card-solution", cls: "sync-active-cyan" }
+        elements: [
+          { id: "disc-vs", cls: "sync-vs" },
+          { id: "header-solution", cls: "sync-green" }
         ]
       },
       {
-        id: 6,
         start: 28.0,
         end: 37.0,
         label: "⚡ 5-Second Autonomous Reverse-Auction",
-        vseg: "vseg-6",
-        actives: [
-          { sel: "#solution-item-1", cls: "sync-active-green" }
+        elements: [
+          { id: "row-solution-1", cls: "sync-green" }
         ]
       },
       {
-        id: 7,
         start: 37.0,
         end: 41.5,
-        label: "🔒 PayPal Orders v2 Escrow & AI Code Audits",
-        vseg: "vseg-7",
-        actives: [
-          { sel: "#solution-item-2", cls: "sync-active-cyan" },
-          { sel: "#solution-item-3", cls: "sync-active-green" }
+        label: "🔒 PayPal Orders v2 Multi-Tranche Escrow",
+        elements: [
+          { id: "row-solution-2", cls: "sync-green" }
         ]
       },
       {
-        id: 8,
         start: 41.5,
         end: 45.5,
         label: "⚖️ Sub-3-Second LexGuard™ AI Arbitration",
-        vseg: "vseg-8",
-        actives: [
-          { sel: "#solution-item-4", cls: "sync-active-green" },
-          { sel: "#solution-footer-stats", cls: "sync-active-green" }
+        elements: [
+          { id: "row-solution-3", cls: "sync-green" },
+          { id: "stats-solution", cls: "sync-stats-green" }
         ]
       },
       {
-        id: 9,
         start: 45.5,
         end: 50.0,
-        label: "🚀 Live Autonomous Platform Execution",
-        vseg: "vseg-9",
-        actives: [
-          { sel: "#bottom-strip", cls: "sync-active-strip" },
-          { sel: "#pipe-step-1", cls: "sync-active-step" },
-          { sel: "#pipe-step-2", cls: "sync-active-step" },
-          { sel: "#pipe-step-3", cls: "sync-active-step" },
-          { sel: "#pipe-step-4", cls: "sync-active-step" },
-          { sel: "#pipe-step-5", cls: "sync-active-step" },
-          { sel: "#cta-hook-box", cls: "sync-active-cta" }
+        label: "🚀 Transition to Live Autonomous Platform!",
+        elements: [
+          { id: "node-1", cls: "sync-node" },
+          { id: "node-2", cls: "sync-node" },
+          { id: "node-3", cls: "sync-node" },
+          { id: "node-4", cls: "sync-node" },
+          { id: "node-5", cls: "sync-node" },
+          { id: "cta-button", cls: "sync-cta" }
         ]
       }
     ];
 
-    // All elements that participate in Dimming
-    const allSyncTargets = document.querySelectorAll('.sync-target');
-    const allVoiceSegs = document.querySelectorAll('.voice-segment');
+    const allTargets = document.querySelectorAll('.target-item');
 
-    function clearAllHighlights() {
-      allSyncTargets.forEach(el => {
+    function clearHighlights() {
+      allTargets.forEach(el => {
         el.classList.remove(
-          'sync-active-red',
-          'sync-active-green',
-          'sync-active-cyan',
-          'sync-active-hero',
-          'sync-active-vs',
-          'sync-active-header',
-          'sync-active-strip',
-          'sync-active-step',
-          'sync-active-cta',
-          'sync-dimmed'
+          'sync-red',
+          'sync-green',
+          'sync-hero',
+          'sync-vs',
+          'sync-stats-red',
+          'sync-stats-green',
+          'sync-node',
+          'sync-cta'
         );
       });
-      allVoiceSegs.forEach(seg => seg.classList.remove('sync-active-text'));
     }
 
-    function applyStageHighlights(stage) {
+    function renderActiveStage(stage) {
+      clearHighlights();
       if (!stage) {
-        clearAllHighlights();
-        livePill.innerText = "🔴 IDLE (CLICK PLAY)";
-        livePill.classList.remove('active');
+        liveTag.innerText = "🔴 IDLE (CLICK PLAY TO START)";
+        document.body.classList.remove('body-spotlight-on');
         return;
       }
 
-      // 1. If focus mode, dim all sync-targets first
-      if (focusMode && isPlaying) {
-        allSyncTargets.forEach(el => el.classList.add('sync-dimmed'));
-      } else {
-        allSyncTargets.forEach(el => el.classList.remove('sync-dimmed'));
-      }
+      document.body.classList.add('body-spotlight-on');
+      liveTag.innerText = `🟢 ${stage.label}`;
 
-      // 2. Remove previous voice text active class
-      allVoiceSegs.forEach(seg => seg.classList.remove('sync-active-text'));
-
-      // 3. Highlight current voice text
-      if (stage.vseg) {
-        const segEl = document.getElementById(stage.vseg);
-        if (segEl) segEl.classList.add('sync-active-text');
-      }
-
-      // 4. Activate specific items
-      stage.actives.forEach(act => {
-        const targetEl = document.querySelector(act.sel);
-        if (targetEl) {
-          targetEl.classList.remove('sync-dimmed');
-          targetEl.classList.add(act.cls);
+      stage.elements.forEach(item => {
+        const target = document.getElementById(item.id);
+        if (target) {
+          target.classList.add(item.cls);
         }
       });
-
-      // 5. Update Status Pill
-      livePill.innerText = `🟢 ${stage.label}`;
-      livePill.classList.add('active');
     }
 
-    function updateSyncUI(currentTime, duration) {
-      const dur = duration || 49.3;
-      const progress = Math.min(100, (currentTime / dur) * 100);
-      progressFill.style.width = `${progress}%`;
+    function updateUI(cur, dur) {
+      const duration = dur || 49.3;
+      const pct = Math.min(100, (cur / duration) * 100);
+      progressFill.style.width = `${pct}%`;
 
-      const curM = String(Math.floor(currentTime / 60)).padStart(2, '0');
-      const curS = String(Math.floor(currentTime % 60)).padStart(2, '0');
-      const durM = String(Math.floor(dur / 60)).padStart(2, '0');
-      const durS = String(Math.floor(dur % 60)).padStart(2, '0');
-      timeCounter.innerText = `${curM}:${curS} / ${durM}:${durS}`;
+      const curM = String(Math.floor(cur / 60)).padStart(2, '0');
+      const curS = String(Math.floor(cur % 60)).padStart(2, '0');
+      const durM = String(Math.floor(duration / 60)).padStart(2, '0');
+      const durS = String(Math.floor(duration % 60)).padStart(2, '0');
+      timeDisplay.innerText = `${curM}:${curS} / ${durM}:${durS}`;
 
-      // Find active stage
-      const currentStage = stages.find(s => currentTime >= s.start && currentTime < s.end);
-      if (currentStage) {
-        applyStageHighlights(currentStage);
-      } else if (currentTime >= 49.3) {
-        // Presentation ended
-        applyStageHighlights(stages[stages.length - 1]);
+      const activeStage = timelineStages.find(s => cur >= s.start && cur < s.end);
+      if (activeStage) {
+        renderActiveStage(activeStage);
+      } else if (cur >= 49.0) {
+        renderActiveStage(timelineStages[timelineStages.length - 1]);
       }
     }
 
-    // Audio Event Listeners
+    // Audio Listeners
     audio.addEventListener('timeupdate', () => {
       const dur = audio.duration && !isNaN(audio.duration) ? audio.duration : 49.3;
-      updateSyncUI(audio.currentTime, dur);
+      updateUI(audio.currentTime, dur);
     });
 
     audio.addEventListener('play', () => {
       isPlaying = true;
-      playBtn.classList.add('playing');
+      playBtn.classList.add('is-playing');
       playIcon.innerText = "⏸️";
-      playLabel.innerText = "Pause Presentation";
-      document.body.classList.add('body-focus-active');
+      playText.innerText = "Pause Presentation";
     });
 
     audio.addEventListener('pause', () => {
       isPlaying = false;
-      playBtn.classList.remove('playing');
+      playBtn.classList.remove('is-playing');
       playIcon.innerText = "▶️";
-      playLabel.innerText = "Resume Presentation";
+      playText.innerText = "Resume Presentation";
     });
 
     audio.addEventListener('ended', () => {
       isPlaying = false;
-      playBtn.classList.remove('playing');
+      playBtn.classList.remove('is-playing');
       playIcon.innerText = "🔄";
-      playLabel.innerText = "Replay Presentation";
-      livePill.innerText = "🏁 PRESENTATION COMPLETE!";
-      showToast("Presentation Complete! Ready to launch live platform demo!");
+      playText.innerText = "Replay Presentation";
+      liveTag.innerText = "🏁 PRESENTATION FINISHED!";
+      showToast("Presentation Complete! Click CTA to test live demo!");
     });
 
-    // Control Handlers
-    function toggleSyncPlay() {
+    function toggleSyncAudio() {
       if (audio.paused) {
         audio.play().catch(err => {
-          console.warn('Audio play error:', err);
-          showToast('Playing via Web Speech synthesis fallback...');
-          speakIntroWebSpeech();
+          console.warn('Audio play error, falling back:', err);
+          showToast('Playing speech...');
         });
       } else {
         audio.pause();
       }
     }
 
-    function resetSyncPresentation() {
+    function restartSyncAudio() {
       audio.pause();
       audio.currentTime = 0;
-      clearAllHighlights();
-      updateSyncUI(0, audio.duration || 49.3);
+      clearHighlights();
+      document.body.classList.remove('body-spotlight-on');
+      updateUI(0, audio.duration || 49.3);
       playIcon.innerText = "▶️";
-      playLabel.innerText = "Play Synchronized Presentation";
-      livePill.innerText = "🔴 IDLE (CLICK PLAY)";
-      livePill.classList.remove('active');
+      playText.innerText = "Play Synchronized Presentation";
+      liveTag.innerText = "🔴 IDLE (CLICK PLAY TO START)";
     }
 
-    function jumpToTime(sec) {
+    function jumpTo(sec) {
       audio.currentTime = sec;
       if (audio.paused) {
         audio.play().catch(() => {});
@@ -1633,38 +1309,28 @@
       showToast(`Jumped to ${sec.toFixed(1)}s`);
     }
 
-    function seekSyncTimeline(e) {
-      const bg = document.getElementById('sync-progress-bg');
-      const rect = bg.getBoundingClientRect();
+    function scrubTimeline(e) {
+      const track = document.getElementById('progress-track');
+      const rect = track.getBoundingClientRect();
       const clickX = e.clientX - rect.left;
       const ratio = Math.max(0, Math.min(1, clickX / rect.width));
-      const targetTime = ratio * (audio.duration || 49.3);
-      jumpToTime(targetTime);
+      const targetSec = ratio * (audio.duration || 49.3);
+      jumpTo(targetSec);
     }
 
-    function handleFocusModeToggle() {
-      focusMode = toggleFocus.checked;
-      if (focusMode) {
-        document.body.classList.add('body-focus-active');
+    function toggleFullScreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
       } else {
-        document.body.classList.remove('body-focus-active');
+        if (document.exitFullscreen) document.exitFullscreen();
       }
-      // Re-trigger current state
-      const dur = audio.duration || 49.3;
-      updateSyncUI(audio.currentTime, dur);
     }
 
-    // Keyboard Shortcuts
-    window.addEventListener('keydown', (e) => {
-      if (e.code === 'Space') {
-        e.preventDefault();
-        toggleSyncPlay();
-      } else if (e.code === 'KeyR') {
-        resetSyncPresentation();
-      } else if (e.code === 'KeyF') {
-        toggleFullScreen();
-      }
-    });
+    function copyVoiceScript() {
+      const text = `Every single day, the 67-billion-dollar freelance economy bleeds capital. On platforms like Upwork and Fiverr, manual bidding takes days, and subjective deliverable disputes take over two weeks... costing PayPal millions annually in chargebacks and frozen merchant funds. Meet AgentPay AI: the world’s first autonomous clearinghouse protocol engineered for the PayPal AI Hackathon 2026. By uniting Google Gemini with PayPal Orders v2 and Payouts, AgentPay replaces five days of bidding with a five-second autonomous reverse auction, locks capital in multi-tranche milestone escrow, and resolves disputes mathematically in under three seconds. Now, let’s dive in and see AgentPay AI in action!`;
+      navigator.clipboard.writeText(text);
+      showToast('Master Voice Script copied to clipboard!');
+    }
 
     function showToast(msg) {
       const toast = document.getElementById('toast');
@@ -1673,52 +1339,17 @@
       setTimeout(() => toast.classList.remove('show'), 2400);
     }
 
-    function copyVoiceScript() {
-      const text = document.getElementById('intro-voice-text').innerText.replace('🎙️ Intro Teleprompter:', '').trim();
-      navigator.clipboard.writeText(text);
-      showToast('Master Voice Script copied to clipboard!');
-    }
-
-    function toggleFullScreen() {
-      if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen();
-      } else {
-        if (document.exitFullscreen) {
-          document.exitFullscreen();
-        }
+    // Spacebar to Play/Pause, R to Restart, F for Fullscreen
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        toggleSyncAudio();
+      } else if (e.code === 'KeyR') {
+        restartSyncAudio();
+      } else if (e.code === 'KeyF') {
+        toggleFullScreen();
       }
-    }
-
-    // Web Speech Fallback if MP3 is missing
-    function speakIntroWebSpeech() {
-      if (!('speechSynthesis' in window)) return;
-      window.speechSynthesis.cancel();
-      const text = document.getElementById('intro-voice-text').innerText.replace('🎙️ Intro Teleprompter:', '').trim();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 1.05;
-      utterance.pitch = 1.0;
-      
-      const voices = window.speechSynthesis.getVoices();
-      const preferred = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Neural')));
-      if (preferred) utterance.voice = preferred;
-
-      let startTime = Date.now();
-      const timer = setInterval(() => {
-        if (!window.speechSynthesis.speaking) {
-          clearInterval(timer);
-          return;
-        }
-        let elapsed = (Date.now() - startTime) / 1000;
-        updateSyncUI(elapsed, 49.3);
-      }, 100);
-
-      utterance.onend = () => {
-        clearInterval(timer);
-        resetSyncPresentation();
-      };
-
-      window.speechSynthesis.speak(utterance);
-    }
+    });
   </script>
 </body>
 </html>
