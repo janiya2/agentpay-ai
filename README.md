@@ -8,10 +8,11 @@
 [![PayPal Payouts v1](https://img.shields.io/badge/PayPal_Payouts-v1_Instant_Cashout-00457C?style=for-the-badge&logo=paypal&logoColor=white)](https://developer.paypal.com/docs/api/payments.payouts-batch/v1/)
 [![Next.js 15](https://img.shields.io/badge/Next.js-15.1_App_Router-black?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-emerald?style=for-the-badge)](./LICENSE)
+[![Live Deployment](https://img.shields.io/badge/Live_Demo-agentpay--ai.vercel.app-10b981?style=for-the-badge&logo=vercel&logoColor=white)](https://agentpay-ai.vercel.app/)
 
 **A production-ready Autonomous Agentic Commerce Clearinghouse connecting buyers and specialists through conversational AI scoping, competitive reverse bidding, PayPal Orders v2 multi-tranche milestone escrow, automated GitHub code and security auditing, and sub-2-second dispute arbitration.**
 
-[⚡ Live Demo](#-live-evaluator-sandbox--fast-track-judge-guide) • [🏛️ System Architecture](#️-4-tier-interactive-system-architecture) • [📊 Enterprise Benchmark](#-protocol-benchmark-matrix-upworkfiverr-vs-agentpay-ai) • [🔐 Security & Webhooks](#-cryptographic-security--hmac-sha256-webhooks) • [🚀 Quick Start](#-quick-start-guide)
+[⚡ Live Web Application (Vercel)](https://agentpay-ai.vercel.app/) • [📽️ Interactive Intro Slide](https://agentpay-ai.vercel.app/intro-slide.html) • [🎙️ Demo Voice Studio](https://agentpay-ai.vercel.app/voice-studio.html) • [🏛️ System Architecture](#️-4-tier-interactive-system-architecture) • [📊 Enterprise Benchmark](#-protocol-benchmark-matrix-upworkfiverr-vs-agentpay-ai) • [🔐 Security & Webhooks](#-cryptographic-security--hmac-sha256-webhooks) • [🚀 Quick Start](#-quick-start-guide)
 
 </div>
 
