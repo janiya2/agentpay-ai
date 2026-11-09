@@ -6,12 +6,12 @@
   <title>AgentPay AI — Problem & Solution Presentation (PayPal AI Hackathon 2026)</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800;900&display=swap" rel="stylesheet">
   
   <style>
     :root {
-      --bg: #030712;
-      --card-bg: rgba(11, 18, 36, 0.92);
+      --bg: #060b18;
+      --card-bg: rgba(14, 23, 48, 0.96);
       --cyan: #06b6d4;
       --cyan-bright: #38bdf8;
       --paypal-blue: #0070ba;
@@ -19,8 +19,9 @@
       --gold: #f59e0b;
       --emerald: #10b981;
       --rose: #f43f5e;
-      --text-main: #ffffff;
-      --text-muted: #94a3b8;
+      --text-white: #ffffff;
+      --text-bright: #f8fafc;
+      --text-sub: #cbd5e1;
     }
 
     * {
@@ -33,22 +34,22 @@
       width: 100%;
       height: 100vh;
       max-height: 100vh;
-      overflow: hidden; /* ZERO SCROLLING REQUIRED - PERFECT 16:9 FIT */
+      overflow: hidden; /* Zero scroll */
       background-color: var(--bg);
-      color: var(--text-main);
+      color: var(--text-bright);
       font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
-      position: relative;
     }
 
     body {
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      padding: 12px 28px 14px;
+      padding: 10px 24px 12px;
+      position: relative;
       background-image: 
-        radial-gradient(circle at 50% 0%, rgba(0, 112, 186, 0.38) 0%, transparent 65%),
-        radial-gradient(circle at 95% 90%, rgba(6, 182, 212, 0.2) 0%, transparent 55%),
-        radial-gradient(circle at 5% 90%, rgba(16, 185, 129, 0.2) 0%, transparent 55%);
+        radial-gradient(circle at 50% 0%, rgba(0, 112, 186, 0.45) 0%, transparent 65%),
+        radial-gradient(circle at 95% 90%, rgba(6, 182, 212, 0.25) 0%, transparent 55%),
+        radial-gradient(circle at 5% 90%, rgba(16, 185, 129, 0.22) 0%, transparent 55%);
     }
 
     /* Ambient Canvas */
@@ -60,49 +61,14 @@
       height: 100%;
       pointer-events: none;
       z-index: 1;
-      opacity: 0.55;
+      opacity: 0.6;
     }
 
-    .glow-orb {
-      position: absolute;
-      border-radius: 50%;
-      filter: blur(140px);
-      pointer-events: none;
-      z-index: 0;
-      opacity: 0.35;
-    }
-
-    .orb-1 {
-      width: 650px;
-      height: 650px;
-      top: -220px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: radial-gradient(circle, var(--paypal-blue), transparent 70%);
-    }
-
-    .orb-2 {
-      width: 500px;
-      height: 500px;
-      bottom: -150px;
-      right: 5%;
-      background: radial-gradient(circle, var(--cyan), transparent 70%);
-    }
-
-    .orb-3 {
-      width: 480px;
-      height: 480px;
-      bottom: -120px;
-      left: 5%;
-      background: radial-gradient(circle, var(--emerald), transparent 70%);
-    }
-
-    /* MASTER CONTAINER */
-    .app-viewport {
+    .app-shell {
       position: relative;
       z-index: 10;
       width: 100%;
-      max-width: 1640px;
+      max-width: 1680px;
       height: 100%;
       margin: 0 auto;
       display: flex;
@@ -111,125 +77,144 @@
       gap: 8px;
     }
 
-    /* 1. TOP HEADER & SYNC CONTROLLER (COMBINED & COMPACT) */
-    .top-bar-strip {
+    /* =========================================
+       1. TOP MASTER BAR (CONTROLS & VIEW TOGGLE)
+       ========================================= */
+    .top-master-bar {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 16px;
-      padding: 6px 16px;
-      background: rgba(11, 18, 36, 0.85);
-      border: 1px solid rgba(56, 189, 248, 0.3);
+      padding: 7px 18px;
+      background: rgba(14, 23, 48, 0.95);
+      border: 1.5px solid rgba(56, 189, 248, 0.45);
       border-radius: 14px;
+      box-shadow: 0 6px 30px rgba(0, 0, 0, 0.7);
       backdrop-filter: blur(20px);
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
       flex-shrink: 0;
     }
 
-    .brand-group {
+    .brand-cluster {
       display: flex;
       align-items: center;
       gap: 12px;
     }
 
-    .brand-icon {
-      width: 36px;
-      height: 36px;
+    .brand-icon-box {
+      width: 38px;
+      height: 38px;
       background: linear-gradient(135deg, #0070ba, #003087);
-      border: 1px solid rgba(56, 189, 248, 0.6);
+      border: 1.5px solid #38bdf8;
       border-radius: 10px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 18px;
-      box-shadow: 0 0 20px rgba(0, 112, 186, 0.6);
+      font-size: 20px;
+      box-shadow: 0 0 20px rgba(0, 112, 186, 0.8);
     }
 
-    .brand-title {
-      font-size: 19px;
+    .brand-name {
+      font-size: 20px;
       font-weight: 900;
       letter-spacing: -0.4px;
       display: flex;
       align-items: center;
       gap: 6px;
+      color: #ffffff;
     }
 
-    .brand-title span.blue {
+    .brand-name span.cyan-glow {
       background: linear-gradient(135deg, #38bdf8, #0070ba);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
 
-    .brand-tag {
+    .brand-sub {
       font-size: 10px;
       font-family: 'JetBrains Mono', monospace;
       color: #94a3b8;
       font-weight: 700;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.6px;
     }
 
-    /* Audio Sync Controls in Top Bar */
-    .sync-playback-unit {
+    /* Audio Sync Controls */
+    .audio-playback-center {
       display: flex;
       align-items: center;
       gap: 12px;
       flex: 1;
-      max-width: 680px;
+      max-width: 720px;
       justify-content: center;
     }
 
-    .btn-main-play {
+    .btn-play-trigger {
       background: linear-gradient(135deg, #0284c7, #0070ba);
       border: 1.5px solid #38bdf8;
       color: #ffffff;
       font-family: 'Plus Jakarta Sans', sans-serif;
-      font-size: 12.5px;
+      font-size: 13px;
       font-weight: 800;
-      padding: 6px 18px;
+      padding: 7px 20px;
       border-radius: 10px;
       cursor: pointer;
       display: flex;
       align-items: center;
       gap: 8px;
-      box-shadow: 0 0 20px rgba(56, 189, 248, 0.5);
+      box-shadow: 0 0 25px rgba(56, 189, 248, 0.6);
       transition: all 0.2s ease;
       white-space: nowrap;
     }
 
-    .btn-main-play:hover {
+    .btn-play-trigger:hover {
       transform: scale(1.03);
-      box-shadow: 0 0 30px rgba(56, 189, 248, 0.8);
+      box-shadow: 0 0 35px rgba(56, 189, 248, 0.9);
       background: linear-gradient(135deg, #38bdf8, #0284c7);
       color: #000;
     }
 
-    .btn-main-play.is-playing {
+    .btn-play-trigger.is-playing {
       background: linear-gradient(135deg, #f59e0b, #d97706);
       border-color: #fbbf24;
-      box-shadow: 0 0 20px rgba(245, 158, 11, 0.6);
       color: #000;
+      box-shadow: 0 0 25px rgba(245, 158, 11, 0.7);
     }
 
-    .timeline-scrubber-box {
+    .btn-restart-circle {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      color: #ffffff;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 11.5px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-restart-circle:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .scrubber-track-box {
       display: flex;
       flex-direction: column;
       gap: 4px;
       flex: 1;
     }
 
-    .timeline-info-row {
+    .scrubber-meta-line {
       display: flex;
       align-items: center;
       justify-content: space-between;
       font-family: 'JetBrains Mono', monospace;
-      font-size: 10.5px;
-      font-weight: 700;
+      font-size: 11px;
+      font-weight: 800;
     }
 
-    .live-scene-tag {
-      background: rgba(16, 185, 129, 0.18);
-      border: 1px solid rgba(16, 185, 129, 0.5);
-      color: #6ee7b7;
+    .status-stage-tag {
+      background: rgba(16, 185, 129, 0.2);
+      border: 1px solid rgba(16, 185, 129, 0.6);
+      color: #4ade80;
       padding: 2px 8px;
       border-radius: 5px;
       display: flex;
@@ -238,15 +223,15 @@
       letter-spacing: 0.4px;
     }
 
-    .timeline-time-display {
+    .timestamp-ticker {
       color: #38bdf8;
       letter-spacing: 0.8px;
     }
 
-    .progress-track {
+    .progress-bar-slot {
       width: 100%;
-      height: 6px;
-      background: rgba(255, 255, 255, 0.12);
+      height: 7px;
+      background: rgba(255, 255, 255, 0.15);
       border-radius: 9999px;
       cursor: pointer;
       position: relative;
@@ -258,72 +243,95 @@
       width: 0%;
       background: linear-gradient(90deg, #38bdf8, #10b981, #f59e0b);
       border-radius: 9999px;
-      box-shadow: 0 0 12px rgba(56, 189, 248, 0.8);
+      box-shadow: 0 0 15px rgba(56, 189, 248, 0.9);
       transition: width 0.1s linear;
     }
 
-    .btn-restart {
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      color: #cbd5e1;
-      padding: 5px 10px;
-      border-radius: 8px;
-      font-size: 11px;
-      font-weight: 700;
-      cursor: pointer;
-    }
-
-    .top-actions-group {
+    /* Right View Switcher & Fullscreen */
+    .view-switcher-group {
       display: flex;
       align-items: center;
       gap: 8px;
     }
 
-    .btn-pill-action {
+    .view-toggle-btn {
       background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      color: #cbd5e1;
       font-size: 11.5px;
-      font-weight: 700;
+      font-weight: 800;
+      padding: 6px 13px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .view-toggle-btn:hover {
+      background: rgba(255, 255, 255, 0.18);
+      color: #ffffff;
+    }
+
+    .view-toggle-btn.active {
+      background: linear-gradient(135deg, #0284c7, #0070ba);
+      border-color: #38bdf8;
+      color: #ffffff;
+      box-shadow: 0 0 15px rgba(56, 189, 248, 0.5);
+    }
+
+    .btn-fs {
+      background: rgba(245, 158, 11, 0.15);
+      border: 1.5px solid rgba(245, 158, 11, 0.5);
+      color: #fbbf24;
+      font-size: 11.5px;
+      font-weight: 800;
       padding: 6px 12px;
       border-radius: 8px;
       cursor: pointer;
       display: flex;
       align-items: center;
       gap: 6px;
-      transition: all 0.2s ease;
     }
 
-    .btn-pill-action:hover {
-      background: rgba(255, 255, 255, 0.18);
-      border-color: #38bdf8;
+    /* =========================================
+       VIEW 1: COMPARISON MATRIX (SIDE BY SIDE)
+       ========================================= */
+    #view-matrix {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      flex: 1;
+      gap: 8px;
+      min-height: 0;
     }
 
-    /* 2. HERO HEADLINE AREA */
-    .hero-center-unit {
+    /* Hero Section */
+    .matrix-hero {
       text-align: center;
       padding: 2px 0 4px;
       flex-shrink: 0;
-      transition: all 0.35s ease;
+      transition: all 0.3s ease;
     }
 
-    .hero-pill-badge {
+    .hero-eyebrow-pill {
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      background: rgba(6, 182, 212, 0.14);
-      border: 1px solid rgba(6, 182, 212, 0.45);
+      background: rgba(6, 182, 212, 0.18);
+      border: 1.5px solid rgba(6, 182, 212, 0.6);
       color: #38bdf8;
-      font-size: 10.5px;
-      font-weight: 800;
+      font-size: 11px;
+      font-weight: 900;
       text-transform: uppercase;
-      letter-spacing: 1.5px;
-      padding: 3px 14px;
+      letter-spacing: 1.4px;
+      padding: 3px 16px;
       border-radius: 9999px;
       margin-bottom: 4px;
     }
 
-    .hero-title-main {
+    .matrix-hero h2 {
       font-size: 30px;
       font-weight: 900;
       letter-spacing: -0.8px;
@@ -331,78 +339,76 @@
       color: #ffffff;
     }
 
-    .hero-title-main span.gradient {
-      background: linear-gradient(135deg, #ffffff 20%, #38bdf8 65%, #0070ba 100%);
+    .matrix-hero h2 span.gradient {
+      background: linear-gradient(135deg, #ffffff 15%, #38bdf8 65%, #0070ba 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
 
-    .hero-desc-clean {
+    .matrix-hero p {
       font-size: 13.5px;
-      color: #cbd5e1;
-      max-width: 980px;
-      margin: 4px auto 0;
-      line-height: 1.45;
+      color: #e2e8f0;
+      max-width: 1040px;
+      margin: 3px auto 0;
+      line-height: 1.4;
       font-weight: 500;
     }
 
-    .hero-desc-clean strong {
+    .matrix-hero p strong {
       color: #38bdf8;
       font-weight: 700;
     }
 
-    /* 3. SYMMETRICAL 3-VS-3 DUAL MATRIX (FITS SCREEN EXACTLY) */
-    .matrix-split-grid {
+    /* Split 3-vs-3 Cards */
+    .matrix-cards-grid {
       display: grid;
-      grid-template-columns: 1fr 54px 1.08fr;
+      grid-template-columns: 1fr 50px 1.1fr;
       gap: 16px;
       align-items: stretch;
       flex: 1;
-      min-height: 0; /* Prevents overflow */
+      min-height: 0;
     }
 
-    .column-card {
+    .matrix-box {
       background: var(--card-bg);
       border-radius: 18px;
       padding: 16px 20px;
       backdrop-filter: blur(25px);
-      box-shadow: 0 15px 45px rgba(0, 0, 0, 0.6);
+      box-shadow: 0 15px 45px rgba(0, 0, 0, 0.7);
       display: flex;
       flex-direction: column;
       justify-content: space-between;
       position: relative;
-      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
       min-height: 0;
+      transition: all 0.35s ease;
     }
 
-    /* Left: Broken Legacy */
-    .card-legacy {
-      border: 2px solid rgba(244, 63, 94, 0.4);
-      background: linear-gradient(165deg, rgba(244, 63, 94, 0.1) 0%, rgba(15, 23, 42, 0.95) 100%);
+    .box-problem {
+      border: 2px solid rgba(244, 63, 94, 0.5);
+      background: linear-gradient(165deg, rgba(244, 63, 94, 0.12) 0%, rgba(14, 23, 48, 0.98) 100%);
     }
 
-    /* Right: AgentPay Autonomous */
-    .card-agentpay {
-      border: 2px solid rgba(16, 185, 129, 0.5);
-      background: linear-gradient(165deg, rgba(16, 185, 129, 0.12) 0%, rgba(0, 112, 186, 0.15) 50%, rgba(15, 23, 42, 0.95) 100%);
+    .box-solution {
+      border: 2px solid rgba(16, 185, 129, 0.6);
+      background: linear-gradient(165deg, rgba(16, 185, 129, 0.14) 0%, rgba(0, 112, 186, 0.18) 50%, rgba(14, 23, 48, 0.98) 100%);
     }
 
-    .col-header {
+    .box-top-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
       padding-bottom: 10px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      border-bottom: 1.5px solid rgba(255, 255, 255, 0.12);
       margin-bottom: 10px;
       flex-shrink: 0;
     }
 
-    .col-tag {
-      font-size: 11.5px;
+    .tag-badge {
+      font-size: 12px;
       font-weight: 900;
       text-transform: uppercase;
       letter-spacing: 1px;
-      padding: 4px 12px;
+      padding: 5px 13px;
       border-radius: 8px;
       font-family: 'JetBrains Mono', monospace;
       display: flex;
@@ -410,26 +416,27 @@
       gap: 6px;
     }
 
-    .tag-problem {
-      background: rgba(244, 63, 94, 0.25);
-      border: 1px solid rgba(244, 63, 94, 0.6);
+    .tag-bad {
+      background: rgba(244, 63, 94, 0.28);
+      border: 1.5px solid rgba(244, 63, 94, 0.7);
       color: #fda4af;
     }
 
-    .tag-solution {
-      background: rgba(16, 185, 129, 0.25);
-      border: 1px solid rgba(16, 185, 129, 0.7);
+    .tag-good {
+      background: rgba(16, 185, 129, 0.28);
+      border: 1.5px solid rgba(16, 185, 129, 0.8);
       color: #6ee7b7;
     }
 
-    .col-subtitle {
-      font-size: 11.5px;
-      font-weight: 700;
+    .platform-names {
+      font-size: 12px;
+      font-weight: 800;
       font-family: 'JetBrains Mono', monospace;
+      color: #94a3b8;
     }
 
-    /* 3 Clean Items in Each Column */
-    .rows-container {
+    /* 3 Content Rows */
+    .box-items-stack {
       display: flex;
       flex-direction: column;
       gap: 10px;
@@ -438,142 +445,143 @@
       min-height: 0;
     }
 
-    .feature-row {
+    .point-card {
       display: flex;
       align-items: center;
-      gap: 12px;
-      background: rgba(0, 0, 0, 0.45);
-      border: 1.5px solid rgba(255, 255, 255, 0.08);
-      padding: 10px 14px;
-      border-radius: 12px;
+      gap: 14px;
+      background: rgba(5, 10, 25, 0.7);
+      border: 1.5px solid rgba(255, 255, 255, 0.12);
+      padding: 12px 16px;
+      border-radius: 14px;
       transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
       cursor: pointer;
+      position: relative;
     }
 
-    .feature-row:hover {
-      background: rgba(255, 255, 255, 0.06);
-      border-color: rgba(255, 255, 255, 0.25);
+    .point-card:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.35);
       transform: translateX(4px);
     }
 
-    .row-icon-box {
-      width: 36px;
-      height: 36px;
-      border-radius: 10px;
+    .point-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 18px;
+      font-size: 20px;
       flex-shrink: 0;
     }
 
-    .icon-problem {
-      background: rgba(244, 63, 94, 0.2);
-      border: 1px solid rgba(244, 63, 94, 0.5);
+    .icon-bad {
+      background: rgba(244, 63, 94, 0.25);
+      border: 1.5px solid rgba(244, 63, 94, 0.6);
       color: #fb7185;
     }
 
-    .icon-solution {
-      background: rgba(16, 185, 129, 0.2);
-      border: 1px solid rgba(16, 185, 129, 0.6);
+    .icon-good {
+      background: rgba(16, 185, 129, 0.25);
+      border: 1.5px solid rgba(16, 185, 129, 0.7);
       color: #34d399;
     }
 
-    .row-body {
+    .point-details {
       flex: 1;
     }
 
-    .row-title-wrap {
+    .point-headline {
       display: flex;
       align-items: center;
-      gap: 8px;
-      margin-bottom: 2px;
+      gap: 9px;
+      margin-bottom: 3px;
     }
 
-    .badge-metric {
+    .point-metric-pill {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 10px;
+      font-size: 11px;
       font-weight: 900;
-      padding: 2px 7px;
-      border-radius: 5px;
+      padding: 3px 8px;
+      border-radius: 6px;
       letter-spacing: 0.5px;
       text-transform: uppercase;
     }
 
-    .badge-red {
-      background: rgba(244, 63, 94, 0.25);
+    .pill-bad {
+      background: rgba(244, 63, 94, 0.3);
       color: #ff8597;
-      border: 1px solid rgba(244, 63, 94, 0.5);
+      border: 1px solid rgba(244, 63, 94, 0.6);
     }
 
-    .badge-green {
-      background: rgba(16, 185, 129, 0.25);
+    .pill-good {
+      background: rgba(16, 185, 129, 0.3);
       color: #4ade80;
-      border: 1px solid rgba(16, 185, 129, 0.5);
+      border: 1px solid rgba(16, 185, 129, 0.6);
     }
 
-    .row-body h4 {
-      font-size: 14.5px;
+    .point-details h4 {
+      font-size: 15.5px;
       font-weight: 800;
       color: #ffffff;
-      letter-spacing: -0.2px;
+      letter-spacing: -0.3px;
     }
 
-    .row-body p {
-      font-size: 12.2px;
+    .point-details p {
+      font-size: 13px;
       color: #cbd5e1;
-      line-height: 1.4;
+      line-height: 1.45;
       font-weight: 500;
     }
 
     /* Footer Stats 3-Col */
-    .col-footer-stats {
+    .box-footer-metrics {
       margin-top: 10px;
-      padding-top: 8px;
-      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      padding-top: 10px;
+      border-top: 1.5px solid rgba(255, 255, 255, 0.12);
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
+      gap: 10px;
       text-align: center;
       flex-shrink: 0;
     }
 
-    .mini-stat-card {
-      background: rgba(0, 0, 0, 0.4);
-      padding: 6px 4px;
-      border-radius: 8px;
-      border: 1px solid rgba(255, 255, 255, 0.06);
+    .metric-cell {
+      background: rgba(0, 0, 0, 0.5);
+      padding: 7px 5px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
       transition: all 0.3s ease;
     }
 
-    .mini-stat-card .val-red {
+    .metric-cell .num-bad {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 15px;
+      font-size: 17px;
       font-weight: 900;
       color: #f87171;
       display: block;
     }
 
-    .mini-stat-card .val-green {
+    .metric-cell .num-good {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 15px;
+      font-size: 17px;
       font-weight: 900;
       color: #34d399;
       display: block;
     }
 
-    .mini-stat-card .lbl {
-      font-size: 9.5px;
-      font-weight: 700;
+    .metric-cell .lbl {
+      font-size: 10px;
+      font-weight: 800;
       color: #94a3b8;
       text-transform: uppercase;
-      letter-spacing: 0.4px;
-      margin-top: 1px;
+      letter-spacing: 0.5px;
+      margin-top: 2px;
       display: block;
     }
 
     /* Center VS Pillar */
-    .center-vs-pillar {
+    .divider-vs-column {
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -581,199 +589,302 @@
       position: relative;
     }
 
-    .pillar-line {
-      width: 2px;
+    .divider-beam {
+      width: 2.5px;
       height: 100%;
-      background: linear-gradient(180deg, transparent, rgba(56, 189, 248, 0.6), transparent);
+      background: linear-gradient(180deg, transparent, rgba(56, 189, 248, 0.7), transparent);
     }
 
-    .vs-disc {
+    .vs-emblem {
       position: absolute;
-      width: 44px;
-      height: 44px;
+      width: 48px;
+      height: 48px;
       border-radius: 50%;
       background: #090e1a;
-      border: 2px solid #38bdf8;
+      border: 2.5px solid #38bdf8;
       display: flex;
       align-items: center;
       justify-content: center;
       font-weight: 900;
-      font-size: 13px;
+      font-size: 14px;
       color: #38bdf8;
-      box-shadow: 0 0 25px rgba(56, 189, 248, 0.7);
-      letter-spacing: 1px;
+      box-shadow: 0 0 30px rgba(56, 189, 248, 0.8);
+      letter-spacing: 1.2px;
       transition: all 0.35s ease;
     }
 
-    /* 4. BOTTOM ACTION STRIP */
-    .bottom-action-bar {
+    /* Bottom Pipeline Action Bar */
+    .matrix-bottom-bar {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 16px;
-      padding: 8px 18px;
-      background: rgba(10, 16, 32, 0.9);
-      border: 1px solid rgba(56, 189, 248, 0.35);
+      padding: 9px 20px;
+      background: rgba(12, 19, 40, 0.95);
+      border: 1.5px solid rgba(56, 189, 248, 0.4);
       border-radius: 14px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 4px 25px rgba(0, 0, 0, 0.6);
       flex-shrink: 0;
     }
 
-    .pipeline-nodes {
+    .protocol-flow-line {
       display: flex;
       align-items: center;
       gap: 10px;
     }
 
-    .node-item {
+    .flow-badge {
       display: flex;
       align-items: center;
-      gap: 6px;
-      font-size: 11.5px;
+      gap: 7px;
+      font-size: 12px;
       font-weight: 800;
       color: #f1f5f9;
-      background: rgba(0, 0, 0, 0.5);
-      padding: 5px 11px;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 6px 12px;
       border-radius: 8px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.15);
       transition: all 0.3s ease;
     }
 
-    .node-num {
-      width: 18px;
-      height: 18px;
+    .flow-num {
+      width: 20px;
+      height: 20px;
       background: linear-gradient(135deg, #38bdf8, #0070ba);
       color: #000;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 10px;
+      font-size: 10.5px;
       font-weight: 900;
     }
 
-    .node-arrow {
+    .flow-arrow {
       color: #38bdf8;
-      font-size: 13px;
+      font-size: 14px;
       font-weight: 900;
     }
 
-    .cta-live-button {
+    .cta-launch-pill {
       background: linear-gradient(135deg, #0284c7, #0070ba);
       border: 1.5px solid #38bdf8;
-      padding: 8px 20px;
+      padding: 9px 22px;
       border-radius: 10px;
       font-weight: 900;
-      font-size: 13px;
+      font-size: 13.5px;
       color: #ffffff;
       display: flex;
       align-items: center;
       gap: 8px;
-      box-shadow: 0 0 25px rgba(6, 182, 212, 0.5);
+      box-shadow: 0 0 30px rgba(6, 182, 212, 0.6);
       white-space: nowrap;
       cursor: pointer;
       transition: all 0.3s ease;
     }
 
-    .cta-live-button:hover {
+    .cta-launch-pill:hover {
       transform: scale(1.03);
-      box-shadow: 0 0 35px rgba(56, 189, 248, 0.8);
+      box-shadow: 0 0 40px rgba(56, 189, 248, 0.9);
       background: linear-gradient(135deg, #38bdf8, #0284c7);
       color: #000;
     }
 
-    /* REAL-TIME HIGHLIGHT & DIMMING STYLES */
-    .body-spotlight-on .target-item {
-      opacity: 0.32 !important;
-      filter: grayscale(35%) !important;
-      transform: scale(0.985) !important;
-      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    /* =========================================
+       ACTIVE SYNCHRONIZATION HIGHLIGHTS (BRIGHT!)
+       ========================================= */
+    /* When an item is active: scale up + intense neon laser outline! */
+    .point-card.is-active-red {
+      transform: scale(1.03) translateX(10px) !important;
+      border: 2.5px solid #f43f5e !important;
+      background: linear-gradient(135deg, rgba(244, 63, 94, 0.35), rgba(15, 23, 42, 0.98)) !important;
+      box-shadow: 0 0 45px rgba(244, 63, 94, 0.95), inset 0 0 15px rgba(244, 63, 94, 0.4) !important;
+      z-index: 30;
+    }
+    .point-card.is-active-red h4 {
+      color: #fff !important;
+      text-shadow: 0 0 10px rgba(244, 63, 94, 0.8);
+    }
+    .point-card.is-active-red .pill-bad {
+      background: #f43f5e !important;
+      color: #fff !important;
+      box-shadow: 0 0 15px #f43f5e;
     }
 
-    /* Active Problem Glow */
-    .feature-row.sync-red {
-      opacity: 1 !important;
-      filter: none !important;
-      transform: translateX(8px) scale(1.025) !important;
-      border: 2px solid #f43f5e !important;
-      background: linear-gradient(135deg, rgba(244, 63, 94, 0.3), rgba(15, 23, 42, 0.98)) !important;
-      box-shadow: 0 0 35px rgba(244, 63, 94, 0.8), inset 0 0 12px rgba(244, 63, 94, 0.3) !important;
-      z-index: 20;
+    .point-card.is-active-green {
+      transform: scale(1.03) translateX(10px) !important;
+      border: 2.5px solid #10b981 !important;
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.35), rgba(15, 23, 42, 0.98)) !important;
+      box-shadow: 0 0 45px rgba(16, 185, 129, 0.95), inset 0 0 15px rgba(16, 185, 129, 0.4) !important;
+      z-index: 30;
+    }
+    .point-card.is-active-green h4 {
+      color: #fff !important;
+      text-shadow: 0 0 10px rgba(16, 185, 129, 0.8);
+    }
+    .point-card.is-active-green .pill-good {
+      background: #10b981 !important;
+      color: #000 !important;
+      box-shadow: 0 0 15px #10b981;
     }
 
-    /* Active Solution Glow */
-    .feature-row.sync-green {
-      opacity: 1 !important;
-      filter: none !important;
-      transform: translateX(8px) scale(1.025) !important;
-      border: 2px solid #10b981 !important;
-      background: linear-gradient(135deg, rgba(16, 185, 129, 0.3), rgba(15, 23, 42, 0.98)) !important;
-      box-shadow: 0 0 40px rgba(16, 185, 129, 0.8), inset 0 0 12px rgba(16, 185, 129, 0.3) !important;
-      z-index: 20;
-    }
-
-    /* Active Hero Glow */
-    .hero-center-unit.sync-hero {
-      opacity: 1 !important;
-      filter: none !important;
-      background: rgba(0, 112, 186, 0.15);
-      border-radius: 14px;
-      box-shadow: 0 0 40px rgba(0, 112, 186, 0.4);
-      transform: scale(1.01);
-    }
-
-    /* Active VS Disc Glow */
-    .vs-disc.sync-vs {
-      opacity: 1 !important;
-      filter: none !important;
-      transform: scale(1.25) !important;
+    .vs-emblem.is-active-vs {
+      transform: scale(1.3) !important;
       border-color: #38bdf8 !important;
       background: #003087 !important;
       color: #ffffff !important;
-      box-shadow: 0 0 50px rgba(56, 189, 248, 1), inset 0 0 15px rgba(56, 189, 248, 0.8) !important;
+      box-shadow: 0 0 60px rgba(56, 189, 248, 1), inset 0 0 20px rgba(56, 189, 248, 0.8) !important;
     }
 
-    /* Active Stats Glow */
-    .col-footer-stats.sync-stats-red {
-      opacity: 1 !important;
-      filter: none !important;
-      border-top-color: #f43f5e !important;
-    }
-    .col-footer-stats.sync-stats-red .mini-stat-card {
+    .box-footer-metrics.is-active-red .metric-cell {
       border-color: #f43f5e !important;
-      box-shadow: 0 0 20px rgba(244, 63, 94, 0.5) !important;
-      background: rgba(244, 63, 94, 0.2) !important;
+      background: rgba(244, 63, 94, 0.25) !important;
+      box-shadow: 0 0 25px rgba(244, 63, 94, 0.6) !important;
+      transform: scale(1.04);
     }
 
-    .col-footer-stats.sync-stats-green {
-      opacity: 1 !important;
-      filter: none !important;
-      border-top-color: #10b981 !important;
-    }
-    .col-footer-stats.sync-stats-green .mini-stat-card {
+    .box-footer-metrics.is-active-green .metric-cell {
       border-color: #10b981 !important;
-      box-shadow: 0 0 20px rgba(16, 185, 129, 0.5) !important;
-      background: rgba(16, 185, 129, 0.2) !important;
+      background: rgba(16, 185, 129, 0.25) !important;
+      box-shadow: 0 0 25px rgba(16, 185, 129, 0.6) !important;
+      transform: scale(1.04);
     }
 
-    /* Active Pipeline Nodes */
-    .node-item.sync-node {
-      opacity: 1 !important;
-      filter: none !important;
+    .flow-badge.is-active-node {
       border-color: #38bdf8 !important;
-      background: linear-gradient(135deg, rgba(6, 182, 212, 0.4), rgba(0, 112, 186, 0.6)) !important;
-      transform: scale(1.08) translateY(-2px) !important;
-      box-shadow: 0 0 25px rgba(56, 189, 248, 0.8) !important;
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.5), rgba(0, 112, 186, 0.7)) !important;
+      transform: scale(1.1) translateY(-3px) !important;
+      box-shadow: 0 0 30px rgba(56, 189, 248, 0.9) !important;
     }
 
-    .cta-live-button.sync-cta {
-      opacity: 1 !important;
-      filter: none !important;
-      transform: scale(1.06) !important;
+    .cta-launch-pill.is-active-cta {
+      transform: scale(1.08) !important;
       background: linear-gradient(135deg, #f59e0b, #d97706) !important;
       border-color: #fbbf24 !important;
       color: #000 !important;
-      box-shadow: 0 0 50px rgba(245, 158, 11, 0.9) !important;
+      box-shadow: 0 0 60px rgba(245, 158, 11, 1) !important;
+    }
+
+    /* =========================================
+       VIEW 2: CINEMATIC FULL-SCREEN SLIDER DECK
+       ========================================= */
+    #view-slider {
+      display: none;
+      flex-direction: column;
+      justify-content: space-between;
+      flex: 1;
+      min-height: 0;
+      position: relative;
+    }
+
+    .slider-stage-viewport {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      min-height: 0;
+    }
+
+    .deck-slide {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 20px 40px;
+      opacity: 0;
+      transform: scale(0.96);
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .deck-slide.active-slide {
+      display: flex;
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .slide-badge-hero {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      font-weight: 900;
+      padding: 6px 20px;
+      border-radius: 9999px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 16px;
+      box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+    }
+
+    .slide-big-title {
+      font-size: 46px;
+      font-weight: 900;
+      letter-spacing: -1.2px;
+      line-height: 1.15;
+      margin-bottom: 16px;
+      color: #ffffff;
+      max-width: 1100px;
+    }
+
+    .slide-big-desc {
+      font-size: 19px;
+      color: #cbd5e1;
+      max-width: 950px;
+      line-height: 1.6;
+      font-weight: 500;
+      margin-bottom: 28px;
+    }
+
+    .slide-highlight-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      width: 100%;
+      max-width: 1150px;
+    }
+
+    .deck-card-metric {
+      background: rgba(14, 23, 48, 0.95);
+      border: 2px solid rgba(255, 255, 255, 0.15);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+      text-align: left;
+    }
+
+    .slider-nav-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 20px;
+      background: rgba(12, 19, 40, 0.95);
+      border: 1.5px solid rgba(56, 189, 248, 0.4);
+      border-radius: 14px;
+      flex-shrink: 0;
+    }
+
+    .slider-dots {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .dot-pill {
+      width: 28px;
+      height: 8px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.2);
+      cursor: pointer;
+      transition: all 0.25s ease;
+    }
+
+    .dot-pill.active {
+      width: 50px;
+      background: #38bdf8;
+      box-shadow: 0 0 15px #38bdf8;
     }
 
     /* Toast */
@@ -784,14 +895,14 @@
       background: #10b981;
       color: #000;
       font-weight: 900;
-      font-size: 12px;
-      padding: 10px 18px;
+      font-size: 12.5px;
+      padding: 10px 20px;
       border-radius: 10px;
       opacity: 0;
       transform: translateY(20px);
       transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
       z-index: 9999;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
     }
     .toast.show {
       opacity: 1;
@@ -799,250 +910,410 @@
     }
   </style>
 </head>
-<body class="body-spotlight-on">
+<body>
 
   <!-- Ambient Particles -->
   <canvas id="bg-canvas"></canvas>
 
-  <div class="glow-orb orb-1"></div>
-  <div class="glow-orb orb-2"></div>
-  <div class="glow-orb orb-3"></div>
-
   <!-- Audio Element with Fallbacks -->
-  <audio id="sync-voice-audio" preload="auto">
+  <audio id="master-voice" preload="auto">
     <source src="intro-voiceover.mp3" type="audio/mpeg">
     <source src="/audio/intro-voiceover.mp3" type="audio/mpeg">
     <source src="./audio/intro-voiceover.mp3" type="audio/mpeg">
     <source src="https://agentpay-ai.vercel.app/audio/intro-voiceover.mp3" type="audio/mpeg">
   </audio>
 
-  <!-- VIEWPORT CONTAINER (100% 16:9 SCREEN FIT) -->
-  <div class="app-viewport">
+  <!-- APP SHELL -->
+  <div class="app-shell">
 
-    <!-- 1. TOP HEADER & AUDIO PLAYBACK BAR -->
-    <header class="top-bar-strip">
-      <div class="brand-group">
-        <div class="brand-icon">🛡️</div>
+    <!-- 1. TOP MASTER BAR -->
+    <header class="top-master-bar">
+      <div class="brand-cluster">
+        <div class="brand-icon-box">🛡️</div>
         <div>
-          <div class="brand-title">AgentPay <span class="blue">AI</span></div>
-          <div class="brand-tag">AUTONOMOUS PAYPAL COMMERCE &amp; ESCROW PROTOCOL</div>
+          <div class="brand-name">AgentPay <span class="cyan-glow">AI</span></div>
+          <div class="brand-sub">AUTONOMOUS PAYPAL COMMERCE &amp; ESCROW PROTOCOL</div>
         </div>
       </div>
 
-      <!-- Playback Scrubber & Button -->
-      <div class="sync-playback-unit">
-        <button class="btn-main-play" id="btn-sync-play" onclick="toggleSyncAudio()">
-          <span id="play-icon">▶️</span>
-          <span id="play-text">Play Synchronized Presentation</span>
+      <!-- Playback Center -->
+      <div class="audio-playback-center">
+        <button class="btn-play-trigger" id="btn-play-trigger" onclick="togglePlayVoice()">
+          <span id="play-btn-icon">▶️</span>
+          <span id="play-btn-text">Play Synchronized Presentation</span>
         </button>
-        <button class="btn-restart" onclick="restartSyncAudio()">🔄 Restart</button>
+        <button class="btn-restart-circle" onclick="restartPresentation()">🔄 Restart</button>
 
-        <div class="timeline-scrubber-box">
-          <div class="timeline-info-row">
-            <span class="live-scene-tag" id="live-scene-tag">🔴 IDLE (CLICK PLAY TO START)</span>
-            <span class="timeline-time-display" id="timeline-time-display">00:00 / 00:49</span>
+        <div class="scrubber-track-box">
+          <div class="scrubber-meta-line">
+            <span class="status-stage-tag" id="status-stage-tag">🔴 IDLE (CLICK PLAY TO START)</span>
+            <span class="timestamp-ticker" id="timestamp-ticker">00:00 / 00:49</span>
           </div>
-          <div class="progress-track" id="progress-track" onclick="scrubTimeline(event)">
+          <div class="progress-bar-slot" id="progress-bar-slot" onclick="seekByClick(event)">
             <div class="progress-bar-fill" id="progress-bar-fill"></div>
           </div>
         </div>
       </div>
 
-      <div class="top-actions-group">
-        <button class="btn-pill-action" onclick="toggleFullScreen()">⛶ Fullscreen (F11)</button>
-        <button class="btn-pill-action" onclick="copyVoiceScript()">📋 Copy Voice</button>
+      <!-- Right View Switcher -->
+      <div class="view-switcher-group">
+        <button class="view-toggle-btn active" id="btn-view-matrix" onclick="switchView('matrix')">⚖️ Matrix View</button>
+        <button class="view-toggle-btn" id="btn-view-slider" onclick="switchView('slider')">🎬 Slider View</button>
+        <button class="btn-fs" onclick="toggleFullScreen()">⛶ Fullscreen (F11)</button>
       </div>
     </header>
 
-    <!-- 2. HERO HEADLINE -->
-    <div class="hero-center-unit target-item" id="hero-unit">
-      <div class="hero-pill-badge">
-        <span>⚡ THE FREELANCE ECONOMY CRISIS VS. AUTONOMOUS COMMERCE</span>
+    <!-- ==============================================
+         VIEW 1: COMPARISON MATRIX (100% VISIBLE & BRIGHT)
+         ============================================== -->
+    <div id="view-matrix">
+
+      <!-- Hero Header -->
+      <div class="matrix-hero" id="matrix-hero">
+        <div class="hero-eyebrow-pill">
+          <span>⚡ THE FREELANCE ECONOMY CRISIS VS. AUTONOMOUS COMMERCE</span>
+        </div>
+        <h2>
+          Why Modern Digital Work Needs an <span class="gradient">Autonomous Clearinghouse</span>
+        </h2>
+        <p>
+          Traditional freelancing bleeds capital with <strong>3–5 days on proposals</strong> and <strong>14+ days on subjective disputes</strong>. 
+          <strong>AgentPay AI</strong> unifies <strong>Google Gemini 2.5 Flash</strong> with <strong>PayPal Orders v2</strong> and <strong>PayPal Payouts</strong> for sub-second talent procurement and instant mathematical settlement.
+        </p>
       </div>
-      <h2 class="hero-title-main">
-        Why Modern Digital Work Needs an <span class="gradient">Autonomous Clearinghouse</span>
-      </h2>
-      <p class="hero-desc-clean">
-        Traditional freelancing bleeds capital with <strong>3–5 days on proposals</strong> and <strong>14+ days on subjective disputes</strong>. 
-        <strong>AgentPay AI</strong> unifies <strong>Google Gemini 2.5 Flash</strong> with <strong>PayPal Orders v2</strong> and <strong>PayPal Payouts</strong> for sub-second talent procurement and instant mathematical settlement.
-      </p>
+
+      <!-- Symmetrical 3 vs 3 Matrix -->
+      <div class="matrix-cards-grid">
+
+        <!-- LEFT: THE BROKEN LEGACY MODEL -->
+        <div class="matrix-box box-problem" id="box-problem">
+          <div class="box-top-header">
+            <span class="tag-badge tag-bad">❌ Traditional Platforms</span>
+            <span class="platform-names" style="color: #f87171;">Upwork • Fiverr • Escrow.com</span>
+          </div>
+
+          <div class="box-items-stack">
+            <!-- Row 1: Manual Bidding (Voice: 05.6s - 10.5s) -->
+            <div class="point-card" id="card-p1" onclick="seekTo(5.6)">
+              <div class="point-icon icon-bad">⏳</div>
+              <div class="point-details">
+                <div class="point-headline">
+                  <span class="point-metric-pill pill-bad">3 TO 5 DAYS DELAY</span>
+                  <h4>Manual Bidding &amp; Proposal Spam</h4>
+                </div>
+                <p>Clients drown in 50+ copy-pasted pitches. Top talent wastes 20% of their workday writing unpaid proposals.</p>
+              </div>
+            </div>
+
+            <!-- Row 2: Subjective Disputes (Voice: 10.5s - 14.8s) -->
+            <div class="point-card" id="card-p2" onclick="seekTo(10.5)">
+              <div class="point-icon icon-bad">⚖️</div>
+              <div class="point-details">
+                <div class="point-headline">
+                  <span class="point-metric-pill pill-bad">14+ DAYS DEADLOCK</span>
+                  <h4>Subjective Deliverable Disputes</h4>
+                </div>
+                <p>Human customer support tickets drag on for weeks with subjective bias, frozen escrow, and contractor paralysis.</p>
+              </div>
+            </div>
+
+            <!-- Row 3: PayPal Chargeback Liabilities (Voice: 14.8s - 20.0s) -->
+            <div class="point-card" id="card-p3" onclick="seekTo(14.8)">
+              <div class="point-icon icon-bad">💸</div>
+              <div class="point-details">
+                <div class="point-headline">
+                  <span class="point-metric-pill pill-bad">MILLIONS TRAPPED</span>
+                  <h4>Frozen Capital &amp; PayPal Chargebacks</h4>
+                </div>
+                <p>Merchants lose millions annually in chargeback penalties and frozen balances when unverified deliveries fail.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Problem Footer Stats (Voice: 16.0s - 20.0s) -->
+          <div class="box-footer-metrics" id="footer-problem" onclick="seekTo(16.0)">
+            <div class="metric-cell">
+              <span class="num-bad">14.2 Days</span>
+              <span class="lbl">Avg. Dispute Time</span>
+            </div>
+            <div class="metric-cell">
+              <span class="num-bad">35% Loss</span>
+              <span class="lbl">Platform Overhead</span>
+            </div>
+            <div class="metric-cell">
+              <span class="num-bad">HIGH</span>
+              <span class="lbl">PayPal Chargeback Risk</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- CENTER: VS PILLAR -->
+        <div class="divider-vs-column">
+          <div class="divider-beam"></div>
+          <div class="vs-emblem" id="emblem-vs" onclick="seekTo(20.0)">VS</div>
+        </div>
+
+        <!-- RIGHT: AGENTPAY AI AUTONOMOUS SOLUTION -->
+        <div class="matrix-box box-solution" id="box-solution">
+          <div class="box-top-header" id="header-solution" onclick="seekTo(20.5)">
+            <span class="tag-badge tag-good">✅ AgentPay AI Clearinghouse</span>
+            <span class="platform-names" style="color: #38bdf8;">PayPal Orders v2 + Google Gemini</span>
+          </div>
+
+          <div class="box-items-stack">
+            <!-- Row 1: 5-Second Reverse Auction (Voice: 28.0s - 37.0s) -->
+            <div class="point-card" id="card-s1" onclick="seekTo(28.0)">
+              <div class="point-icon icon-good">⚡</div>
+              <div class="point-details">
+                <div class="point-headline">
+                  <span class="point-metric-pill pill-good">⚡ 5 SECONDS</span>
+                  <h4>Autonomous Swarm Reverse-Auction</h4>
+                </div>
+                <p>Gemini Flash scopes requirements in real time. Specialist bots compete downward with instant bids and strict SLAs.</p>
+              </div>
+            </div>
+
+            <!-- Row 2: Multi-Tranche Milestone Escrow (Voice: 37.0s - 41.5s) -->
+            <div class="point-card" id="card-s2" onclick="seekTo(37.0)">
+              <div class="point-icon icon-good">🔒</div>
+              <div class="point-details">
+                <div class="point-headline">
+                  <span class="point-metric-pill pill-good">🔒 PAYPAL ORDERS v2</span>
+                  <h4>Multi-Tranche Segregated Escrow</h4>
+                </div>
+                <p>Capital is securely captured via PayPal Orders v2 into milestone vaults with mathematical spending limits.</p>
+              </div>
+            </div>
+
+            <!-- Row 3: Sub-3s LexGuard Arbitration (Voice: 41.5s - 45.5s) -->
+            <div class="point-card" id="card-s3" onclick="seekTo(41.5)">
+              <div class="point-icon icon-good">⚖️</div>
+              <div class="point-details">
+                <div class="point-headline">
+                  <span class="point-metric-pill pill-good">⚖️ &lt; 3.0 SECONDS</span>
+                  <h4>Binding LexGuard™ AI Arbitration</h4>
+                </div>
+                <p>Autonomous dispute court evaluates code evidence under <em>Quantum Meruit</em>, executing fair PayPal payouts instantly.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Solution Footer Stats (Voice: 43.5s - 45.5s) -->
+          <div class="box-footer-metrics" id="footer-solution" onclick="seekTo(43.5)">
+            <div class="metric-cell">
+              <span class="num-good">&lt; 3.0 Sec</span>
+              <span class="lbl">Dispute Resolution</span>
+            </div>
+            <div class="metric-cell">
+              <span class="num-good">100% Escrow</span>
+              <span class="lbl">PayPal Protection</span>
+            </div>
+            <div class="metric-cell">
+              <span class="num-good">INSTANT</span>
+              <span class="lbl">PayPal Payouts API</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Bottom Pipeline Action Bar -->
+      <div class="matrix-bottom-bar" id="matrix-bottom-bar">
+        <div class="protocol-flow-line">
+          <div class="flow-badge" id="flow-node-1">
+            <span class="flow-num">1</span>
+            <span>NL RFP Scoping</span>
+          </div>
+          <span class="flow-arrow">➔</span>
+          <div class="flow-badge" id="flow-node-2">
+            <span class="flow-num">2</span>
+            <span>Reverse-Auction Swarm</span>
+          </div>
+          <span class="flow-arrow">➔</span>
+          <div class="flow-badge" id="flow-node-3">
+            <span class="flow-num">3</span>
+            <span>PayPal Orders v2 Escrow</span>
+          </div>
+          <span class="flow-arrow">➔</span>
+          <div class="flow-badge" id="flow-node-4">
+            <span class="flow-num">4</span>
+            <span>AI Code Audit</span>
+          </div>
+          <span class="flow-arrow">➔</span>
+          <div class="flow-badge" id="flow-node-5">
+            <span class="flow-num">5</span>
+            <span>Instant PayPal Payout</span>
+          </div>
+        </div>
+
+        <div class="cta-launch-pill" id="cta-launch-pill" onclick="window.location.href='/'">
+          <span>🚀 Let's dive in and see AgentPay AI in action! ➔</span>
+        </div>
+      </div>
+
     </div>
 
-    <!-- 3. SYMMETRICAL 3-VS-3 MATRIX (EXACT 1-TO-1 MATCH TO VOICE) -->
-    <div class="matrix-split-grid">
+    <!-- ==============================================
+         VIEW 2: CINEMATIC SLIDER DECK (TRUE SLIDE DECK)
+         ============================================== -->
+    <div id="view-slider">
+      <div class="slider-stage-viewport">
 
-      <!-- LEFT: THE BROKEN LEGACY MODEL -->
-      <div class="column-card card-legacy target-item" id="card-problem">
-        <div class="col-header" id="header-problem">
-          <span class="col-tag tag-problem">❌ Traditional Platforms</span>
-          <span class="col-subtitle" style="color: #f87171;">Upwork • Fiverr • Escrow.com</span>
-        </div>
-
-        <div class="rows-container">
-          <!-- Problem 1: Manual Bidding (Voice: 05.6s - 10.5s) -->
-          <div class="feature-row target-item" id="row-problem-1" onclick="jumpTo(5.6)">
-            <div class="row-icon-box icon-problem">⏳</div>
-            <div class="row-body">
-              <div class="row-title-wrap">
-                <span class="badge-metric badge-red">3 TO 5 DAYS DELAY</span>
-                <h4>Manual Bidding &amp; Proposal Spam</h4>
-              </div>
-              <p>Clients drown in 50+ copy-pasted pitches. Top talent wastes 20% of their workday writing unpaid proposals.</p>
+        <!-- Slide 1: Freelance Crisis (00:00 - 05.6s) -->
+        <div class="deck-slide active-slide" id="slide-1">
+          <span class="slide-badge-hero" style="background: rgba(244, 63, 94, 0.25); border: 1.5px solid #f43f5e; color: #fda4af;">
+            💸 THE GLOBAL COMMERCE CRISIS
+          </span>
+          <h1 class="slide-big-title">
+            The <span style="background: linear-gradient(135deg, #f43f5e, #fb7185); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">$67-Billion</span> Freelance Economy Bleeds Capital Every Day
+          </h1>
+          <p class="slide-big-desc">
+            Manual procurement processes and subjective deliverable disputes drain massive wealth from digital creators and enterprise buyers worldwide.
+          </p>
+          <div class="slide-highlight-grid">
+            <div class="deck-card-metric" style="border-color: rgba(244, 63, 94, 0.4);">
+              <h3 style="color: #f87171; font-size: 26px; font-weight: 900;">$67 Billion</h3>
+              <p style="color: #cbd5e1; font-size: 14px; margin-top: 4px;">Annual digital services transaction volume suffering friction.</p>
             </div>
-          </div>
-
-          <!-- Problem 2: Subjective Disputes (Voice: 10.5s - 14.8s) -->
-          <div class="feature-row target-item" id="row-problem-2" onclick="jumpTo(10.5)">
-            <div class="row-icon-box icon-problem">⚖️</div>
-            <div class="row-body">
-              <div class="row-title-wrap">
-                <span class="badge-metric badge-red">14+ DAYS DEADLOCK</span>
-                <h4>Subjective Deliverable Disputes</h4>
-              </div>
-              <p>Human customer support tickets drag on for weeks with subjective bias, frozen escrow, and contractor paralysis.</p>
+            <div class="deck-card-metric" style="border-color: rgba(244, 63, 94, 0.4);">
+              <h3 style="color: #f87171; font-size: 26px; font-weight: 900;">3 to 5 Days</h3>
+              <p style="color: #cbd5e1; font-size: 14px; margin-top: 4px;">Wasted on copy-pasted proposal pitches and screening.</p>
             </div>
-          </div>
-
-          <!-- Problem 3: PayPal Chargeback Liabilities (Voice: 14.8s - 20.0s) -->
-          <div class="feature-row target-item" id="row-problem-3" onclick="jumpTo(14.8)">
-            <div class="row-icon-box icon-problem">💸</div>
-            <div class="row-body">
-              <div class="row-title-wrap">
-                <span class="badge-metric badge-red">MILLIONS TRAPPED</span>
-                <h4>Frozen Capital &amp; PayPal Chargebacks</h4>
-              </div>
-              <p>Merchants lose millions annually in chargeback penalties and frozen balances when unverified deliveries fail.</p>
+            <div class="deck-card-metric" style="border-color: rgba(244, 63, 94, 0.4);">
+              <h3 style="color: #f87171; font-size: 26px; font-weight: 900;">14+ Days</h3>
+              <p style="color: #cbd5e1; font-size: 14px; margin-top: 4px;">Capital deadlock during manual customer support arbitrations.</p>
             </div>
           </div>
         </div>
 
-        <!-- Problem Footer Stats (Voice: 16.0s - 20.0s) -->
-        <div class="col-footer-stats target-item" id="stats-problem" onclick="jumpTo(16.0)">
-          <div class="mini-stat-card">
-            <span class="val-red">14.2 Days</span>
-            <span class="lbl">Avg. Dispute Time</span>
-          </div>
-          <div class="mini-stat-card">
-            <span class="val-red">35% Loss</span>
-            <span class="lbl">Platform Overhead</span>
-          </div>
-          <div class="mini-stat-card">
-            <span class="val-red">HIGH</span>
-            <span class="lbl">PayPal Chargeback Risk</span>
+        <!-- Slide 2: The 3 Fatal Flaws (05.6s - 20.0s) -->
+        <div class="deck-slide" id="slide-2">
+          <span class="slide-badge-hero" style="background: rgba(244, 63, 94, 0.25); border: 1.5px solid #f43f5e; color: #fda4af;">
+            ❌ UPWORK &amp; FIVERR BOTTLENECKS
+          </span>
+          <h1 class="slide-big-title">
+            Manual Bidding &amp; Subjective Disputes Create Massive Liability
+          </h1>
+          <p class="slide-big-desc">
+            Traditional freelancing locks up customer capital in black-hole disputes, exposing PayPal to millions in chargebacks and frozen merchant accounts.
+          </p>
+          <div class="slide-highlight-grid">
+            <div class="deck-card-metric" style="border-color: #f43f5e; background: rgba(244, 63, 94, 0.1);">
+              <div style="font-size: 28px; margin-bottom: 8px;">⏳</div>
+              <h4 style="font-size: 17px; font-weight: 800; color: #fff;">Manual Proposal Spam</h4>
+              <p style="font-size: 13.5px; color: #cbd5e1; margin-top: 6px;">50+ unverified pitches flood buyers while top talent wastes 20% of their workday.</p>
+            </div>
+            <div class="deck-card-metric" style="border-color: #f43f5e; background: rgba(244, 63, 94, 0.1);">
+              <div style="font-size: 28px; margin-bottom: 8px;">⚖️</div>
+              <h4 style="font-size: 17px; font-weight: 800; color: #fff;">2-Week Dispute Deadlock</h4>
+              <p style="font-size: 13.5px; color: #cbd5e1; margin-top: 6px;">Subjective customer support takes 14+ days to rule on deliverable conflicts.</p>
+            </div>
+            <div class="deck-card-metric" style="border-color: #f43f5e; background: rgba(244, 63, 94, 0.1);">
+              <div style="font-size: 28px; margin-bottom: 8px;">💸</div>
+              <h4 style="font-size: 17px; font-weight: 800; color: #fff;">PayPal Chargeback Loss</h4>
+              <p style="font-size: 13.5px; color: #cbd5e1; margin-top: 6px;">Millions lost in chargeback fees, frozen balances, and trapped working capital.</p>
+            </div>
           </div>
         </div>
+
+        <!-- Slide 3: Introducing AgentPay AI (20.0s - 28.0s) -->
+        <div class="deck-slide" id="slide-3">
+          <span class="slide-badge-hero" style="background: rgba(56, 189, 248, 0.25); border: 1.5px solid #38bdf8; color: #38bdf8;">
+            🏆 PAYPAL AI HACKATHON 2026
+          </span>
+          <h1 class="slide-big-title">
+            Meet <span style="background: linear-gradient(135deg, #38bdf8, #0070ba); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">AgentPay AI</span>: The World's First Autonomous Clearinghouse
+          </h1>
+          <p class="slide-big-desc">
+            Engineered exclusively for PayPal AI Hackathon 2026. Uniting <strong>Google Gemini 2.5 Flash</strong> with <strong>PayPal Orders v2</strong> &amp; <strong>PayPal Payouts</strong> to eliminate bidding friction and guarantee instant cryptographic settlement.
+          </p>
+          <div style="display: flex; gap: 20px; justify-content: center; width: 100%; max-width: 900px;">
+            <div class="deck-card-metric" style="flex: 1; border-color: #38bdf8; text-align: center;">
+              <span style="font-size: 30px;">⚡</span>
+              <h3 style="color: #38bdf8; font-size: 20px; font-weight: 800; margin-top: 6px;">Gemini 2.5 Flash</h3>
+              <p style="color: #cbd5e1; font-size: 13.5px; margin-top: 4px;">Real-time natural language RFP decomposition &amp; specialist agent swarms.</p>
+            </div>
+            <div class="deck-card-metric" style="flex: 1; border-color: #38bdf8; text-align: center;">
+              <span style="font-size: 30px;">🔒</span>
+              <h3 style="color: #38bdf8; font-size: 20px; font-weight: 800; margin-top: 6px;">PayPal Orders v2</h3>
+              <p style="color: #cbd5e1; font-size: 13.5px; margin-top: 4px;">Milestone-segregated vault escrow with mathematical spending caps.</p>
+            </div>
+            <div class="deck-card-metric" style="flex: 1; border-color: #38bdf8; text-align: center;">
+              <span style="font-size: 30px;">💸</span>
+              <h3 style="color: #38bdf8; font-size: 20px; font-weight: 800; margin-top: 6px;">PayPal Payouts API</h3>
+              <p style="color: #cbd5e1; font-size: 13.5px; margin-top: 4px;">Sub-second batch disbursements directly to developer wallets.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Slide 4: The 3 Breakthroughs (28.0s - 45.5s) -->
+        <div class="deck-slide" id="slide-4">
+          <span class="slide-badge-hero" style="background: rgba(16, 185, 129, 0.25); border: 1.5px solid #10b981; color: #6ee7b7;">
+            ✅ THE THREE AUTONOMOUS PILLARS
+          </span>
+          <h1 class="slide-big-title">
+            From 5 Days of Bidding to a 5-Second Reverse Auction
+          </h1>
+          <p class="slide-big-desc">
+            Multi-tranche escrow protects buyer capital, while sub-3-second mathematical arbitration settles disputes instantly under international law.
+          </p>
+          <div class="slide-highlight-grid">
+            <div class="deck-card-metric" style="border-color: #10b981; background: rgba(16, 185, 129, 0.1);">
+              <div style="font-size: 28px; margin-bottom: 8px;">⚡</div>
+              <h4 style="font-size: 17px; font-weight: 800; color: #fff;">5s Autonomous Auction</h4>
+              <p style="font-size: 13.5px; color: #cbd5e1; margin-top: 6px;">AI agents bid downward in real time with verified SLA commitments.</p>
+            </div>
+            <div class="deck-card-metric" style="border-color: #10b981; background: rgba(16, 185, 129, 0.1);">
+              <div style="font-size: 28px; margin-bottom: 8px;">🔒</div>
+              <h4 style="font-size: 17px; font-weight: 800; color: #fff;">Milestone Escrow Vault</h4>
+              <p style="font-size: 13.5px; color: #cbd5e1; margin-top: 6px;">Funds securely locked in segregated tranches via PayPal Orders v2.</p>
+            </div>
+            <div class="deck-card-metric" style="border-color: #10b981; background: rgba(16, 185, 129, 0.1);">
+              <div style="font-size: 28px; margin-bottom: 8px;">⚖️</div>
+              <h4 style="font-size: 17px; font-weight: 800; color: #fff;">Sub-3s LexGuard™ Court</h4>
+              <p style="font-size: 13.5px; color: #cbd5e1; margin-top: 6px;">Automated <em>Quantum Meruit</em> dispute ruling executed on PayPal in &lt; 3.0s.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Slide 5: Live Transition (45.5s - 49.3s) -->
+        <div class="deck-slide" id="slide-5">
+          <span class="slide-badge-hero" style="background: rgba(245, 158, 11, 0.25); border: 1.5px solid #fbbf24; color: #fbbf24;">
+            🚀 READY FOR LIVE EVALUATION
+          </span>
+          <h1 class="slide-big-title">
+            Now, Let’s Dive In and See AgentPay AI in Action!
+          </h1>
+          <p class="slide-big-desc">
+            Experience our 1-Click Zero-Friction Evaluator Login, automated code quality checks, and real-time PayPal webhooks terminal.
+          </p>
+          <button class="cta-launch-pill" style="font-size: 16px; padding: 14px 34px;" onclick="window.location.href='/'">
+            🚀 Launch Live AgentPay AI Platform ➔
+          </button>
+        </div>
+
       </div>
 
-      <!-- CENTER: VS PILLAR -->
-      <div class="center-vs-pillar">
-        <div class="pillar-line"></div>
-        <div class="vs-disc target-item" id="disc-vs" onclick="jumpTo(20.0)">VS</div>
-      </div>
-
-      <!-- RIGHT: AGENTPAY AI AUTONOMOUS SOLUTION -->
-      <div class="column-card card-agentpay target-item" id="card-solution">
-        <div class="col-header target-item" id="header-solution" onclick="jumpTo(20.5)">
-          <span class="col-tag tag-solution">✅ AgentPay AI Clearinghouse</span>
-          <span class="col-subtitle" style="color: #38bdf8;">PayPal Orders v2 + Google Gemini</span>
+      <!-- Slider Bottom Nav -->
+      <div class="slider-nav-controls">
+        <button class="view-toggle-btn" onclick="prevSlide()">⬅️ Previous Slide</button>
+        <div class="slider-dots">
+          <div class="dot-pill active" id="dot-1" onclick="goToSlide(1)"></div>
+          <div class="dot-pill" id="dot-2" onclick="goToSlide(2)"></div>
+          <div class="dot-pill" id="dot-3" onclick="goToSlide(3)"></div>
+          <div class="dot-pill" id="dot-4" onclick="goToSlide(4)"></div>
+          <div class="dot-pill" id="dot-5" onclick="goToSlide(5)"></div>
         </div>
-
-        <div class="rows-container">
-          <!-- Solution 1: 5-Second Reverse Auction (Voice: 28.0s - 37.0s) -->
-          <div class="feature-row target-item" id="row-solution-1" onclick="jumpTo(28.0)">
-            <div class="row-icon-box icon-solution">⚡</div>
-            <div class="row-body">
-              <div class="row-title-wrap">
-                <span class="badge-metric badge-green">⚡ 5 SECONDS</span>
-                <h4>Autonomous Swarm Reverse-Auction</h4>
-              </div>
-              <p>Gemini Flash scopes requirements in real time. Specialist bots compete downward with instant bids and strict SLAs.</p>
-            </div>
-          </div>
-
-          <!-- Solution 2: Multi-Tranche Milestone Escrow (Voice: 37.0s - 41.5s) -->
-          <div class="feature-row target-item" id="row-solution-2" onclick="jumpTo(37.0)">
-            <div class="row-icon-box icon-solution">🔒</div>
-            <div class="row-body">
-              <div class="row-title-wrap">
-                <span class="badge-metric badge-green">🔒 PAYPAL ORDERS v2</span>
-                <h4>Multi-Tranche Segregated Escrow</h4>
-              </div>
-              <p>Capital is securely captured via PayPal Orders v2 into milestone vaults with mathematical spending limits.</p>
-            </div>
-          </div>
-
-          <!-- Solution 3: Sub-3s LexGuard Arbitration (Voice: 41.5s - 45.5s) -->
-          <div class="feature-row target-item" id="row-solution-3" onclick="jumpTo(41.5)">
-            <div class="row-icon-box icon-solution">⚖️</div>
-            <div class="row-body">
-              <div class="row-title-wrap">
-                <span class="badge-metric badge-green">⚖️ &lt; 3.0 SECONDS</span>
-                <h4>Binding LexGuard™ AI Arbitration</h4>
-              </div>
-              <p>Autonomous dispute court evaluates code evidence under <em>Quantum Meruit</em>, executing fair PayPal payouts instantly.</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Solution Footer Stats (Voice: 43.5s - 45.5s) -->
-        <div class="col-footer-stats target-item" id="stats-solution" onclick="jumpTo(43.5)">
-          <div class="mini-stat-card">
-            <span class="val-green">&lt; 3.0 Sec</span>
-            <span class="lbl">Dispute Resolution</span>
-          </div>
-          <div class="mini-stat-card">
-            <span class="val-green">100% Escrow</span>
-            <span class="lbl">PayPal Protection</span>
-          </div>
-          <div class="mini-stat-card">
-            <span class="val-green">INSTANT</span>
-            <span class="lbl">PayPal Payouts API</span>
-          </div>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- 4. BOTTOM ACTION STRIP (Voice: 45.5s - 49.3s) -->
-    <div class="bottom-action-bar target-item" id="bottom-action-bar">
-      <div class="pipeline-nodes">
-        <div class="node-item" id="node-1">
-          <span class="node-num">1</span>
-          <span>NL RFP Scoping</span>
-        </div>
-        <span class="node-arrow">➔</span>
-        <div class="node-item" id="node-2">
-          <span class="node-num">2</span>
-          <span>Reverse-Auction Swarm</span>
-        </div>
-        <span class="node-arrow">➔</span>
-        <div class="node-item" id="node-3">
-          <span class="node-num">3</span>
-          <span>PayPal Orders v2 Escrow</span>
-        </div>
-        <span class="node-arrow">➔</span>
-        <div class="node-item" id="node-4">
-          <span class="node-num">4</span>
-          <span>AI Code Audit</span>
-        </div>
-        <span class="node-arrow">➔</span>
-        <div class="node-item" id="node-5">
-          <span class="node-num">5</span>
-          <span>Instant PayPal Payout</span>
-        </div>
-      </div>
-
-      <div class="cta-live-button target-item" id="cta-button" onclick="window.location.href='/'">
-        <span>🚀 Let's dive in and see AgentPay AI in action! ➔</span>
+        <button class="view-toggle-btn" onclick="nextSlide()">Next Slide ➔</button>
       </div>
     </div>
 
   </div>
 
-  <div class="toast" id="toast">✅ Text copied to clipboard!</div>
+  <div class="toast" id="toast">✅ Notification</div>
 
   <script>
-    // Particle Canvas Animation
+    // Particle Canvas
     const canvas = document.getElementById('bg-canvas');
     const ctx = canvas.getContext('2d');
     let width = canvas.width = window.innerWidth;
@@ -1054,7 +1325,7 @@
     });
 
     const particles = [];
-    for (let i = 0; i < 65; i++) {
+    for (let i = 0; i < 60; i++) {
       particles.push({
         x: Math.random() * width,
         y: Math.random() * height,
@@ -1098,140 +1369,121 @@
     }
     animate();
 
-    // ==========================================
-    // EXACT AUDIO-DRIVEN SYNCHRONIZATION ENGINE
-    // ==========================================
-    const audio = document.getElementById('sync-voice-audio');
-    const playBtn = document.getElementById('btn-sync-play');
-    const playIcon = document.getElementById('play-icon');
-    const playText = document.getElementById('play-text');
-    const liveTag = document.getElementById('live-scene-tag');
-    const timeDisplay = document.getElementById('timeline-time-display');
+    // =========================================
+    // AUDIO ENGINE & SYNC CONTROLLER
+    // =========================================
+    const audio = document.getElementById('master-voice');
+    const playBtn = document.getElementById('btn-play-trigger');
+    const playIcon = document.getElementById('play-btn-icon');
+    const playText = document.getElementById('play-btn-text');
+    const stageTag = document.getElementById('status-stage-tag');
+    const timeTicker = document.getElementById('timestamp-ticker');
     const progressFill = document.getElementById('progress-bar-fill');
 
-    let isPlaying = false;
+    let currentView = 'matrix';
+    let currentSlideIdx = 1;
 
-    // Choreographed Stages matching Janitha's 49.3s audio EXACTLY
-    const timelineStages = [
+    // Timeline Choreography matching audio timestamps
+    const cues = [
       {
         start: 0.0,
         end: 5.6,
         label: "💸 Freelance Economy Crisis ($67B Bleed)",
-        elements: [
-          { id: "hero-unit", cls: "sync-hero" }
-        ]
+        slideIdx: 1,
+        matrix: () => {}
       },
       {
         start: 5.6,
         end: 10.5,
         label: "⏳ Manual Bidding Delays (3 to 5 Days)",
-        elements: [
-          { id: "row-problem-1", cls: "sync-red" }
-        ]
+        slideIdx: 2,
+        matrix: () => highlightMatrixItem('card-p1', 'is-active-red')
       },
       {
         start: 10.5,
         end: 14.8,
         label: "⚖️ Subjective Disputes Deadlock (14+ Days)",
-        elements: [
-          { id: "row-problem-2", cls: "sync-red" }
-        ]
+        slideIdx: 2,
+        matrix: () => highlightMatrixItem('card-p2', 'is-active-red')
       },
       {
         start: 14.8,
         end: 20.0,
-        label: "🚨 Frozen Capital & PayPal Chargeback Risks",
-        elements: [
-          { id: "row-problem-3", cls: "sync-red" },
-          { id: "stats-problem", cls: "sync-stats-red" }
-        ]
+        label: "🚨 Frozen Capital & PayPal Chargeback Liabilities",
+        slideIdx: 2,
+        matrix: () => {
+          highlightMatrixItem('card-p3', 'is-active-red');
+          document.getElementById('footer-problem')?.classList.add('is-active-red');
+        }
       },
       {
         start: 20.0,
         end: 28.0,
         label: "🛡️ Introducing AgentPay AI Protocol",
-        elements: [
-          { id: "disc-vs", cls: "sync-vs" },
-          { id: "header-solution", cls: "sync-green" }
-        ]
+        slideIdx: 3,
+        matrix: () => {
+          document.getElementById('emblem-vs')?.classList.add('is-active-vs');
+        }
       },
       {
         start: 28.0,
         end: 37.0,
         label: "⚡ 5-Second Autonomous Reverse-Auction",
-        elements: [
-          { id: "row-solution-1", cls: "sync-green" }
-        ]
+        slideIdx: 4,
+        matrix: () => highlightMatrixItem('card-s1', 'is-active-green')
       },
       {
         start: 37.0,
         end: 41.5,
         label: "🔒 PayPal Orders v2 Multi-Tranche Escrow",
-        elements: [
-          { id: "row-solution-2", cls: "sync-green" }
-        ]
+        slideIdx: 4,
+        matrix: () => highlightMatrixItem('card-s2', 'is-active-green')
       },
       {
         start: 41.5,
         end: 45.5,
         label: "⚖️ Sub-3-Second LexGuard™ AI Arbitration",
-        elements: [
-          { id: "row-solution-3", cls: "sync-green" },
-          { id: "stats-solution", cls: "sync-stats-green" }
-        ]
+        slideIdx: 4,
+        matrix: () => {
+          highlightMatrixItem('card-s3', 'is-active-green');
+          document.getElementById('footer-solution')?.classList.add('is-active-green');
+        }
       },
       {
         start: 45.5,
         end: 50.0,
-        label: "🚀 Transition to Live Autonomous Platform!",
-        elements: [
-          { id: "node-1", cls: "sync-node" },
-          { id: "node-2", cls: "sync-node" },
-          { id: "node-3", cls: "sync-node" },
-          { id: "node-4", cls: "sync-node" },
-          { id: "node-5", cls: "sync-node" },
-          { id: "cta-button", cls: "sync-cta" }
-        ]
+        label: "🚀 Transition to Live Platform Execution!",
+        slideIdx: 5,
+        matrix: () => {
+          ['flow-node-1', 'flow-node-2', 'flow-node-3', 'flow-node-4', 'flow-node-5'].forEach(id => {
+            document.getElementById(id)?.classList.add('is-active-node');
+          });
+          document.getElementById('cta-launch-pill')?.classList.add('is-active-cta');
+        }
       }
     ];
 
-    const allTargets = document.querySelectorAll('.target-item');
-
-    function clearHighlights() {
-      allTargets.forEach(el => {
-        el.classList.remove(
-          'sync-red',
-          'sync-green',
-          'sync-hero',
-          'sync-vs',
-          'sync-stats-red',
-          'sync-stats-green',
-          'sync-node',
-          'sync-cta'
-        );
+    function clearMatrixHighlights() {
+      ['card-p1', 'card-p2', 'card-p3', 'card-s1', 'card-s2', 'card-s3'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.remove('is-active-red', 'is-active-green');
       });
+      document.getElementById('footer-problem')?.classList.remove('is-active-red');
+      document.getElementById('footer-solution')?.classList.remove('is-active-green');
+      document.getElementById('emblem-vs')?.classList.remove('is-active-vs');
+      ['flow-node-1', 'flow-node-2', 'flow-node-3', 'flow-node-4', 'flow-node-5'].forEach(id => {
+        document.getElementById(id)?.classList.remove('is-active-node');
+      });
+      document.getElementById('cta-launch-pill')?.classList.remove('is-active-cta');
     }
 
-    function renderActiveStage(stage) {
-      clearHighlights();
-      if (!stage) {
-        liveTag.innerText = "🔴 IDLE (CLICK PLAY TO START)";
-        document.body.classList.remove('body-spotlight-on');
-        return;
-      }
-
-      document.body.classList.add('body-spotlight-on');
-      liveTag.innerText = `🟢 ${stage.label}`;
-
-      stage.elements.forEach(item => {
-        const target = document.getElementById(item.id);
-        if (target) {
-          target.classList.add(item.cls);
-        }
-      });
+    function highlightMatrixItem(id, cls) {
+      clearMatrixHighlights();
+      const el = document.getElementById(id);
+      if (el) el.classList.add(cls);
     }
 
-    function updateUI(cur, dur) {
+    function updateSyncPresentation(cur, dur) {
       const duration = dur || 49.3;
       const pct = Math.min(100, (cur / duration) * 100);
       progressFill.style.width = `${pct}%`;
@@ -1240,82 +1492,134 @@
       const curS = String(Math.floor(cur % 60)).padStart(2, '0');
       const durM = String(Math.floor(duration / 60)).padStart(2, '0');
       const durS = String(Math.floor(duration % 60)).padStart(2, '0');
-      timeDisplay.innerText = `${curM}:${curS} / ${durM}:${durS}`;
+      timeTicker.innerText = `${curM}:${curS} / ${durM}:${durS}`;
 
-      const activeStage = timelineStages.find(s => cur >= s.start && cur < s.end);
-      if (activeStage) {
-        renderActiveStage(activeStage);
+      const activeCue = cues.find(c => cur >= c.start && cur < c.end);
+      if (activeCue) {
+        stageTag.innerText = `🟢 ${activeCue.label}`;
+        
+        // Update Matrix View
+        clearMatrixHighlights();
+        activeCue.matrix();
+
+        // Update Slider View automatically
+        if (currentView === 'slider' && activeCue.slideIdx !== currentSlideIdx) {
+          goToSlide(activeCue.slideIdx, false);
+        }
       } else if (cur >= 49.0) {
-        renderActiveStage(timelineStages[timelineStages.length - 1]);
+        cues[cues.length - 1].matrix();
       }
     }
 
-    // Audio Listeners
     audio.addEventListener('timeupdate', () => {
       const dur = audio.duration && !isNaN(audio.duration) ? audio.duration : 49.3;
-      updateUI(audio.currentTime, dur);
+      updateSyncPresentation(audio.currentTime, dur);
     });
 
     audio.addEventListener('play', () => {
-      isPlaying = true;
       playBtn.classList.add('is-playing');
       playIcon.innerText = "⏸️";
       playText.innerText = "Pause Presentation";
     });
 
     audio.addEventListener('pause', () => {
-      isPlaying = false;
       playBtn.classList.remove('is-playing');
       playIcon.innerText = "▶️";
       playText.innerText = "Resume Presentation";
     });
 
     audio.addEventListener('ended', () => {
-      isPlaying = false;
       playBtn.classList.remove('is-playing');
       playIcon.innerText = "🔄";
       playText.innerText = "Replay Presentation";
-      liveTag.innerText = "🏁 PRESENTATION FINISHED!";
-      showToast("Presentation Complete! Click CTA to test live demo!");
+      stageTag.innerText = "🏁 PRESENTATION COMPLETE!";
+      showToast("Presentation Finished! Ready for live demo!");
     });
 
-    function toggleSyncAudio() {
+    function togglePlayVoice() {
       if (audio.paused) {
         audio.play().catch(err => {
-          console.warn('Audio play error, falling back:', err);
-          showToast('Playing speech...');
+          console.warn('Playback error:', err);
+          showToast('Audio playback started');
         });
       } else {
         audio.pause();
       }
     }
 
-    function restartSyncAudio() {
+    function restartPresentation() {
       audio.pause();
       audio.currentTime = 0;
-      clearHighlights();
-      document.body.classList.remove('body-spotlight-on');
-      updateUI(0, audio.duration || 49.3);
+      clearMatrixHighlights();
+      goToSlide(1, false);
+      updateSyncPresentation(0, audio.duration || 49.3);
       playIcon.innerText = "▶️";
       playText.innerText = "Play Synchronized Presentation";
-      liveTag.innerText = "🔴 IDLE (CLICK PLAY TO START)";
+      stageTag.innerText = "🔴 IDLE (CLICK PLAY TO START)";
     }
 
-    function jumpTo(sec) {
+    function seekTo(sec) {
       audio.currentTime = sec;
-      if (audio.paused) {
-        audio.play().catch(() => {});
-      }
+      if (audio.paused) audio.play().catch(() => {});
       showToast(`Jumped to ${sec.toFixed(1)}s`);
     }
 
-    function scrubTimeline(e) {
-      const track = document.getElementById('progress-track');
-      const rect = track.getBoundingClientRect();
+    function seekByClick(e) {
+      const slot = document.getElementById('progress-bar-slot');
+      const rect = slot.getBoundingClientRect();
       const clickX = e.clientX - rect.left;
       const ratio = Math.max(0, Math.min(1, clickX / rect.width));
       const targetSec = ratio * (audio.duration || 49.3);
-      jumpTo(targetSec);
+      seekTo(targetSec);
+    }
+
+    // View Switcher: Matrix vs Slider
+    function switchView(view) {
+      currentView = view;
+      const matrixEl = document.getElementById('view-matrix');
+      const sliderEl = document.getElementById('view-slider');
+      const btnMatrix = document.getElementById('btn-view-matrix');
+      const btnSlider = document.getElementById('btn-view-slider');
+
+      if (view === 'matrix') {
+        matrixEl.style.display = 'flex';
+        sliderEl.style.display = 'none';
+        btnMatrix.classList.add('active');
+        btnSlider.classList.remove('active');
+        showToast('Switched to Comparison Matrix View');
+      } else {
+        matrixEl.style.display = 'none';
+        sliderEl.style.display = 'flex';
+        btnMatrix.classList.remove('active');
+        btnSlider.classList.add('active');
+        showToast('Switched to Cinematic Slide Deck View');
+      }
+    }
+
+    // Slider Navigation
+    function goToSlide(idx, userInitiated = true) {
+      currentSlideIdx = idx;
+      for (let i = 1; i <= 5; i++) {
+        const slide = document.getElementById(`slide-${i}`);
+        const dot = document.getElementById(`dot-${i}`);
+        if (slide) slide.classList.toggle('active-slide', i === idx);
+        if (dot) dot.classList.toggle('active', i === idx);
+      }
+      if (userInitiated) {
+        // Jump audio to roughly matching timestamp
+        const timeMap = { 1: 0.0, 2: 5.6, 3: 20.0, 4: 28.0, 5: 45.5 };
+        seekTo(timeMap[idx]);
+      }
+    }
+
+    function nextSlide() {
+      const next = currentSlideIdx < 5 ? currentSlideIdx + 1 : 1;
+      goToSlide(next);
+    }
+
+    function prevSlide() {
+      const prev = currentSlideIdx > 1 ? currentSlideIdx - 1 : 5;
+      goToSlide(prev);
     }
 
     function toggleFullScreen() {
@@ -1326,28 +1630,26 @@
       }
     }
 
-    function copyVoiceScript() {
-      const text = `Every single day, the 67-billion-dollar freelance economy bleeds capital. On platforms like Upwork and Fiverr, manual bidding takes days, and subjective deliverable disputes take over two weeks... costing PayPal millions annually in chargebacks and frozen merchant funds. Meet AgentPay AI: the world’s first autonomous clearinghouse protocol engineered for the PayPal AI Hackathon 2026. By uniting Google Gemini with PayPal Orders v2 and Payouts, AgentPay replaces five days of bidding with a five-second autonomous reverse auction, locks capital in multi-tranche milestone escrow, and resolves disputes mathematically in under three seconds. Now, let’s dive in and see AgentPay AI in action!`;
-      navigator.clipboard.writeText(text);
-      showToast('Master Voice Script copied to clipboard!');
-    }
-
     function showToast(msg) {
       const toast = document.getElementById('toast');
       toast.innerText = msg;
       toast.classList.add('show');
-      setTimeout(() => toast.classList.remove('show'), 2400);
+      setTimeout(() => toast.classList.remove('show'), 2200);
     }
 
     // Spacebar to Play/Pause, R to Restart, F for Fullscreen
     window.addEventListener('keydown', (e) => {
       if (e.code === 'Space') {
         e.preventDefault();
-        toggleSyncAudio();
+        togglePlayVoice();
       } else if (e.code === 'KeyR') {
-        restartSyncAudio();
+        restartPresentation();
       } else if (e.code === 'KeyF') {
         toggleFullScreen();
+      } else if (e.code === 'ArrowRight' && currentView === 'slider') {
+        nextSlide();
+      } else if (e.code === 'ArrowLeft' && currentView === 'slider') {
+        prevSlide();
       }
     });
   </script>
