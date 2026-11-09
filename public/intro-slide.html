@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AgentPay AI — Problem & Solution Presentation Slide (PayPal AI Hackathon 2026)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg: #030712;
+      --card-bg: rgba(10, 15, 30, 0.78);
+      --card-border: rgba(56, 189, 248, 0.22);
+      --cyan: #06b6d4;
+      --cyan-glow: #38bdf8;
+      --paypal-blue: #0070ba;
+      --paypal-deep: #003087;
+      --gold: #f59e0b;
+      --emerald: #10b981;
+      --purple: #a855f7;
+      --rose: #f43f5e;
+      --text-main: #f8fafc;
+      --text-dim: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+      padding: 24px 36px;
+      position: relative;
+      overflow-x: hidden;
+      background-image: 
+        radial-gradient(circle at 50% 0%, rgba(0, 112, 186, 0.25) 0%, transparent 60%),
+        radial-gradient(circle at 90% 90%, rgba(6, 182, 212, 0.15) 0%, transparent 55%),
+        radial-gradient(circle at 10% 90%, rgba(16, 185, 129, 0.12) 0%, transparent 55%);
+    }
+
+    /* Ambient Background Canvas for Neural Grid & Cyber Dust */
+    #bg-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1;
+      opacity: 0.6;
+    }
+
+    /* Glowing Ambient Orbs */
+    .glow-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(130px);
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.35;
+      animation: floatOrb 12s ease-in-out infinite alternate;
+    }
+
+    .orb-1 {
+      width: 650px;
+      height: 650px;
+      top: -180px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: radial-gradient(circle, var(--paypal-blue), transparent 70%);
+    }
+
+    .orb-2 {
+      width: 500px;
+      height: 500px;
+      bottom: -120px;
+      right: 5%;
+      background: radial-gradient(circle, var(--cyan), transparent 70%);
+    }
+
+    .orb-3 {
+      width: 450px;
+      height: 450px;
+      bottom: -100px;
+      left: 5%;
+      background: radial-gradient(circle, var(--emerald), transparent 70%);
+    }
+
+    @keyframes floatOrb {
+      0% { transform: translate(-50%, 0) scale(0.95); opacity: 0.3; }
+      100% { transform: translate(-50%, 30px) scale(1.08); opacity: 0.45; }
+    }
+
+    /* Main Container (16:9 Optimized) */
+    .slide-wrapper {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+      max-width: 1650px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      margin: auto 0;
+    }
+
+    /* Header Nav Bar */
+    .slide-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .brand-wrap {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-logo-icon {
+      width: 42px;
+      height: 42px;
+      background: linear-gradient(135deg, #0070ba, #003087);
+      border: 1px solid rgba(56, 189, 248, 0.5);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      box-shadow: 0 0 25px rgba(0, 112, 186, 0.6);
+    }
+
+    .brand-text h1 {
+      font-size: 24px;
+      font-weight: 900;
+      letter-spacing: -0.5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-text h1 span.highlight {
+      background: linear-gradient(135deg, #38bdf8, #0070ba);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .brand-text p {
+      font-size: 11.5px;
+      color: var(--text-dim);
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: 0.5px;
+    }
+
+    .header-badges {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .badge-pill {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      backdrop-filter: blur(10px);
+    }
+
+    .badge-paypal {
+      background: rgba(0, 112, 186, 0.18);
+      border: 1px solid rgba(0, 112, 186, 0.5);
+      color: #38bdf8;
+    }
+
+    .badge-hackathon {
+      background: rgba(245, 158, 11, 0.15);
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      color: #fbbf24;
+    }
+
+    .btn-header {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
+      font-family: 'Outfit', sans-serif;
+      font-size: 11.5px;
+      font-weight: 700;
+      padding: 7px 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .btn-header:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: #38bdf8;
+      transform: translateY(-1px);
+    }
+
+    /* Hero Headline */
+    .hero-title-area {
+      text-align: center;
+      padding: 8px 0 16px;
+    }
+
+    .hero-pill-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(6, 182, 212, 0.1);
+      border: 1px solid rgba(6, 182, 212, 0.35);
+      color: #38bdf8;
+      font-size: 11.5px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      padding: 5px 16px;
+      border-radius: 9999px;
+      margin-bottom: 12px;
+      box-shadow: 0 0 20px rgba(6, 182, 212, 0.2);
+    }
+
+    .hero-title-area h2 {
+      font-size: 42px;
+      font-weight: 900;
+      letter-spacing: -1px;
+      line-height: 1.15;
+      color: #ffffff;
+    }
+
+    .hero-title-area h2 span.gradient-text {
+      background: linear-gradient(135deg, #ffffff 30%, #38bdf8 70%, #0070ba 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-subtitle {
+      font-size: 16px;
+      color: #cbd5e1;
+      max-width: 950px;
+      margin: 10px auto 0;
+      line-height: 1.55;
+      font-weight: 400;
+    }
+
+    /* Problem vs Solution Split Matrix */
+    .contrast-grid {
+      display: grid;
+      grid-template-columns: 1fr 70px 1.15fr;
+      gap: 20px;
+      align-items: stretch;
+      margin-top: 10px;
+    }
+
+    /* Card Styling */
+    .matrix-card {
+      background: var(--card-bg);
+      border-radius: 24px;
+      padding: 28px 30px;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: all 0.3s ease;
+    }
+
+    /* Left Card: The Broken Legacy Model */
+    .card-problem {
+      border: 1px solid rgba(244, 63, 94, 0.35);
+      background: linear-gradient(165deg, rgba(244, 63, 94, 0.08) 0%, rgba(15, 23, 42, 0.85) 100%);
+    }
+
+    .card-problem:hover {
+      border-color: rgba(244, 63, 94, 0.6);
+      transform: translateY(-2px);
+    }
+
+    /* Right Card: The AgentPay AI Solution */
+    .card-solution {
+      border: 1px solid rgba(16, 185, 129, 0.45);
+      background: linear-gradient(165deg, rgba(16, 185, 129, 0.1) 0%, rgba(0, 112, 186, 0.12) 50%, rgba(15, 23, 42, 0.9) 100%);
+      box-shadow: 0 20px 60px rgba(0, 112, 186, 0.25);
+    }
+
+    .card-solution:hover {
+      border-color: rgba(56, 189, 248, 0.8);
+      transform: translateY(-2px);
+    }
+
+    /* Top Card Header */
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .card-tag {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      padding: 5px 12px;
+      border-radius: 8px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .tag-red {
+      background: rgba(244, 63, 94, 0.2);
+      border: 1px solid rgba(244, 63, 94, 0.45);
+      color: #fda4af;
+    }
+
+    .tag-green {
+      background: rgba(16, 185, 129, 0.2);
+      border: 1px solid rgba(16, 185, 129, 0.5);
+      color: #6ee7b7;
+    }
+
+    .card-heading {
+      font-size: 22px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* Problem / Solution Items List */
+    .items-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      flex-grow: 1;
+    }
+
+    .item-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      padding: 12px 16px;
+      border-radius: 14px;
+      transition: all 0.2s;
+    }
+
+    .item-row:hover {
+      background: rgba(255, 255, 255, 0.03);
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .item-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .icon-fail {
+      background: rgba(244, 63, 94, 0.2);
+      color: #fb7185;
+      border: 1px solid rgba(244, 63, 94, 0.35);
+    }
+
+    .icon-win {
+      background: rgba(16, 185, 129, 0.2);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.4);
+    }
+
+    .item-content h4 {
+      font-size: 14.5px;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 2px;
+    }
+
+    .item-content p {
+      font-size: 12px;
+      color: #94a3b8;
+      line-height: 1.45;
+    }
+
+    .card-footer-metrics {
+      margin-top: 18px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11.5px;
+    }
+
+    .metrics-bad {
+      color: #f87171;
+    }
+
+    .metrics-good {
+      color: #34d399;
+    }
+
+    /* Center VS Divider */
+    .divider-center {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .divider-line {
+      width: 2px;
+      height: 100%;
+      background: linear-gradient(180deg, transparent, rgba(56, 189, 248, 0.4), transparent);
+    }
+
+    .vs-bubble {
+      position: absolute;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: #090e1a;
+      border: 2px solid #38bdf8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 13px;
+      color: #38bdf8;
+      box-shadow: 0 0 25px rgba(56, 189, 248, 0.6);
+      letter-spacing: 1px;
+    }
+
+    /* Bottom Architecture Strip */
+    .bottom-strip {
+      background: rgba(10, 15, 30, 0.7);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      border-radius: 18px;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      backdrop-filter: blur(15px);
+    }
+
+    .pipeline-steps {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .pipe-step {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #cbd5e1;
+      background: rgba(0, 0, 0, 0.4);
+      padding: 6px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .pipe-step span.num {
+      width: 18px;
+      height: 18px;
+      background: #38bdf8;
+      color: #000;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 900;
+    }
+
+    .pipe-arrow {
+      color: rgba(56, 189, 248, 0.6);
+      font-size: 14px;
+      font-weight: bold;
+    }
+
+    .cta-hook-box {
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.2), rgba(0, 112, 186, 0.3));
+      border: 1px solid rgba(56, 189, 248, 0.5);
+      padding: 8px 18px;
+      border-radius: 12px;
+      font-weight: 800;
+      font-size: 13px;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 0 20px rgba(6, 182, 212, 0.3);
+      white-space: nowrap;
+    }
+
+    /* Modal / Drawer for Voice Narration Preview */
+    .teleprompter-box {
+      margin-top: 14px;
+      background: rgba(2, 6, 23, 0.9);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      border-radius: 14px;
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .teleprompter-text {
+      font-size: 13.5px;
+      color: #fde047;
+      line-height: 1.5;
+      font-weight: 500;
+    }
+
+    .teleprompter-text strong {
+      color: #fff;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #10b981;
+      color: #000;
+      font-weight: 800;
+      font-size: 12.5px;
+      padding: 10px 18px;
+      border-radius: 10px;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: all 0.3s;
+      z-index: 9999;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Background Animated Cyber Dust & Particles -->
+  <canvas id="bg-canvas"></canvas>
+
+  <div class="glow-orb orb-1"></div>
+  <div class="glow-orb orb-2"></div>
+  <div class="glow-orb orb-3"></div>
+
+  <!-- Slide Core Container -->
+  <div class="slide-wrapper">
+
+    <!-- Header Navigation -->
+    <header class="slide-header">
+      <div class="brand-wrap">
+        <div class="brand-logo-icon">🛡️</div>
+        <div class="brand-text">
+          <h1>AgentPay <span class="highlight">AI</span></h1>
+          <p>AUTONOMOUS PAYPAL AGENTIC COMMERCE &amp; ESCROW PROTOCOL</p>
+        </div>
+      </div>
+
+      <div class="header-badges">
+        <span class="badge-pill badge-paypal">⚡ Powered by PayPal Orders v2 &amp; Payouts</span>
+        <span class="badge-pill badge-hackathon">🏆 PayPal AI Hackathon 2026</span>
+        <button class="btn-header" onclick="speakIntro()">🔊 Play Voice Preview</button>
+        <button class="btn-header" onclick="copyVoiceScript()">📋 Copy Voice</button>
+        <button class="btn-header" onclick="toggleFullScreen()">⛶ Fullscreen</button>
+      </div>
+    </header>
+
+    <!-- Hero Title Area -->
+    <div class="hero-title-area">
+      <div class="hero-pill-badge">
+        <span>⚡ The Freelance Economy Dilemma vs. Autonomous Solution</span>
+      </div>
+      <h2>
+        Why Modern Digital Work Needs an <span class="gradient-text">Autonomous Clearinghouse</span>
+      </h2>
+      <p class="hero-subtitle">
+        Traditional freelancing wastes days on manual proposal bidding and weeks on subjective disputes. 
+        <strong>AgentPay AI</strong> unifies <strong>Google Gemini</strong> with <strong>PayPal Orders v2</strong> and <strong>PayPal Payouts</strong> to deliver sub-second autonomous talent procurement, multi-tranche milestone protection, and instant cryptographic settlement.
+      </p>
+    </div>
+
+    <!-- Contrast Grid (Problem vs Solution) -->
+    <div class="contrast-grid">
+
+      <!-- LEFT: THE BROKEN LEGACY MODEL -->
+      <div class="matrix-card card-problem">
+        <div class="card-top">
+          <span class="card-tag tag-red">❌ Traditional Freelance Platforms</span>
+          <span style="font-size: 11px; color: #f87171; font-family: 'JetBrains Mono', monospace;">Upwork • Fiverr • Freelancer</span>
+        </div>
+
+        <div class="items-list">
+          <!-- Item 1 -->
+          <div class="item-row">
+            <div class="item-icon icon-fail">⏳</div>
+            <div class="item-content">
+              <h4>Manual Bidding Takes 3 to 5 Days</h4>
+              <p>Clients are spammed with 50+ generic proposals; verified talent spends up to 20% of their workday writing repetitive pitches.</p>
+            </div>
+          </div>
+
+          <!-- Item 2 -->
+          <div class="item-row">
+            <div class="item-icon icon-fail">⚖️</div>
+            <div class="item-content">
+              <h4>Subjective Disputes Take Over 14 Days</h4>
+              <p>Human support tickets drag on for weeks. Both parties suffer from bias, frozen funds, and millions in PayPal chargeback liabilities.</p>
+            </div>
+          </div>
+
+          <!-- Item 3 -->
+          <div class="item-row">
+            <div class="item-icon icon-fail">🔒</div>
+            <div class="item-content">
+              <h4>All-or-Nothing Escrow Traps Capital</h4>
+              <p>Clients either risk losing their entire deposit or contractors get stiffed when minor deliverable defects arise.</p>
+            </div>
+          </div>
+
+          <!-- Item 4 -->
+          <div class="item-row">
+            <div class="item-icon icon-fail">📑</div>
+            <div class="item-content">
+              <h4>Zero Automated Code &amp; Security Verification</h4>
+              <p>Clients lack technical expertise to verify whether submitted repositories actually meet specifications or contain vulnerabilities.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-footer-metrics metrics-bad">
+          <span>⚠️ Dispute Resolution: 14.2 Days</span>
+          <span>⚠️ Chargeback Loss: High</span>
+          <span>⚠️ Bidding Friction: High</span>
+        </div>
+      </div>
+
+      <!-- CENTER: VS BADGE -->
+      <div class="divider-center">
+        <div class="divider-line"></div>
+        <div class="vs-bubble">VS</div>
+      </div>
+
+      <!-- RIGHT: THE AGENTPAY AI SOLUTION -->
+      <div class="matrix-card card-solution">
+        <div class="card-top">
+          <span class="card-tag tag-green">✅ AgentPay AI Autonomous Clearinghouse</span>
+          <span style="font-size: 11px; color: #38bdf8; font-family: 'JetBrains Mono', monospace;">PayPal Orders v2 + Gemini 2.5 Flash</span>
+        </div>
+
+        <div class="items-list">
+          <!-- Item 1 -->
+          <div class="item-row">
+            <div class="item-icon icon-win">⚡</div>
+            <div class="item-content">
+              <h4>5-Second Autonomous Reverse-Auction</h4>
+              <p>Gemini Flash scopes requirements in real time. Specialist AI agents compete downward with instant bids and verified SLA guarantees.</p>
+            </div>
+          </div>
+
+          <!-- Item 2 -->
+          <div class="item-row">
+            <div class="item-icon icon-win">🛡️</div>
+            <div class="item-content">
+              <h4>PayPal Orders v2 Multi-Tranche Escrow</h4>
+              <p>Funds are securely captured into segmented milestone tranches in our platform vault with strict mathematical spending ceilings.</p>
+            </div>
+          </div>
+
+          <!-- Item 3 -->
+          <div class="item-row">
+            <div class="item-icon icon-win">🔍</div>
+            <div class="item-content">
+              <h4>Automated AI Repository &amp; Security Audits</h4>
+              <p>Static code analysis parses commit histories, dependencies, and requirements, instantly catching placeholder or defective code.</p>
+            </div>
+          </div>
+
+          <!-- Item 4 -->
+          <div class="item-row">
+            <div class="item-icon icon-win">⚖️</div>
+            <div class="item-content">
+              <h4>Sub-3-Second Binding LexGuard™ AI Arbitration</h4>
+              <p>Autonomous dispute court enforces international <em>Quantum Meruit</em> precedents, fairly splitting funds on PayPal without human delay.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-footer-metrics metrics-good">
+          <span>⚡ Dispute Resolution: &lt; 3.0 Seconds</span>
+          <span>⚡ Payouts: Instant (PayPal API)</span>
+          <span>⚡ Escrow Vault: 100% Secured</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Bottom Architecture Protocol Strip -->
+    <div class="bottom-strip">
+      <div class="pipeline-steps">
+        <div class="pipe-step">
+          <span class="num">1</span>
+          <span>Natural Language RFP</span>
+        </div>
+        <span class="pipe-arrow">➔</span>
+        <div class="pipe-step">
+          <span class="num">2</span>
+          <span>Reverse-Auction Swarm</span>
+        </div>
+        <span class="pipe-arrow">➔</span>
+        <div class="pipe-step">
+          <span class="num">3</span>
+          <span>PayPal Orders v2 Escrow</span>
+        </div>
+        <span class="pipe-arrow">➔</span>
+        <div class="pipe-step">
+          <span class="num">4</span>
+          <span>Autonomous AI Code Audit</span>
+        </div>
+        <span class="pipe-arrow">➔</span>
+        <div class="pipe-step">
+          <span class="num">5</span>
+          <span>Instant PayPal Payout</span>
+        </div>
+      </div>
+
+      <div class="cta-hook-box">
+        <span>🚀 Let's dive in and see how AgentPay AI works in action!</span>
+      </div>
+    </div>
+
+    <!-- Teleprompter Voiceover Box -->
+    <div class="teleprompter-box">
+      <div class="teleprompter-text" id="intro-voice-text">
+        <strong>🎙️ Intro Voiceover (English):</strong> 
+        "In today's 67-billion-dollar freelance economy, traditional platforms like Upwork and Fiverr suffer from two fatal flaws: manual bidding takes days, and deliverable disputes take over 14 days, costing PayPal millions in frozen capital. Meet AgentPay AI: the world’s first autonomous clearinghouse protocol powered by PayPal Orders v2 and Payouts. Here, AI agents discover talent, lock multi-tranche milestone escrow, and resolve disputes mathematically in under 3 seconds. Now, let’s dive in and see how AgentPay AI works in action!"
+      </div>
+      <button class="btn-header" style="background: rgba(245, 158, 11, 0.2); border-color: rgba(245, 158, 11, 0.5); color: #fde047;" onclick="copyVoiceScript()">📋 Copy Voice Script</button>
+    </div>
+
+  </div>
+
+  <div class="toast" id="toast">✅ Text copied to clipboard!</div>
+
+  <script>
+    // Particle Animation
+    const canvas = document.getElementById('bg-canvas');
+    const ctx = canvas.getContext('2d');
+    let width = canvas.width = window.innerWidth;
+    let height = canvas.height = window.innerHeight;
+
+    window.addEventListener('resize', () => {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+    });
+
+    const particles = [];
+    for (let i = 0; i < 70; i++) {
+      particles.push({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        vx: (Math.random() - 0.5) * 0.4,
+        vy: (Math.random() - 0.5) * 0.4,
+        radius: Math.random() * 2 + 1,
+        color: Math.random() > 0.5 ? 'rgba(56, 189, 248, ' : 'rgba(16, 185, 129, '
+      });
+    }
+
+    function animate() {
+      ctx.clearRect(0, 0, width, height);
+
+      // Draw connection lines
+      for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+          const dx = particles[i].x - particles[j].x;
+          const dy = particles[i].y - particles[j].y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+
+          if (dist < 110) {
+            ctx.beginPath();
+            ctx.strokeStyle = `rgba(56, 189, 248, ${0.12 * (1 - dist / 110)})`;
+            ctx.lineWidth = 0.8;
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.stroke();
+          }
+        }
+      }
+
+      // Draw nodes
+      particles.forEach(p => {
+        p.x += p.vx;
+        p.y += p.vy;
+
+        if (p.x < 0) p.x = width;
+        if (p.x > width) p.x = 0;
+        if (p.y < 0) p.y = height;
+        if (p.y > height) p.y = 0;
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fillStyle = p.color + '0.6)';
+        ctx.fill();
+      });
+
+      requestAnimationFrame(animate);
+    }
+    animate();
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.innerText = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2200);
+    }
+
+    function copyVoiceScript() {
+      const text = document.getElementById('intro-voice-text').innerText.replace('🎙️ Intro Voiceover (English):', '').trim();
+      navigator.clipboard.writeText(text);
+      showToast('Intro Voiceover copied to clipboard!');
+    }
+
+    function speakIntro() {
+      if (!('speechSynthesis' in window)) {
+        alert('Web Speech API is not supported in this browser.');
+        return;
+      }
+      window.speechSynthesis.cancel();
+      const text = document.getElementById('intro-voice-text').innerText.replace('🎙️ Intro Voiceover (English):', '').trim();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 1.05;
+      utterance.pitch = 1.0;
+      
+      const voices = window.speechSynthesis.getVoices();
+      const preferred = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Neural')));
+      if (preferred) utterance.voice = preferred;
+
+      window.speechSynthesis.speak(utterance);
+      showToast('Playing Intro Voiceover preview...');
+    }
+
+    function toggleFullScreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        }
+      }
+    }
+  </script>
+</body>
+</html>
