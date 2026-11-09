@@ -45,7 +45,7 @@ function formatMessageTime(dateStr?: string) {
 
 export default function ChatInterface() {
   const { user, openAuthModal, logout, loginWithJudgeAccount } = useAuth();
-  const { openTourModal, openTourBanner } = useJudgeTour();
+  const { openTourModal, openTourBanner, openWebhooksModal } = useJudgeTour();
   const searchParams = useSearchParams();
   const targetOrderId = searchParams?.get('orderId') || null;
   const targetSessionId = searchParams?.get('sessionId') || null;
@@ -2632,11 +2632,22 @@ export default function ChatInterface() {
                 <span>Admin</span>
               </Link>
 
-              {/* PayPal Orders v2 Live Status */}
-              <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[10px] text-emerald-400 font-mono font-bold">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                <span>PayPal v2 Live</span>
-              </div>
+              {/* PayPal Orders v2 Live Status & Webhook Terminal Trigger */}
+              <button
+                type="button"
+                onClick={openWebhooksModal}
+                className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-950/40 hover:bg-emerald-950/70 border border-emerald-500/40 hover:border-emerald-400 text-[11px] text-emerald-400 font-mono shadow-md shadow-emerald-950/40 transition-all cursor-pointer group"
+                title="Inspect Live PayPal Webhooks Stream & Cryptographic HMAC Verification"
+              >
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                <span className="font-bold group-hover:text-emerald-300">PayPal v2 Live</span>
+                <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  HMAC
+                </span>
+              </button>
 
               {/* 1-Click Judge Guided Tour Button in Top Header */}
               <button
