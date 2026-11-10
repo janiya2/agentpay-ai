@@ -199,11 +199,11 @@ PAYPAL_MODE="sandbox"
 RESEND_API_KEY="your-resend-api-key"
 RESEND_FROM_EMAIL="onboarding@resend.dev"
 # Pre-configured Sandbox Evaluator Passcode for Hackathon Judges (override as needed)
-ADMIN_PASSCODE="innoxpert2026"
+ADMIN_PASSCODE="your-evaluator-passcode"
 ```
 
 > [!NOTE]
-> **Hackathon Evaluator Access**: The pre-seeded sandbox demo includes `innoxpert2026` as the evaluator admin passcode to test the Admin Audit & Payout Console (`/admin`) and 1-Click Factory Re-Seed. In production, platform administration is governed by server-side IAM and OAuth2 roles.
+> **Hackathon Evaluator Access**: Evaluators testing the live sandbox demo on Vercel can unlock the Admin Treasury Console (`/admin`) using the pre-seeded evaluator passkey: `innoxpert2026`. In production, clearinghouse governance is enforced via enterprise IAM and OAuth2 roles.
 
 ### 3. Run Development Server
 ```bash
