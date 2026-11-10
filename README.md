@@ -12,7 +12,7 @@
 
 **A production-ready Autonomous Agentic Commerce Clearinghouse connecting buyers and specialists through conversational AI scoping, competitive reverse bidding, PayPal Orders v2 multi-tranche milestone escrow, automated GitHub code and security auditing, and sub-2-second dispute arbitration.**
 
-[⚡ Live Web Application (Vercel)](https://agentpay-ai.vercel.app/) • [📽️ Interactive Intro Slide](https://agentpay-ai.vercel.app/intro-slide.html) • [🎙️ Demo Voice Studio](https://agentpay-ai.vercel.app/voice-studio.html) • [🏛️ System Architecture](#️-4-tier-interactive-system-architecture) • [📊 Enterprise Benchmark](#-protocol-benchmark-matrix-upworkfiverr-vs-agentpay-ai) • [🔐 Security & Webhooks](#-cryptographic-security--hmac-sha256-webhooks) • [🚀 Quick Start](#-quick-start-guide)
+[🎬 Official Demo Video (3m 10s)](https://youtu.be/9cvkKj0af2U) • [🎥 7-Min Extended Deep-Dive](https://youtu.be/1m5ubiDEKKM) • [⚡ Live Web Application](https://agentpay-ai.vercel.app/) • [📽️ Intro Slide](https://agentpay-ai.vercel.app/intro-slide.html) • [🏆 Outro Slide](https://agentpay-ai.vercel.app/ending-slide.html) • [🎙️ Voice Studio](https://agentpay-ai.vercel.app/voice-studio.html)
 
 </div>
 
