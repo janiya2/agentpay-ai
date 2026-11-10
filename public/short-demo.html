@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AgentPay AI — 2m 48s Official Hackathon Demo Studio (Devpost Compliant)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800;900&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #030712;
+      --card-bg: rgba(11, 18, 38, 0.92);
+      --card-border: rgba(255, 255, 255, 0.12);
+      --accent-cyan: #38bdf8;
+      --accent-emerald: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-purple: #a855f7;
+      --accent-rose: #f43f5e;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      padding: 24px 20px 80px;
+      line-height: 1.5;
+      background-image: 
+        radial-gradient(circle at 50% 0%, rgba(0, 112, 186, 0.35) 0%, transparent 60%),
+        radial-gradient(circle at 90% 90%, rgba(16, 185, 129, 0.15) 0%, transparent 50%),
+        radial-gradient(circle at 10% 90%, rgba(168, 85, 247, 0.15) 0%, transparent 50%);
+      background-attachment: fixed;
+    }
+
+    .container {
+      max-width: 1040px;
+      margin: 0 auto;
+    }
+
+    /* Top Sticky Header */
+    .top-header {
+      background: rgba(11, 18, 38, 0.95);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      border-radius: 16px;
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 24px;
+      position: sticky;
+      top: 16px;
+      z-index: 100;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+    }
+
+    .brand-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-badge {
+      background: linear-gradient(135deg, #0070ba, #003087);
+      border: 1.5px solid #38bdf8;
+      border-radius: 10px;
+      width: 38px;
+      height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+
+    .brand-text h1 {
+      font-size: 18px;
+      font-weight: 900;
+    }
+
+    .brand-text p {
+      font-size: 10.5px;
+      font-family: 'JetBrains Mono', monospace;
+      color: #94a3b8;
+    }
+
+    .target-badge {
+      background: rgba(16, 185, 129, 0.2);
+      border: 1.5px solid #10b981;
+      color: #4ade80;
+      padding: 6px 14px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 800;
+      font-family: 'JetBrains Mono', monospace;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .header-links {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-nav-h {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #cbd5e1;
+      padding: 6px 12px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-size: 11.5px;
+      font-weight: 700;
+      transition: all 0.2s;
+    }
+
+    .btn-nav-h:hover {
+      background: rgba(255, 255, 255, 0.18);
+      color: #fff;
+    }
+
+    /* Strategy Alert Banner */
+    .strategy-banner {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(6, 182, 212, 0.15));
+      border: 1.5px solid rgba(16, 185, 129, 0.5);
+      border-radius: 16px;
+      padding: 18px 22px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+    }
+
+    .strategy-banner .icon {
+      font-size: 28px;
+      flex-shrink: 0;
+    }
+
+    .strategy-banner h3 {
+      font-size: 15px;
+      font-weight: 800;
+      color: #4ade80;
+      margin-bottom: 4px;
+    }
+
+    .strategy-banner p {
+      font-size: 12.5px;
+      color: #cbd5e1;
+      line-height: 1.5;
+    }
+
+    .timeline-bar {
+      margin-top: 12px;
+      background: rgba(0, 0, 0, 0.4);
+      border-radius: 8px;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11.5px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .timeline-segment {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .dot-ready { color: #4ade80; font-size: 14px; }
+    .dot-new { color: #f59e0b; font-size: 14px; }
+
+    /* Clip Cards */
+    .clip-card {
+      background: var(--card-bg);
+      border: 1.5px solid var(--card-border);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 18px;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+
+    .clip-card.is-reused {
+      border-color: rgba(16, 185, 129, 0.4);
+      background: rgba(16, 185, 129, 0.03);
+    }
+
+    .clip-card.is-new {
+      border-color: rgba(56, 189, 248, 0.5);
+      box-shadow: 0 0 25px rgba(56, 189, 248, 0.15);
+    }
+
+    .clip-card.done {
+      opacity: 0.7;
+      border-color: #10b981 !important;
+    }
+
+    .clip-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .clip-tags {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .clip-id {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 900;
+      padding: 3px 10px;
+      border-radius: 6px;
+      color: #000;
+    }
+
+    .id-reused { background: #4ade80; }
+    .id-new { background: #38bdf8; }
+
+    .clip-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: #ffffff;
+    }
+
+    .clip-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .duration-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: #fbbf24;
+      background: rgba(245, 158, 11, 0.15);
+      border: 1px solid rgba(245, 158, 11, 0.35);
+      padding: 3px 8px;
+      border-radius: 6px;
+    }
+
+    .btn-act {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #f1f5f9;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 11.5px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.2s;
+    }
+
+    .btn-act:hover {
+      background: rgba(56, 189, 248, 0.25);
+      border-color: #38bdf8;
+    }
+
+    .screen-guide {
+      background: rgba(0, 0, 0, 0.45);
+      border-left: 3px solid #f59e0b;
+      padding: 10px 14px;
+      border-radius: 0 8px 8px 0;
+      font-size: 12.5px;
+      margin-bottom: 12px;
+      line-height: 1.45;
+    }
+
+    .screen-guide .sin-tip {
+      margin-top: 6px;
+      color: #fde047;
+      font-size: 11.5px;
+      background: rgba(0,0,0,0.3);
+      padding: 6px 10px;
+      border-radius: 6px;
+      border-left: 2px solid #fde047;
+    }
+
+    .script-box {
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      border-radius: 10px;
+      padding: 14px;
+      font-size: 14px;
+      line-height: 1.6;
+      color: #f8fafc;
+      font-weight: 500;
+    }
+
+    .script-box strong.cyan { color: #38bdf8; }
+    .script-box strong.green { color: #4ade80; }
+    .script-box strong.gold { color: #fbbf24; }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #10b981;
+      color: #000;
+      font-weight: 800;
+      font-size: 13px;
+      padding: 10px 18px;
+      border-radius: 10px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s;
+      z-index: 1000;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+
+    <!-- Top Sticky Header -->
+    <header class="top-header">
+      <div class="brand-wrap">
+        <div class="brand-badge">⚡</div>
+        <div class="brand-text">
+          <h1>AgentPay AI — 2m 48s Official Hackathon Demo Cut</h1>
+          <p>STRICTLY UNDER 3 MINUTES • 100% DEVPOST COMPLIANT</p>
+        </div>
+      </div>
+
+      <div class="target-badge">
+        <span>⏱️ Target: 02m 48s / 03m 00s MAX</span>
+      </div>
+
+      <div class="header-links">
+        <a href="intro-slide.html" target="_blank" class="btn-nav-h">📽️ Intro Slide</a>
+        <a href="ending-slide.html" target="_blank" class="btn-nav-h">🎬 Outro Slide</a>
+        <a href="voice-studio.html" target="_blank" class="btn-nav-h">🎙️ Full Studio (19 Clips)</a>
+      </div>
+    </header>
+
+    <!-- Strategy Banner -->
+    <div class="strategy-banner">
+      <div class="icon">🏆</div>
+      <div style="flex: 1;">
+        <h3>The Winning Formula: 3 Clips Reused + 4 Quick Clips = 2m 48s Masterpiece!</h3>
+        <p>
+          ඔයා දැනටමත් record කරපු <strong>Intro Slide (49s)</strong>, <strong>1-Click Login (16s)</strong>, සහ <strong>12-Stage Tour (39s)</strong> එහෙම්මම තියෙනවා (Total: 1m 45s). 
+          ඉතුරු <strong>තත්පර 63</strong> ට ඔයාට record කරන්න තියෙන්නේ පහළ තියෙන <strong>කෙටි clips 4 විතරයි!</strong> 
+          මේකෙන් මුළු Hackathon එකේම core requirements (PayPal Orders v2, Gemini Code Audit, PayPal Payouts, LexGuard Arbitration) 100% cover වෙනවා!
+        </p>
+        <div class="timeline-bar">
+          <div class="timeline-segment"><span class="dot-ready">●</span> Intro Slide: 49s (Ready ✅)</div>
+          <div class="timeline-segment"><span class="dot-ready">●</span> Login: 16s (Ready ✅)</div>
+          <div class="timeline-segment"><span class="dot-ready">●</span> Tour: 39s (Ready ✅)</div>
+          <div class="timeline-segment"><span class="dot-new">●</span> 4 Short Clips: ~64s (Record Below 🎙️)</div>
+          <div style="color: #4ade80; font-weight: 900;">= TOTAL: ~2m 48s 🎯</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PART 1: ALREADY RECORDED (REUSED CLIPS) -->
+    <div style="margin-bottom: 12px; font-weight: 800; font-size: 13px; color: #4ade80; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; gap: 6px;">
+      <span>✅</span> PART 1: ALREADY RECORDED (REUSE YOUR EXISTING CLIPS — 01m 45s)
+    </div>
+
+    <!-- CARD 0: INTRO SLIDE -->
+    <div class="clip-card is-reused" id="card-r0">
+      <div class="clip-header">
+        <div class="clip-tags">
+          <span class="clip-id id-reused">ALREADY DONE</span>
+          <span class="clip-title">Master Problem &amp; Solution Intro Slide</span>
+        </div>
+        <div class="clip-controls">
+          <span class="duration-badge">⏱️ 49.2 sec</span>
+          <a href="intro-slide.html" target="_blank" class="btn-act">📽️ Open Slide</a>
+        </div>
+      </div>
+      <div class="screen-guide">
+        <strong>Source File:</strong> <code>intro.mp3</code> (Recorded via <code>/intro-slide.html</code> in fullscreen). Covers the Freelance Economy breakdown and the Autonomous Clearinghouse solution.
+      </div>
+    </div>
+
+    <!-- CARD 1: 1-CLICK LOGIN -->
+    <div class="clip-card is-reused" id="card-r1">
+      <div class="clip-header">
+        <div class="clip-tags">
+          <span class="clip-id id-reused">ALREADY DONE</span>
+          <span class="clip-title">1-Click Judge Access &amp; Evaluator Persona</span>
+        </div>
+        <div class="clip-controls">
+          <span class="duration-badge">⏱️ 16.6 sec</span>
+        </div>
+      </div>
+      <div class="screen-guide">
+        <strong>Source File:</strong> <code>1.mp3</code>. Shows 1-Click Judge Access login with pre-authorized $250 spending ceiling.
+      </div>
+    </div>
+
+    <!-- CARD 2: 12-STAGE TOUR -->
+    <div class="clip-card is-reused" id="card-r2">
+      <div class="clip-header">
+        <div class="clip-tags">
+          <span class="clip-id id-reused">ALREADY DONE</span>
+          <span class="clip-title">12-Stage Protocol Guided Architecture Tour</span>
+        </div>
+        <div class="clip-controls">
+          <span class="duration-badge">⏱️ 39.2 sec</span>
+        </div>
+      </div>
+      <div class="screen-guide">
+        <strong>Source File:</strong> <code>2.mp3</code>. Clicks through the 12 stages, giving judges the complete blueprint before diving into live action.
+      </div>
+    </div>
+
+    <!-- PART 2: 4 NEW SHORT CLIPS TO RECORD -->
+    <div style="margin: 32px 0 12px; font-weight: 800; font-size: 13px; color: #38bdf8; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; gap: 6px;">
+      <span>🎙️</span> PART 2: RECORD THESE 4 SHORT CLIPS ONLY (~64 SECONDS TOTAL)
+    </div>
+
+    <!-- CLIP S1 -->
+    <div class="clip-card is-new" id="card-s1">
+      <div class="clip-header">
+        <div class="clip-tags">
+          <span class="clip-id id-new">NEW CLIP S1</span>
+          <span class="clip-title">RFP Scoping, Swarm Bidding &amp; PayPal Orders v2 Escrow</span>
+        </div>
+        <div class="clip-controls">
+          <span class="duration-badge">⏱️ ~18 sec</span>
+          <button class="btn-act" onclick="speakScript('s1')">🔊 Listen Preview</button>
+          <button class="btn-act" onclick="copyScript('s1')">📋 Copy Text</button>
+          <label style="font-size: 11px; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+            <input type="checkbox" onchange="toggleDone('s1', this.checked)"> Done
+          </label>
+        </div>
+      </div>
+
+      <div class="screen-guide">
+        <strong>Screen Action:</strong> In Home Chat (<code>/</code>), type RFP: <code>Build an AI SaaS platform under $160</code>. Show Gemini lock the $160 ceiling. Show the specialist bid arrive, click <strong>"Accept & Secure Escrow"</strong>, approve the PayPal Orders v2 modal, and show status change to <strong>"In Escrow"</strong>.
+        <div class="sin-tip">
+          <strong>🇱🇰 Screen එකේ කරන්න:</strong> Chat එකට <code>Build an AI SaaS under $160</code> කියලා type කරන්න. $160 spending cap lock වෙනවා පෙන්වන්න. Bid එක accept කරලා PayPal Orders v2 modal එකෙන් approve කරලා "In Escrow" වෙන හැටි පෙන්වන්න (~18 තත්පර).
+        </div>
+      </div>
+
+      <div class="script-box" id="text-s1">
+"In our live client flow, typing an RFP prompts Google Gemini to analyze requirements and lock an unbreachable spending ceiling. As specialists bid in an autonomous reverse-auction, the client accepts, immediately capturing funds into segregated milestone escrow via PayPal Orders v2!"
+      </div>
+    </div>
+
+    <!-- CLIP S2 -->
+    <div class="clip-card is-new" id="card-s2">
+      <div class="clip-header">
+        <div class="clip-tags">
+          <span class="clip-id id-new">NEW CLIP S2</span>
+          <span class="clip-title">Gemini AI Code Audit &amp; Instant PayPal Payouts API</span>
+        </div>
+        <div class="clip-controls">
+          <span class="duration-badge">⏱️ ~17 sec</span>
+          <button class="btn-act" onclick="speakScript('s2')">🔊 Listen Preview</button>
+          <button class="btn-act" onclick="copyScript('s2')">📋 Copy Text</button>
+          <label style="font-size: 11px; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+            <input type="checkbox" onchange="toggleDone('s2', this.checked)"> Done
+          </label>
+        </div>
+      </div>
+
+      <div class="screen-guide">
+        <strong>Screen Action:</strong> In Provider Workspace, submit a placeholder repo. Show the <strong>AI Code Inspector</strong> flag changes with a <strong>5/100 score</strong>! Switch to Client -> Click <strong>"Approve & Release"</strong> on Milestone 1. Switch back to Provider -> Show <strong>$70 instantly received via PayPal Payouts API</strong>!
+        <div class="sin-tip">
+          <strong>🇱🇰 Screen එකේ කරන්න:</strong> Provider පැත්තෙන් placeholder code එකක් submit කරලා, Gemini Code Inspector එකෙන් audit score 5/100 දෙන හැටි පෙන්වන්න. Client Milestone 1 approve කරපු ගමන් Provider ට PayPal Payouts API එකෙන් $70 ක්ෂණිකව ලැබෙන හැටි පෙන්වන්න (~17 තත්පර).
+        </div>
+      </div>
+
+      <div class="script-box" id="text-s2">
+"When code is submitted, our Gemini Code Inspector automatically audits commits and flags incomplete work with a 5 out of 100 score. The client releases verified Milestone 1, instantly disbursing seventy dollars to the specialist via PayPal Payouts API!"
+      </div>
+    </div>
+
+    <!-- CLIP S3 -->
+    <div class="clip-card is-new" id="card-s3">
+      <div class="clip-header">
+        <div class="clip-tags">
+          <span class="clip-id id-new">NEW CLIP S3</span>
+          <span class="clip-title">LexGuard™ AI Dispute Court &amp; Binding PayPal Split</span>
+        </div>
+        <div class="clip-controls">
+          <span class="duration-badge">⏱️ ~17 sec</span>
+          <button class="btn-act" onclick="speakScript('s3')">🔊 Listen Preview</button>
+          <button class="btn-act" onclick="copyScript('s3')">📋 Copy Text</button>
+          <label style="font-size: 11px; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+            <input type="checkbox" onchange="toggleDone('s3', this.checked)"> Done
+          </label>
+        </div>
+      </div>
+
+      <div class="screen-guide">
+        <strong>Screen Action:</strong> Client clicks <strong>"AI Dispute Court"</strong>. Show LexGuard deliver quantum meruit ruling in under 3.0s! Click <strong>"Execute Binding PayPal Settlement"</strong>. Show remaining funds split programmatically on PayPal while the HMAC-SHA256 telemetry stream logs it!
+        <div class="sin-tip">
+          <strong>🇱🇰 Screen එකේ කරන්න:</strong> Client පැත්තෙන් "AI Dispute Court" ඔබන්න. තත්පර 3න් LexGuard තීන්දුව දෙන හැටි පෙන්වන්න. "Execute Binding Settlement" ඔබලා PayPal split එකයි, Webhook Telemetry stream එකයි පෙන්වන්න (~17 තත්පර).
+        </div>
+      </div>
+
+      <div class="script-box" id="text-s3">
+"To resolve the disputed milestone without weeks of delay, LexGuard AI Dispute Court arbitrates in under three seconds. One click executes a binding PayPal settlement, fairly splitting funds on PayPal while HMAC-SHA256 webhooks update our real-time ledger!"
+      </div>
+    </div>
+
+    <!-- CLIP S4 -->
+    <div class="clip-card is-new" id="card-s4">
+      <div class="clip-header">
+        <div class="clip-tags">
+          <span class="clip-id id-new">NEW CLIP S4</span>
+          <span class="clip-title">Grand Finale Outro Slide &amp; Closing Thank You</span>
+        </div>
+        <div class="clip-controls">
+          <span class="duration-badge">⏱️ ~10 sec</span>
+          <button class="btn-act" onclick="speakScript('s4')">🔊 Listen Preview</button>
+          <button class="btn-act" onclick="copyScript('s4')">📋 Copy Text</button>
+          <a href="ending-slide.html" target="_blank" class="btn-act" style="color: #4ade80;">🎬 Open Slide</a>
+          <label style="font-size: 11px; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+            <input type="checkbox" onchange="toggleDone('s4', this.checked)"> Done
+          </label>
+        </div>
+      </div>
+
+      <div class="screen-guide">
+        <strong>Screen Action:</strong> Open <code>/ending-slide.html</code> in fullscreen (<code>F11</code>). Show the high-tech conclusion screen celebrating the project's production PayPal + Gemini integration.
+        <div class="sin-tip">
+          <strong>🇱🇰 Screen එකේ කරන්න:</strong> <code>/ending-slide.html</code> එක Fullscreen දාලා, මේ කෙටි voice එක play කරලා celebration confetti එකත් එක්ක ලස්සනට finish කරන්න (~10 තත්පර).
+        </div>
+      </div>
+
+      <div class="script-box" id="text-s4">
+"AgentPay AI redefines digital work with autonomous agents transacting securely on PayPal Orders v2 and Payouts. The future of agentic commerce is here. Thank you!"
+      </div>
+    </div>
+
+    <!-- BOTTOM SUMMARY BAR -->
+    <div style="background: rgba(11, 18, 38, 0.95); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 14px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; margin-top: 24px;">
+      <div>
+        <div style="font-size: 13px; font-weight: 800; color: #f8fafc;">Total Video Runtime: Exactly 2 Minutes 48 Seconds ✅</div>
+        <div style="font-size: 11px; color: #94a3b8; font-family: 'JetBrains Mono', monospace;">105s (Reused) + 63s (New) = 168s (Safe under 180s Devpost limit)</div>
+      </div>
+      <button class="btn-act" onclick="copyAllNewClips()" style="background: linear-gradient(135deg, #10b981, #059669); color: #000; font-weight: 900; padding: 8px 18px; border: none;">
+        📋 Copy All 4 New Clips
+      </button>
+    </div>
+
+  </div>
+
+  <div class="toast" id="toast">✅ Text copied to clipboard!</div>
+
+  <script>
+    const scripts = {
+      s1: `"In our live client flow, typing an RFP prompts Google Gemini to analyze requirements and lock an unbreachable spending ceiling. As specialists bid in an autonomous reverse-auction, the client accepts, immediately capturing funds into segregated milestone escrow via PayPal Orders v2!"`,
+      s2: `"When code is submitted, our Gemini Code Inspector automatically audits commits and flags incomplete work with a 5 out of 100 score. The client releases verified Milestone 1, instantly disbursing seventy dollars to the specialist via PayPal Payouts API!"`,
+      s3: `"To resolve the disputed milestone without weeks of delay, LexGuard AI Dispute Court arbitrates in under three seconds. One click executes a binding PayPal settlement, fairly splitting funds on PayPal while HMAC-SHA256 webhooks update our real-time ledger!"`,
+      s4: `"AgentPay AI redefines digital work with autonomous agents transacting securely on PayPal Orders v2 and Payouts. The future of agentic commerce is here. Thank you!"`
+    };
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.innerText = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2200);
+    }
+
+    function copyScript(id) {
+      const text = scripts[id].replace(/^"|"$/g, '');
+      navigator.clipboard.writeText(text);
+      showToast(`Clip ${id.toUpperCase()} copied to clipboard!`);
+    }
+
+    function copyAllNewClips() {
+      const allText = Object.keys(scripts).map(k => `[CLIP ${k.toUpperCase()}]\n${scripts[k].replace(/^"|"$/g, '')}`).join('\n\n');
+      navigator.clipboard.writeText(allText);
+      showToast('All 4 new clips copied to clipboard!');
+    }
+
+    function toggleDone(id, isChecked) {
+      const card = document.getElementById(`card-${id}`);
+      if (isChecked) card.classList.add('done');
+      else card.classList.remove('done');
+    }
+
+    function speakScript(id) {
+      if (!('speechSynthesis' in window)) {
+        alert('Web Speech API not supported in browser.');
+        return;
+      }
+      window.speechSynthesis.cancel();
+      const cleanText = scripts[id].replace(/^"|"$/g, '');
+      const utt = new SpeechSynthesisUtterance(cleanText);
+      utt.rate = 1.05;
+      const voices = window.speechSynthesis.getVoices();
+      const pref = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Neural')));
+      if (pref) utt.voice = pref;
+      window.speechSynthesis.speak(utt);
+      showToast(`Playing preview for Clip ${id.toUpperCase()}...`);
+    }
+  </script>
+</body>
+</html>
