@@ -945,9 +945,13 @@
   <audio id="audio-player" preload="auto">
     <source src="final-voiceover.mp3" type="audio/mpeg">
     <source src="./final-voiceover.mp3" type="audio/mpeg">
+    <source src="short/final.mp3" type="audio/mpeg">
+    <source src="./short/final.mp3" type="audio/mpeg">
+    <source src="/short/final.mp3" type="audio/mpeg">
+    <source src="/audio/short/final.mp3" type="audio/mpeg">
     <source src="/audio/final-voiceover.mp3" type="audio/mpeg">
     <source src="./audio/final-voiceover.mp3" type="audio/mpeg">
-    <source src="https://agentpay-ai.vercel.app/audio/final-voiceover.mp3" type="audio/mpeg">
+    <source src="https://agentpay-ai.vercel.app/final-voiceover.mp3" type="audio/mpeg">
   </audio>
 
   <div class="app-shell">
@@ -977,7 +981,7 @@
               <span class="live-dot"></span>
               <span id="stage-label">Grand Finale Ready</span>
             </div>
-            <div class="time-counter" id="time-display">00:00 / 00:19</div>
+            <div class="time-counter" id="time-display">00:00 / 00:12</div>
           </div>
           <div class="progress-bar-slot" id="progress-slot" onclick="seekAudio(event)">
             <div class="progress-bar-fill" id="progress-fill"></div>
@@ -1204,7 +1208,7 @@
         <span style="color: #94a3b8;">Click <strong>"Play Presentation"</strong> or press Spacebar to play the Grand Finale voiceover with synchronized animations.</span>
       </div>
       <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #64748b; font-weight: 700; white-space: nowrap;">
-        VOICE SYNC: 19.4s
+        VOICE SYNC: 12.4s
       </div>
     </div>
 
@@ -1251,7 +1255,7 @@
        6. INTERACTIVE SCRIPT & AUDIO ENGINE
        ========================================= -->
   <script>
-    const voiceScriptText = `"AgentPay AI proves that the future of digital work isn't manual contracts and sluggish disputes—it's autonomous agents transacting securely on PayPal Orders v2 and Payouts. Built with Next.js, Google Gemini, and PayPal, this is the future of agentic commerce. Thank you!"`;
+    const voiceScriptText = `"AgentPay AI redefines digital work with autonomous agents transacting securely on PayPal Orders v2 and Payouts. The future of agentic commerce is here. Thank you!"`;
 
     const audio = document.getElementById('audio-player');
     const btnPlay = document.getElementById('btn-play');
@@ -1273,7 +1277,7 @@
     let speechSynthUtterance = null;
     let usingWebSpeech = false;
     let speechStartTime = 0;
-    const TOTAL_DURATION = 19.41;
+    const TOTAL_DURATION = 12.43;
 
     // Toast helper
     function showToast(msg) {
@@ -1425,7 +1429,7 @@
       triggerGrandFinaleSparkles();
     }
 
-    // Core Choreography Engine (19.41 seconds)
+    // Core Choreography Engine (12.43 seconds)
     function updateVisualSync(currentTime, duration = TOTAL_DURATION) {
       // 1. Time & Progress
       const pct = Math.min(100, (currentTime / duration) * 100);
@@ -1433,8 +1437,8 @@
       timeDisplay.innerText = formatTime(currentTime) + ' / ' + formatTime(duration);
 
       // 2. Stage Sync & Captions
-      // Phase 1: 0.0s - 5.0s ("AgentPay AI proves that the future of digital work isn't manual contracts and sluggish disputes...")
-      if (currentTime >= 0 && currentTime < 5.0) {
+      // Phase 1: 0.0s - 4.2s ("AgentPay AI redefines digital work with autonomous agents transacting securely...")
+      if (currentTime >= 0 && currentTime < 4.2) {
         stageLabel.innerText = '01 • Legacy Freelance Crisis Solved';
         stageLabel.style.color = '#f43f5e';
         heroEyebrow.innerHTML = '<span>⚡</span> PHASE 1: OVERCOMING THE $67B FREELANCE CRISIS';
@@ -1444,11 +1448,11 @@
         cardP3.className = 'pillar-card';
 
         captionBox.innerHTML = `
-          "AgentPay AI proves that the future of digital work <strong class="glow-cyan">isn't manual contracts and sluggish disputes—</strong>"
+          "AgentPay AI redefines digital work with <strong class="glow-cyan">autonomous agents transacting securely...</strong>"
         `;
       }
-      // Phase 2: 5.0s - 10.6s ("...it's autonomous agents transacting securely on PayPal Orders v2 and Payouts.")
-      else if (currentTime >= 5.0 && currentTime < 10.6) {
+      // Phase 2: 4.2s - 8.2s ("...on PayPal Orders v2 and Payouts.")
+      else if (currentTime >= 4.2 && currentTime < 8.2) {
         stageLabel.innerText = '02 • PayPal Orders v2 & Payouts Engine';
         stageLabel.style.color = '#38bdf8';
         heroEyebrow.innerHTML = '<span>💳</span> PHASE 2: AUTONOMOUS SETTLEMENT VIA PAYPAL ORDERS V2 &amp; PAYOUTS';
@@ -1458,24 +1462,24 @@
         cardP3.className = 'pillar-card';
 
         captionBox.innerHTML = `
-          "...it's <strong class="glow-cyan">autonomous agents transacting securely</strong> on <strong class="glow-emerald">PayPal Orders v2</strong> and <strong class="glow-emerald">PayPal Payouts</strong>."
+          "...on <strong class="glow-emerald">PayPal Orders v2</strong> and <strong class="glow-emerald">PayPal Payouts</strong>."
         `;
       }
-      // Phase 3: 10.6s - 16.2s ("Built with Next.js, Google Gemini, and PayPal, this is the future of agentic commerce.")
-      else if (currentTime >= 10.6 && currentTime < 16.2) {
-        stageLabel.innerText = '03 • Production Trinity (Next.js + Gemini + PayPal)';
+      // Phase 3: 8.2s - 10.3s ("The future of agentic commerce is here.")
+      else if (currentTime >= 8.2 && currentTime < 10.3) {
+        stageLabel.innerText = '03 • The Future of Agentic Commerce';
         stageLabel.style.color = '#a855f7';
-        heroEyebrow.innerHTML = '<span>🧠</span> PHASE 3: PRODUCTION TRINITY &amp; HACKATHON TRACK DOMINANCE';
+        heroEyebrow.innerHTML = '<span>🧠</span> PHASE 3: PRODUCTION TRINITY &amp; AGENTIC COMMERCE';
 
         cardP1.className = 'pillar-card';
         cardP2.className = 'pillar-card';
         cardP3.className = 'pillar-card highlight-phase3';
 
         captionBox.innerHTML = `
-          "Built with <strong class="glow-cyan">Next.js</strong>, <strong class="glow-gold">Google Gemini 2.5 Flash</strong>, and <strong class="glow-emerald">PayPal</strong>, this is the future of agentic commerce."
+          "<strong class="glow-gold">The future of agentic commerce is here.</strong>"
         `;
       }
-      // Phase 4: 16.2s - 19.41s ("Thank you!")
+      // Phase 4: 10.3s - 12.43s ("Thank you!")
       else {
         stageLabel.innerText = 'Grand Finale • Thank You Judges! 🏆';
         stageLabel.style.color = '#fbbf24';
@@ -1487,7 +1491,7 @@
         confettiCanvas.classList.add('active');
 
         captionBox.innerHTML = `
-          "<strong class="glow-gold" style="font-size: 15px;">Thank you!</strong> Ready for evaluation on <strong class="glow-cyan">Devpost</strong> &amp; <strong class="glow-emerald">agentpay-ai.vercel.app</strong>."
+          "<strong class="glow-gold" style="font-size: 16px;">Thank you!</strong> Ready for evaluation on <strong class="glow-cyan">Devpost</strong> &amp; <strong class="glow-emerald">agentpay-ai.vercel.app</strong>."
         `;
       }
     }
@@ -1646,3 +1650,4 @@
   </script>
 </body>
 </html>
+
